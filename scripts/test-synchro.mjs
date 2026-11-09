@@ -55,6 +55,9 @@ export const sendPasswordResetEmail = async () => { window.fsCall('reset'); };
 async function telephone(nom) {
   const ctx = await navigateur.newContext({ viewport: { width: 390, height: 800 } });
   await ctx.route('**/vendor/firebase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: SDK_FAUX }));
+  await ctx.route('https://world.openfoodfacts.org/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 1, product: {
+    product_name: 'Yaourt nature', brands: 'Laiterie Test', allergens_tags: ['en:milk'], categories_tags: ['en:dairies', 'en:yogurts'], nova_group: 3, nutriscore_grade: 'a',
+    nutriments: { 'energy-kcal_100g': 55, 'saturated-fat_100g': 1.2, sugars_100g: 4.5, salt_100g: 0.1, proteins_100g: 4, fiber_100g: 0 } } }) }));
   await ctx.exposeBinding('fsCall', async ({ page }, op, a, b) => {
     if (op === 'auth') return COMPTES[a] === b;
     if (op === 'set') { base.set(a, b); await notifier(a.split('/').slice(0, -1).join('/')); return null; }
@@ -161,6 +164,46 @@ verif(await marie.locator('.jour .mini').count() === 14, 'Marie : les 14 repas d
 await marie.click('.jour .repas-jour >> nth=0 >> [aria-label^="Retirer"]');
 await eymric.waitForFunction(() => document.querySelectorAll('.jour .mini').length === 13, null, { timeout: 2000 }).then(
   () => verif(true, 'Marie retire un repas : disparu chez Eymric'), () => verif(false, 'retrait de repas synchronisé'));
+
+// 4 ter. Courses partagées : un document par article, cochage en direct, pastilles E / M
+await eymric.goto(serveur.url + '/#/courses'); await eymric.waitForSelector('.page-courses');
+await eymric.fill('input[aria-label="Ajouter un article"]', '6 oeufs'); await eymric.press('input[aria-label="Ajouter un article"]', 'Enter');
+await eymric.fill('input[aria-label="Ajouter un article"]', '1 l de lait'); await eymric.press('input[aria-label="Ajouter un article"]', 'Enter');
+const docsArticles = [...base.keys()].filter((k) => k.startsWith('households/foyer/shoppingLists/semaine__'));
+verif(docsArticles.length === 2, `un document par article : ${docsArticles.map((k) => k.split('/').pop()).join(', ')}`);
+verif(docsArticles.every((k) => Object.values(base.get(k)).every((v) => v !== undefined) && Object.keys(base.get(k)).length <= 60 && base.get(k).par === 'E'), 'documents d\'articles valides, ajoutés par E');
+await marie.goto(serveur.url + '/#/courses'); await marie.waitForSelector('.article', { timeout: 2000 }).then(
+  () => verif(true, 'Marie voit les articles d\'Eymric en moins de 2 s'), () => verif(false, 'Marie voit les articles'));
+verif(await marie.locator('.article', { hasText: 'Oeufs' }).locator('.article-qui .pastille.E').count() === 1, 'pastille E (ajouté par Eymric)');
+verif(await marie.locator('.article', { hasText: 'Lait' }).locator('.alerte-article.rouge').count() === 1, 'alerte de profil sur la liste de Marie (allergie au lait)');
+await marie.click('.article:has-text("Oeufs") .case-article');
+await eymric.waitForSelector('.article.coche .article-qui .pastille.M', { timeout: 2000 }).then(
+  () => verif(true, 'Marie coche : Eymric voit l\'article coché avec la pastille M en moins de 2 s'), () => verif(false, 'cochage synchronisé'));
+// deux personnes ajoutent en même temps : aucun article perdu
+await Promise.all([
+  eymric.fill('input[aria-label="Ajouter un article"]', 'pain').then(() => eymric.press('input[aria-label="Ajouter un article"]', 'Enter')),
+  marie.fill('input[aria-label="Ajouter un article"]', 'riz').then(() => marie.press('input[aria-label="Ajouter un article"]', 'Enter')),
+]);
+await eymric.waitForFunction(() => document.querySelectorAll('.article').length === 4, null, { timeout: 2500 }).then(
+  () => verif(true, 'ajouts simultanés : les 4 articles sont là des deux côtés, sans perte'), () => verif(false, 'ajouts simultanés'));
+// terminer les courses -> stock partagé
+marie.once('dialog', (d) => d.accept());
+await marie.click('text=Terminer les courses');
+await marie.waitForSelector('text=Courses terminées');
+verif([...base.keys()].some((k) => k.startsWith('households/foyer/pantry/')), 'stock écrit dans households/foyer/pantry/…');
+await eymric.click('role=tab[name="📦 Stock"]');
+await eymric.waitForSelector('.article:has-text("Oeufs")', { timeout: 2000 }).then(
+  () => verif(true, 'le stock mis à jour par Marie apparaît chez Eymric'), () => verif(false, 'stock synchronisé'));
+
+// 4 quater. Scans partagés
+await eymric.goto(serveur.url + '/#/produit/3017620422003'); await eymric.waitForSelector('.produit .jauge');
+verif(base.has('households/foyer/scans/3017620422003') && base.get('households/foyer/scans/3017620422003').par === 'E', 'scan écrit dans households/foyer/scans/{code-barres}');
+await marie.goto(serveur.url + '/#/scans');
+await marie.waitForSelector('.sans-marge-liste .carte', { timeout: 2000 }).then(
+  () => verif(true, 'Marie voit le scan d\'Eymric en moins de 2 s'), () => verif(false, 'scan partagé'));
+verif((await marie.textContent('.sans-marge-liste')).includes('Yaourt nature'), 'historique partagé : produit et auteur');
+await marie.goto(serveur.url + '/#/produit/3017620422003'); await marie.waitForSelector('.produit .jauge');
+verif((await marie.textContent('.bandeau.alerte')).includes('lait'), 'le même produit : alerte selon le profil de Marie (lait)');
 
 // 5. Favoris déjà gardés en local avant la connexion : ils rejoignent le nuage
 const tardif = await telephone('Tardif');

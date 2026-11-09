@@ -5,7 +5,7 @@ import { chargerPlaywright, servir, modeLocal } from './_navigateur.mjs';
 const captures = process.argv[2];
 const { chromium } = chargerPlaywright();
 const serveur = await servir();
-const navigateur = await chromium.launch();
+const navigateur = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 const ctx = await navigateur.newContext({ viewport: { width: 390, height: 800 }, deviceScaleFactor: 1 });
 await modeLocal(ctx);
 const p = await ctx.newPage();
@@ -227,6 +227,105 @@ await p.reload(); await p.waitForSelector('.bulle.coach');
 const nbBulles = await p.locator('.bulle').count(); verif(nbBulles === 4, 'coach : conversation conservée (' + nbBulles + ' bulles)');
 await p.click('text=Effacer la conversation');
 verif(await p.locator('.bulle').count() === 0, 'coach : conversation effacée');
+
+// Courses : générées depuis le menu, rayons, cochage, saisie libre, alertes de profil, stock
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+verif((await p.textContent('.etat')).includes('La liste est vide'), 'courses : état vide soigné');
+await p.click('text=Depuis le menu de la semaine'); await p.waitForSelector('.article');
+const nbArticles = await p.locator('.article').count();
+verif(nbArticles > 30, `courses : ${nbArticles} articles générés depuis le menu`);
+verif((await p.locator('.page-courses .bandeau').first().textContent()).includes('pour 2 personnes'), 'courses : calculées pour 2 personnes');
+verif((await p.textContent('.rayon .petit-titre >> nth=0')).includes('Fruits et légumes'), 'courses : groupées par rayon (fruits et légumes en premier)');
+verif(await p.locator('.rayon .petit-titre').count() >= 4, 'courses : plusieurs rayons');
+const nom0 = (await p.textContent('.article >> nth=0 >> strong')).trim();
+await p.click('.case-article >> nth=0');
+await p.waitForSelector('text=Dans le panier (1)');
+verif(await p.locator('.article.coche').count() === 1 && await p.locator('.article.coche .article-qui .pastille.M').count() === 1, 'courses : article coché, pastille M (qui l\'a coché)');
+await p.fill('input[aria-label="Ajouter un article"]', '2 kg de pommes'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+await p.fill('input[aria-label="Ajouter un article"]', '1 kg de pommes'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+verif((await p.locator('.article', { hasText: 'Pommes' }).first().textContent()).includes('3 kg'), 'courses : 2 kg + 1 kg de pommes fusionnés en 3 kg');
+await p.fill('input[aria-label="Ajouter un article"]', 'saumon fumé'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+await p.fill('input[aria-label="Ajouter un article"]', 'beurre'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+verif((await p.locator('.article', { hasText: 'Saumon fumé' }).textContent()).includes('listériose'), 'courses : saumon fumé signalé à Marie enceinte, avec la raison');
+verif(await p.locator('.article', { hasText: 'Beurre' }).locator('.alerte-article.rouge').count() === 1, 'courses : beurre signalé en rouge (allergie au lait)');
+await p.click('text=Depuis le menu de la semaine'); await p.waitForTimeout(600);
+verif(await p.locator('.article', { hasText: 'Pommes' }).count() === 1 && await p.locator('.article.coche').count() === 1, 'courses : régénérer ne perd ni les articles saisis ni les cochés');
+p.once('dialog', (d) => d.accept());
+await p.click('text=Terminer les courses');
+await p.waitForSelector('text=Courses terminées');
+await p.click('role=tab[name="📦 Stock"]');
+verif((await p.textContent('.page-courses')).includes(nom0), `stock : « ${nom0} » ajouté après les courses`);
+await p.click('role=tab[name="🛒 Liste"]');
+verif(await p.locator('.article.coche').count() === 0, 'courses : les articles achetés quittent la liste');
+await p.click('text=Depuis le menu de la semaine'); await p.waitForTimeout(600);
+const nomsApres = await p.locator('.article strong').allTextContents();
+verif(!nomsApres.map((t) => t.trim()).includes(nom0), 'courses : le stock est déduit à la génération suivante');
+if (captures) await p.screenshot({ path: `${captures}/courses.png`, fullPage: true });
+
+// Scan de produits (fausse API Open Food Facts)
+const PRODUITS = {
+  '3017620422003': { status: 1, product: { product_name: 'Camembert de Normandie au lait cru', brands: 'Fromagerie Test', allergens_tags: ['en:milk'], categories_tags: ['en:dairies', 'en:cheeses', 'en:camemberts'],
+    ingredients_text: 'Lait cru de vache, sel, présure', nutriscore_grade: 'd', nova_group: 3, nutriments: { 'energy-kcal_100g': 300, 'saturated-fat_100g': 17, sugars_100g: 0.5, salt_100g: 1.6, proteins_100g: 20, fiber_100g: 0 } } },
+  '5449000000996': { status: 1, product: { product_name: 'Cola zéro', brands: 'Boissons Test', additives_tags: ['en:e150d', 'en:e338', 'en:e951', 'en:e950'], categories_tags: ['en:beverages', 'en:sodas'],
+    nutriscore_grade: 'b', nova_group: 4, nutriments: { 'energy-kcal_100g': 0.4, 'saturated-fat_100g': 0, sugars_100g: 0, salt_100g: 0.01, proteins_100g: 0, fiber_100g: 0 } } },
+};
+let appelsOFF = 0;
+await ctx.route('https://world.openfoodfacts.org/**', async (route) => {
+  appelsOFF++;
+  const u = route.request().url();
+  if (/\/api\/v2\/search/.test(u)) {
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ products: [
+      { code: '5449000000996', product_name: 'Cola zéro', nova_group: 4, additives_tags: ['en:e951'], nutriments: { 'energy-kcal_100g': 0.4, sugars_100g: 0, 'saturated-fat_100g': 0, salt_100g: 0.01 } },
+      { code: '3274080005003', product_name: 'Eau pétillante nature', brands: 'Source Test', nova_group: 1, nutriments: { 'energy-kcal_100g': 0, sugars_100g: 0, 'saturated-fat_100g': 0, salt_100g: 0.01, proteins_100g: 0, fiber_100g: 0 } }] }) });
+  }
+  const code = (u.match(/product\/(\d+)\.json/) || [])[1];
+  await route.fulfill({ contentType: 'application/json', body: JSON.stringify(PRODUITS[code] || { status: 0 }) });
+});
+await p.goto(serveur.url + '/#/scan'); await p.waitForSelector('.scanner');
+await p.waitForSelector('.viseur.pret', { timeout: 6000 }).then(() => verif(true, 'scan : la caméra démarre (lecteur local ZXing, caméra factice)'), () => verif(false, 'scan : la caméra démarre'));
+await p.fill('input[aria-label="Numéro du code-barres"]', '3017620422004'); await p.click('text=Chercher');
+verif((await p.textContent('.erreur-champ')).includes('clé de contrôle'), 'scan : numéro invalide refusé (clé de contrôle)');
+await p.fill('input[aria-label="Numéro du code-barres"]', '3017620422003'); await p.click('text=Chercher');
+await p.waitForSelector('.produit .jauge');
+verif((await p.locator('.entete:visible h1').textContent()).includes('Camembert'), 'scan : fiche produit affichée');
+const noteTxt = await p.getAttribute('.produit .jauge', 'aria-label');
+verif(/Note \d+ sur 100/.test(noteTxt), `scan : ${noteTxt}`);
+verif((await p.textContent('.bandeau.alerte')).includes('À savoir pour Marie') && (await p.textContent('.bandeau.alerte')).includes('listériose'), 'scan : fromage au lait cru + profil grossesse = avertissement rouge expliqué');
+verif((await p.textContent('.bandeau.alerte')).includes('lait'), 'scan : allergie au lait signalée');
+verif((await p.textContent('.produit')).includes('Pourquoi cette note'), 'scan : détail du « pourquoi »');
+verif((await p.textContent('.produit')).includes('ne remplace pas un avis médical'), 'scan : mention « note indicative »');
+if (captures) await p.screenshot({ path: `${captures}/produit.png`, fullPage: true });
+await p.click('text=Aux courses'); await p.waitForSelector('text=Ajouté à la liste de courses');
+await p.click('role=button[name="♡ Favori"]');
+verif(await p.locator('role=button[name="♥ Favori"]').count() === 1, 'scan : favori');
+const appelsAvant = appelsOFF;
+await p.goto(serveur.url + '/#/produit/5449000000996'); await p.waitForSelector('.produit .jauge');
+verif((await p.textContent('.additifs')).includes('E951') && (await p.textContent('.additifs')).includes('Risque modéré'), 'scan : additifs classés par niveau de risque');
+await p.click('text=Voir des alternatives'); await p.waitForSelector('.alt');
+verif((await p.textContent('.alt')).includes('Eau pétillante'), 'scan : alternative mieux notée proposée');
+await p.goto(serveur.url + '/#/produit/4006381333931'); await p.waitForSelector('text=Produit inconnu');
+await p.getByLabel('Nom du produit').fill('Pain maison');
+await p.getByLabel('Énergie (kcal)').fill('250'); await p.getByLabel('Sucres (g)').fill('3'); await p.getByLabel('Graisses saturées (g)').fill('0.5'); await p.getByLabel('Sel (g)').fill('1.2');
+await p.click('text=Enregistrer et noter');
+await p.waitForSelector('.produit .jauge');
+verif((await p.locator('.entete:visible h1').textContent()).includes('Pain maison') && /Note \d+ sur 100/.test(await p.getAttribute('.produit .jauge', 'aria-label')), 'scan : produit inconnu saisi à la main puis noté');
+await ctx.route('https://world.openfoodfacts.org/**', (r) => r.abort());
+await p.goto(serveur.url + '/#/produit/3017620422003'); await p.waitForSelector('.produit .jauge');
+verif(true, 'scan : produit déjà scanné consultable sans réseau');
+await p.goto(serveur.url + '/#/scans'); await p.waitForSelector('.sans-marge-liste .carte');
+verif(await p.locator('.sans-marge-liste .carte').count() === 3, 'historique : 3 produits scannés');
+await p.click('.puce:has-text("Favoris")');
+verif(await p.locator('.sans-marge-liste .carte').count() === 1, 'historique : filtre favoris');
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+verif((await p.textContent('.page-courses')).includes('Camembert de Normandie'), 'scan : le produit est dans la liste de courses commune');
+
+// Plus : sources, thème
+await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
+await p.click('.puce:text-is("Rose")');
+verif(await p.evaluate(() => document.documentElement.dataset.theme) === 'rose', 'thème de couleur changé');
+await p.click('.puce:text-is("Lagon")');
+await p.goto(serveur.url + '/#/sources'); await p.waitForSelector('text=Santé publique France');
+verif((await p.textContent('.contenu')).includes('lait cru') && (await p.textContent('.contenu')).includes('ne remplacent pas'), 'sources : règles d\'alerte et mention affichées');
 
 // Installation et hors ligne
 await p.goto(serveur.url + '/#/recettes');

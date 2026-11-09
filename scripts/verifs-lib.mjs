@@ -5,6 +5,7 @@ import { normaliser } from '../js/lib/texte.js';
 import { ligneIngredient, conseilsAdaptation } from '../js/lib/adaptation.js';
 import { PORTIONS_MIN, PORTIONS_MAX } from '../js/core/config.js';
 import { alertesProfil, conflitsProfil, profilVide } from '../js/lib/profils.js';
+import { fusionner, lignesDepuisPlan, arrondirCourses, libelleQuantite } from '../js/lib/courses.js';
 
 export function verifier({ parFichier, toutes, ko, ALLERGENES }) {
   const index = construireIndex(parFichier).recettes.map((r) => ({
@@ -55,6 +56,18 @@ export function verifier({ parFichier, toutes, ko, ALLERGENES }) {
     conflitsProfil(c, { ...profilsTypes.enceinte, allergenes: ['lait'], regimes: ['vegan'], exclusions: 'ail, oignons' });
   }
   console.log(`alertes de profil : ${alertes} alertes calculées sur 4 profils types`);
+
+  // Courses : les ingrédients de chaque recette, pour 1 à 12 personnes, donnent des articles lisibles.
+  let articles = 0;
+  for (const r of toutes) {
+    for (const p of [1, 2, 6, 12]) {
+      for (const a of fusionner(lignesDepuisPlan({ j: { diner: r.id } }, ['j'], new Map([[r.id, r]]), p)).map((x) => ({ ...x, ...arrondirCourses(x) }))) {
+        articles++;
+        if (!(a.quantite > 0) || !Number.isFinite(a.quantite) || /NaN|undefined/.test(libelleQuantite(a) + a.nom + a.rayon)) ko(`${r.id} (${p} pers.) : article de courses illisible « ${a.nom} »`);
+      }
+    }
+  }
+  console.log(`courses : ${articles} articles calculés (1, 2, 6 et 12 personnes)`);
 
   // Chaque recette se retrouve par son titre exact.
   for (const r of index.slice(0, 400)) {
