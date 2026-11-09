@@ -1,10 +1,11 @@
 // Écran « Profil » : qui je suis, mes données, mes régimes et exclusions, mes besoins.
-import { html } from '../../vendor/preact-htm.js';
+import { html, useState } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { REGIMES, ALLERGENES } from '../data/libelles.js';
 import { ACTIVITES, OBJECTIFS, calculerBesoins } from '../lib/besoins.js';
 import { validerProfil, profilComplet, LIMITES } from '../lib/profils.js';
 import { basculer } from '../lib/recettes.js';
+import { pinValide } from '../core/pin.js';
 import { Puce, Pastille, Bandeau } from '../ui/composants.js';
 
 const CONDITIONS = { diabete: 'Diabète', hypertension: 'Hypertension', immunodeprime: 'Système immunitaire affaibli' };
@@ -12,7 +13,7 @@ const CONDITIONS = { diabete: 'Diabète', hypertension: 'Hypertension', immunode
 const REGIMES_DEJA_AILLEURS = ['omnivore', 'enceinte', 'sportif', 'diabetique'];
 const TRIMESTRES = [[0, 'Non'], [1, '1er trimestre'], [2, '2e trimestre'], [3, '3e trimestre']];
 
-function ChoixPersonne({ onChoisir }) {
+export function ChoixPersonne({ onChoisir }) {
   return html`<div class="fiche-corps">
     <h1>Qui utilise ce téléphone ?</h1>
     <p class="desc">Ce choix reste sur cet appareil. Vous pourrez le changer plus tard.</p>
@@ -32,7 +33,36 @@ function Nombre({ p, champ, unite, maj, erreurs }) {
       value=${p[champ]} onInput=${(e) => maj({ [champ]: e.target.value === '' ? '' : Number(e.target.value) })} /><//>`;
 }
 
-export function Profil({ moi, profil, onMoi, onChange }) {
+function SectionPin({ pin }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [code, setCode] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [message, setMessage] = useState('');
+  const enregistrer = async () => {
+    if (!pinValide(code)) { setMessage('Le code doit comporter 4 à 8 chiffres.'); return; }
+    if (code !== confirmation) { setMessage('Les deux codes ne sont pas identiques.'); return; }
+    await pin.onDefinir(code);
+    setOuvert(false); setCode(''); setConfirmation(''); setMessage('');
+  };
+  return html`<div>
+    <p>${pin.defini ? '🔒 Un code est défini : l\'appli se verrouille après 1 minute en arrière-plan.' : 'Aucun code défini.'}</p>
+    ${!ouvert && html`<div class="puces sans-marge">
+      <${Puce} actif=${false} onClick=${() => setOuvert(true)}>${pin.defini ? 'Changer le code' : 'Définir un code'}<//>
+      ${pin.defini && html`<${Puce} actif=${false} onClick=${pin.onRetirer}>Retirer le code<//>`}</div>`}
+    ${ouvert && html`<div>
+      <${Champ} etiquette="Nouveau code (4 à 8 chiffres)"><input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+        autocomplete="off" value=${code} onInput=${(e) => setCode(e.target.value.replace(/\D/g, ''))} /><//>
+      <${Champ} etiquette="Confirmer le code"><input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+        autocomplete="off" value=${confirmation} onInput=${(e) => setConfirmation(e.target.value.replace(/\D/g, ''))} /><//>
+      ${message && html`<p class="erreur-champ" role="alert">${message}</p>`}
+      <div class="puces sans-marge"><${Puce} actif=${true} onClick=${enregistrer}>Enregistrer<//>
+        <${Puce} actif=${false} onClick=${() => { setOuvert(false); setMessage(''); }}>Annuler<//></div>
+    </div>`}
+    <p class="note">Le code verrouille l'écran de l'appli. Il ne remplace pas le verrouillage de votre téléphone.</p>
+  </div>`;
+}
+
+export function Profil({ moi, profil, onMoi, onChange, compte, pin }) {
   if (!moi) return html`<${ChoixPersonne} onChoisir=${onMoi} />`;
   const p = profil;
   const maj = (changes) => onChange({ ...p, ...changes });
@@ -92,6 +122,14 @@ export function Profil({ moi, profil, onMoi, onChange }) {
       <${Champ} etiquette="Aliments que je n'aime pas (séparés par des virgules)">
         <input type="text" value=${p.exclusions} placeholder="ex. coriandre, olives"
           onInput=${(e) => maj({ exclusions: e.target.value })} /><//>
+
+      <h2 class="petit-titre">Sécurité</h2>
+      <${SectionPin} pin=${pin} />
+
+      ${compte.actif && html`<h2 class="petit-titre">Compte</h2>
+        <p>Connecté : <strong>${compte.email}</strong></p>
+        <p class="note">Vos favoris et votre profil sont synchronisés avec l'autre téléphone.</p>
+        <button type="button" class="bouton secondaire" onClick=${compte.onDeconnecter}>Se déconnecter</button>`}
 
       <h2 class="petit-titre">Mes besoins</h2>
       ${!complet
