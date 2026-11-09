@@ -11,7 +11,7 @@ const page = await contexte.newPage();
 const erreursPage = [];
 page.on('pageerror', (e) => erreursPage.push(e.message));
 await page.addInitScript(() => localStorage.setItem('nutricoach.moi', '"M"'));
-await page.goto(serveur.url + '/');
+await page.goto(serveur.url + '/#/recettes');
 await page.waitForSelector('.carte');
 
 const bilan = await page.evaluate(async () => {
