@@ -88,7 +88,7 @@ verif(await p.locator('.liste .carte').count() === 0 && (await p.textContent('.e
 await p.goto(serveur.url + '/#/profil');
 await p.waitForSelector('text=Qui utilise ce téléphone');
 await p.click('text=Je suis Marie');
-await p.waitForSelector('text=Profil de Marie');
+await p.waitForSelector('h1:has-text("Profil de Marie")');
 verif(!(await p.textContent('body')).includes('Chargement…'), 'plus de « Chargement… » résiduel à l\'écran');
 await p.click('.puce:text-is("Femme")');
 const champs = p.locator('.grille input');
@@ -103,6 +103,30 @@ verif((await p.textContent('.besoins')).includes('sage-femme'), 'mention « à s
 if (captures) await p.screenshot({ path: `${captures}/profil.png`, fullPage: true });
 await p.reload(); await p.waitForSelector('.besoins');
 verif(await p.locator('.grille input').nth(1).inputValue() === '62' && await p.locator('.puce[aria-pressed="true"]:text-is("2e trimestre")').count() === 1, 'profil conservé après rechargement');
+
+// Alertes de profil : Marie enceinte, allergique au lait, évite le poulet
+await p.goto(serveur.url + '/#/profil'); await p.waitForSelector('.besoins');
+await p.click('.puce.exclu:text-is("Lait")');
+await p.fill('input[placeholder^="ex."]', 'poulet');
+await p.goto(serveur.url + '/#/'); await p.waitForSelector('.carte');
+const attP = toutes.filter((r) => !r.allergenes.includes('lait') && !/poulet/i.test(r.titre + ' ' + r.ingredients.map((i) => i.aliment).join(' '))).length;
+verif(await nb() === attP, `profil appliqué (sans lait, sans poulet) : ${await nb()} = ${attP}`);
+verif((await p.textContent('.profil-applique')).includes('Marie'), 'bandeau « profil appliqué »');
+await p.fill('input[type=search]', 'vin blanc');
+const carteAlerte = p.locator('.carte', { has: p.locator('.alerte-carte') }).first();
+if (await carteAlerte.count()) {
+  verif((await carteAlerte.textContent()).includes('femme enceinte'), 'carte marquée « Déconseillé : femme enceinte »');
+  await carteAlerte.locator('.carte-lien').click();
+  await p.waitForSelector('.fiche h1');
+  verif((await p.textContent('.bandeau.alerte')).includes('À savoir pour Marie'), 'fiche : « À savoir pour Marie » avec la raison');
+  if (captures) await p.screenshot({ path: `${captures}/alerte.png` });
+} else verif(false, 'aucune carte marquée pour une femme enceinte');
+await p.goto(serveur.url + '/#/'); await p.waitForSelector('.carte');
+await p.fill('input[type=search]', '');
+await p.click('.profil-applique .lien');
+verif(await nb() === 1610, 'profil non appliqué : les 1610 recettes reviennent');
+await p.click('.profil-applique .lien');
+verif(await nb() === attP, 'profil réappliqué');
 
 // Installation et hors ligne
 await p.goto(serveur.url + '/');

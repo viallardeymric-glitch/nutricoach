@@ -4,6 +4,7 @@ import { normaliser } from './texte.js';
 export const FILTRES_VIDES = Object.freeze({
   q: '', categories: [], regimes: [], allergenes: [], tempsMax: null,
   difficultes: [], saisons: [], appareils: [], favoris: false,
+  exclusions: [], // aliments à éviter (mots normalisés) : voir listeExclusions
 });
 
 /** Nombre de filtres actifs (hors texte de recherche). */
@@ -44,6 +45,7 @@ export function filtrerRecettes(recettes, f, favoris = new Set()) {
     && (!f.saisons.length || f.saisons.some((s) => r.saisons.includes(s) || r.saisons.includes('toute_annee')))
     && (!f.appareils.length || f.appareils.some((a) => r.appareils.includes(a)))
     && (!f.favoris || favoris.has(r.id))
+    && !(f.exclusions || []).some((x) => (r._ingr || '').includes(x) || r._titre.includes(x))
     && jetons.every((j) => r._titre.includes(j) || r._autres.includes(j)));
   if (!jetons.length) return resultats;
   // Les recettes dont le titre contient tous les mots passent devant (ordre conservé sinon).

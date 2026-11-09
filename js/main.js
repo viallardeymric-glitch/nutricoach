@@ -60,11 +60,12 @@ function App() {
   return html`
     <div hidden=${!surListe}>
       <${Liste} index=${index} erreur=${erreur} f=${f} setF=${setF} favoris=${favoris} onFavori=${onFavori}
-        favorisSeulement=${route.ecran === 'favoris'} onOuvrir=${() => { defilSauvegarde = window.scrollY; }} />
+        favorisSeulement=${route.ecran === 'favoris'} onOuvrir=${() => { defilSauvegarde = window.scrollY; }}
+        moi=${moi} profil=${profil} onAppliquerProfil=${() => changerProfil({ ...profil, appliquer: profil.appliquer === false })} />
     </div>
     ${route.ecran === 'profil' && html`<${Profil} moi=${moi} profil=${profil} onMoi=${changerMoi} onChange=${changerProfil} />`}
     ${surFiche && html`<${Fiche} id=${route.id} index=${index} favori=${favoris.has(route.id)}
-      onFavori=${() => onFavori(route.id)} />`}
+      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} />`}
     ${!surFiche && html`<${BarreOnglets} onglets=${ONGLETS} actif=${route.ecran} />`}`;
 }
 

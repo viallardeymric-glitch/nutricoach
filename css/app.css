@@ -206,3 +206,8 @@ ul, ol { margin: 0; }
 .grosse-valeur { font-size: 1.1rem; margin-bottom: .5rem; }
 .grosse-valeur strong { font-size: 2rem; color: var(--accent); }
 .entete h1 .pastille { margin-right: .3rem; }
+
+/* Alertes de profil */
+.alerte-carte { color: var(--alerte); font-size: .85rem; font-weight: 600; }
+.profil-applique { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .92rem; }
+.profil-applique .lien { flex: none; padding: 0 .25rem; }

@@ -4,7 +4,9 @@ import { PORTIONS_MIN, PORTIONS_MAX } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { REGIMES, ALLERGENES, PROFILS, NUTRITION, REGLAGES, DIFFICULTES, COUTS, lib, libSousCategorie } from '../data/libelles.js';
 import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
-import { Pictogramme, Coeur, Bandeau } from '../ui/composants.js';
+import { conflitsProfil } from '../lib/profils.js';
+import { PERSONNES } from '../core/config.js';
+import { Pictogramme, Coeur, Bandeau, Pastille } from '../ui/composants.js';
 
 /** Avertissements : toujours affichés en haut de la fiche quand la recette en comporte. */
 function Avertissements({ liste }) {
@@ -12,6 +14,20 @@ function Avertissements({ liste }) {
   return html`<${Bandeau} type="alerte" titre="⚠ Déconseillé à">
     <ul>${liste.map((d) => html`<li><strong>${lib(PROFILS, d.profil)}</strong> : ${d.raison}</li>`)}</ul>
     <p class="note">Ces avertissements couvrent les cas courants mais ne sont pas exhaustifs.</p><//>`;
+}
+
+/** « À savoir pour Marie » : ce qui ne convient pas à CE profil (en plus des avertissements généraux). */
+function AlerteProfil({ r, moi, profil }) {
+  if (!moi || !profil || profil.appliquer === false) return null;
+  const c = conflitsProfil(r, profil);
+  if (!c.alertes.length && !c.allergenes.length && !c.regimes.length && !c.exclusions.length) return null;
+  return html`<${Bandeau} type="alerte" titre=${html`<${Pastille} qui=${moi} /> À savoir pour ${PERSONNES[moi].prenom}`}>
+    <ul>
+      ${c.alertes.map((d) => html`<li><strong>${lib(PROFILS, d.profil)}</strong> : ${d.raison}</li>`)}
+      ${c.allergenes.length > 0 && html`<li>Contient ${c.allergenes.map((a) => lib(ALLERGENES, a).toLowerCase()).join(', ')} : à éviter selon votre profil.</li>`}
+      ${c.regimes.length > 0 && html`<li>Ne respecte pas votre régime : ${c.regimes.map((g) => lib(REGIMES, g).toLowerCase()).join(', ')}.</li>`}
+      ${c.exclusions.length > 0 && html`<li>Contient un aliment que vous évitez (${c.exclusions.join(', ')}).</li>`}
+    </ul><//>`;
 }
 
 function Ingredients({ liste, facteur }) {
@@ -33,7 +49,7 @@ function Ingredients({ liste, facteur }) {
 }
 
 /** Contenu d'une fiche déjà chargée (composant pur : utilisé aussi par scripts/verifier-affichage.mjs). */
-export function FicheRecette({ r, portions, setPortions, favori, onFavori }) {
+export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil }) {
   const facteur = portions / r.portions_base;
   const t = r.temps;
   const c = r.conservation;
@@ -53,6 +69,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori }) {
         <span>Coût : ${lib(COUTS, r.cout).toLowerCase()}</span>
       </div>
       <p class="desc">${r.description}</p>
+      <${AlerteProfil} r=${r} moi=${moi} profil=${profil} />
       <${Avertissements} liste=${r.deconseille_a} />
       ${r.allergenes.length > 0 && html`<div class="etiquettes" aria-label="Allergènes">
         <strong>Contient :</strong>
@@ -102,7 +119,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori }) {
 }
 
 /** Charge la fiche complète puis l'affiche. */
-export function Fiche({ id, index, favori, onFavori }) {
+export function Fiche({ id, index, favori, onFavori, moi, profil }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [portions, setPortions] = useState(1);
@@ -135,5 +152,5 @@ export function Fiche({ id, index, favori, onFavori }) {
     </div></div>`;
   }
   return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${setPortions}
-    favori=${favori} onFavori=${onFavori} /></div>`;
+    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} /></div>`;
 }

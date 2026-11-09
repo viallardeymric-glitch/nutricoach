@@ -4,6 +4,7 @@ import { filtrerRecettes, FILTRES_VIDES } from '../js/lib/recettes.js';
 import { normaliser } from '../js/lib/texte.js';
 import { ligneIngredient, conseilsAdaptation } from '../js/lib/adaptation.js';
 import { PORTIONS_MIN, PORTIONS_MAX } from '../js/core/config.js';
+import { alertesProfil, conflitsProfil, profilVide } from '../js/lib/profils.js';
 
 export function verifier({ parFichier, toutes, ko, ALLERGENES }) {
   const index = construireIndex(parFichier).recettes.map((r) => ({
@@ -32,6 +33,28 @@ export function verifier({ parFichier, toutes, ko, ALLERGENES }) {
     if (JSON.stringify(r.allergenes) !== JSON.stringify(c.allergenes)) ko(`${r.id} : allergènes de l'index ≠ fiche`);
     if (JSON.stringify(r.regimes) !== JSON.stringify(c.regimes_compatibles)) ko(`${r.id} : régimes de l'index ≠ fiche`);
   }
+
+  // Alertes de profil : l'index (risques) et les fiches (deconseille_a) disent la même chose.
+  const profilsTypes = {
+    enceinte: { ...profilVide('M'), sexe: 'femme', age: 30, grossesse: 2 },
+    allaitante: { ...profilVide('M'), sexe: 'femme', age: 30, allaitement: true },
+    senior: { ...profilVide('E'), sexe: 'homme', age: 70 },
+    diabete: { ...profilVide('E'), sexe: 'homme', age: 40, conditions: ['diabete'] },
+  };
+  const cle = { enceinte: 'femme_enceinte', allaitante: 'allaitante', senior: 'senior', diabete: 'diabetique' };
+  let alertes = 0;
+  for (const r of index) {
+    const c = complet.get(r.id);
+    const attendu = [...new Set(c.deconseille_a.map((d) => d.profil))].sort();
+    if (JSON.stringify([...r.risques].sort()) !== JSON.stringify(attendu)) ko(`${r.id} : risques de l'index ≠ fiche`);
+    for (const [nom, p] of Object.entries(profilsTypes)) {
+      const n = alertesProfil(c, p).length;
+      alertes += n;
+      if (n !== c.deconseille_a.filter((d) => d.profil === cle[nom]).length) ko(`${r.id} : alertes « ${nom} » incohérentes`);
+    }
+    conflitsProfil(c, { ...profilsTypes.enceinte, allergenes: ['lait'], regimes: ['vegan'], exclusions: 'ail, oignons' });
+  }
+  console.log(`alertes de profil : ${alertes} alertes calculées sur 4 profils types`);
 
   // Chaque recette se retrouve par son titre exact.
   for (const r of index.slice(0, 400)) {

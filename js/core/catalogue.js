@@ -16,6 +16,7 @@ export function chargerIndex() {
           ...r,
           _titre: normaliser(r.titre),
           _autres: normaliser([...r.ingredients, ...r.tags].join(' | ')),
+          _ingr: normaliser(r.ingredients.join(' | ')),
         })),
       }))
       .catch((e) => { promesseIndex = null; throw e; });

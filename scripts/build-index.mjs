@@ -34,6 +34,7 @@ export function construireIndex(parFichier) {
         saisons: r.saisons,
         appareils: r.appareils_possibles,
         tags: r.tags,
+        risques: [...new Set(r.deconseille_a.map((d) => d.profil))],
         ingredients: [...new Set(r.ingredients.map((i) => i.aliment))],
         f,
       });

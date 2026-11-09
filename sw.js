@@ -1,6 +1,6 @@
 // Service worker NutriCoach : l'appli, l'index et les recettes consultées fonctionnent hors ligne.
 // Pour publier une mise à jour : changer VERSION ici ET les ?v=N de index.html (scripts/verifier.mjs le contrôle).
-const VERSION = '3';
+const VERSION = '4';
 const CACHE = `nutricoach-${VERSION}`;
 const DONNEES = 'nutricoach-donnees'; // recettes : conservées d'une version à l'autre
 const FICHIERS = [

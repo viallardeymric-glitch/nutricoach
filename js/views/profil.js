@@ -45,6 +45,10 @@ export function Profil({ moi, profil, onMoi, onChange }) {
     <div class="fiche-corps">
       <button type="button" class="lien" onClick=${() => onMoi(moi === 'E' ? 'M' : 'E')}>Ce n'est pas moi : passer à ${PERSONNES[moi === 'E' ? 'M' : 'E'].prenom}</button>
 
+      <div class="puces sans-marge"><${Puce} actif=${p.appliquer !== false} onClick=${() => maj({ appliquer: p.appliquer === false })}>
+        ${p.appliquer === false ? 'Profil non appliqué aux recettes' : 'Profil appliqué aux recettes'}<//></div>
+      <p class="note">Appliqué : les recettes qui ne vous conviennent pas sont masquées et les alertes s'affichent sur les fiches.</p>
+
       <h2 class="petit-titre">Moi</h2>
       <div class="puces sans-marge">
         ${[['femme', 'Femme'], ['homme', 'Homme']].map(([v, n]) => html`<${Puce} key=${v} actif=${p.sexe === v}
