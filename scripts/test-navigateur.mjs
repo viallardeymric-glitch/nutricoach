@@ -250,6 +250,7 @@ verif((await p.locator('.article', { hasText: 'Saumon fumé' }).textContent()).i
 verif(await p.locator('.article', { hasText: 'Beurre' }).locator('.alerte-article.rouge').count() === 1, 'courses : beurre signalé en rouge (allergie au lait)');
 await p.click('text=Depuis le menu de la semaine'); await p.waitForTimeout(600);
 verif(await p.locator('.article', { hasText: 'Pommes' }).count() === 1 && await p.locator('.article.coche').count() === 1, 'courses : régénérer ne perd ni les articles saisis ni les cochés');
+const memeNomAvant = (await p.locator('.article strong').allTextContents()).filter((t) => t.trim() === nom0).length;
 p.once('dialog', (d) => d.accept());
 await p.click('text=Terminer les courses');
 await p.waitForSelector('text=Courses terminées');
@@ -258,8 +259,8 @@ verif((await p.textContent('.page-courses')).includes(nom0), `stock : « ${nom0}
 await p.click('role=tab[name="🛒 Liste"]');
 verif(await p.locator('.article.coche').count() === 0, 'courses : les articles achetés quittent la liste');
 await p.click('text=Depuis le menu de la semaine'); await p.waitForTimeout(600);
-const nomsApres = await p.locator('.article strong').allTextContents();
-verif(!nomsApres.map((t) => t.trim()).includes(nom0), 'courses : le stock est déduit à la génération suivante');
+const memeNomApres = (await p.locator('.article strong').allTextContents()).filter((t) => t.trim() === nom0).length;
+verif(memeNomApres === memeNomAvant - 1, `courses : le stock est déduit à la génération suivante (${memeNomAvant} → ${memeNomApres} articles « ${nom0} »)`);
 if (captures) await p.screenshot({ path: `${captures}/courses.png`, fullPage: true });
 
 // Scan de produits (fausse API Open Food Facts)
