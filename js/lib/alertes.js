@@ -1,0 +1,32 @@
+// Alertes de profil sur un aliment (courses, journal, scan) : allergies, aliments évités, aliments déconseillés.
+import { normaliser } from './texte.js';
+import { REGLES_ALERTE, MOTS_ALLERGENES } from '../data/deconseilles.js';
+import { profilsARisque, listeExclusions } from './profils.js';
+import { ALLERGENES, lib } from '../data/libelles.js';
+
+/**
+ * Alertes pour un texte (nom d'article, ingrédients, catégories d'un produit) et un profil.
+ * Retourne [{ id, niveau: 'rouge' | 'orange', raison, source }] : les rouges d'abord. Tableau vide si profil absent.
+ */
+export function alertesTexte(texte, profil) {
+  if (!profil || profil.appliquer === false) return [];
+  const t = ` ${normaliser(texte)} `;
+  const risques = profilsARisque(profil);
+  const res = [];
+  for (const a of profil.allergenes || []) {
+    if (MOTS_ALLERGENES[a] && MOTS_ALLERGENES[a].test(t)) {
+      res.push({ id: `allergie-${a}`, niveau: 'rouge', source: 'profil', raison: `Contient probablement du ${lib(ALLERGENES, a).toLowerCase()}, que vous évitez.` });
+    }
+  }
+  for (const x of listeExclusions(profil.exclusions)) {
+    if (t.includes(x)) res.push({ id: `exclusion-${x}`, niveau: 'orange', source: 'profil', raison: `Contient « ${x} », un aliment que vous évitez.` });
+  }
+  for (const r of REGLES_ALERTE) {
+    if (!r.profils.some((p) => risques.includes(p))) continue;
+    if (r.exclure && r.exclure.test(t)) continue;
+    if (r.motif.test(t)) res.push({ id: r.id, niveau: r.niveau, source: r.source, raison: r.raison });
+  }
+  return res.sort((a, b) => (a.niveau === b.niveau ? 0 : a.niveau === 'rouge' ? -1 : 1));
+}
+
+export const pireNiveau = (alertes) => (alertes.some((a) => a.niveau === 'rouge') ? 'rouge' : alertes.length ? 'orange' : null);
