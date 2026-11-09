@@ -1,13 +1,16 @@
 // Affiche les 1 610 fiches dans Chromium (3 nombres de personnes chacune) et contrôle le contenu.
 // Usage : node scripts/verifier-affichage.mjs   (nécessite Playwright)
-import { chargerPlaywright, servir } from './_navigateur.mjs';
+import { chargerPlaywright, servir, modeLocal } from './_navigateur.mjs';
 
 const { chromium } = chargerPlaywright();
 const serveur = await servir();
 const navigateur = await chromium.launch();
-const page = await navigateur.newPage();
+const contexte = await navigateur.newContext();
+await modeLocal(contexte);
+const page = await contexte.newPage();
 const erreursPage = [];
 page.on('pageerror', (e) => erreursPage.push(e.message));
+await page.addInitScript(() => localStorage.setItem('nutricoach.moi', '"M"'));
 await page.goto(serveur.url + '/');
 await page.waitForSelector('.carte');
 

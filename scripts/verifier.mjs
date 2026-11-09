@@ -75,7 +75,8 @@ if (!existsSync(join(racine, '.nojekyll'))) ko('.nojekyll manquant');
 // 4. Aucune donnée personnelle ni clé dans le dépôt --------------------------
 section('Secrets');
 const suspect = /(AIza[0-9A-Za-z_-]{30,}|sk-[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY)/;
-for (const f of [...lister('js'), 'index.html', 'sw.js', ...lister('scripts')]) {
+// js/core/firebase-config.js : clé web Firebase, publique par conception (voir le commentaire du fichier).
+for (const f of [...lister('js'), 'index.html', 'sw.js', ...lister('scripts')].filter((x) => x !== 'js/core/firebase-config.js')) {
   if (suspect.test(readFileSync(join(racine, f), 'utf8'))) ko(`${f} : ressemble à une clé d'API`);
 }
 console.log('rien de suspect');

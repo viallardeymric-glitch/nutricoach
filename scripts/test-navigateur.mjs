@@ -1,12 +1,13 @@
 // Parcours complet dans Chromium au format téléphone. Usage : node scripts/test-navigateur.mjs [dossier-captures]
 import { readFileSync } from 'node:fs';
-import { chargerPlaywright, servir } from './_navigateur.mjs';
+import { chargerPlaywright, servir, modeLocal } from './_navigateur.mjs';
 
 const captures = process.argv[2];
 const { chromium } = chargerPlaywright();
 const serveur = await servir();
 const navigateur = await chromium.launch();
 const ctx = await navigateur.newContext({ viewport: { width: 390, height: 800 }, deviceScaleFactor: 1 });
+await modeLocal(ctx);
 const p = await ctx.newPage();
 const erreurs = [];
 p.on('pageerror', (e) => erreurs.push(e.message));
@@ -17,6 +18,9 @@ const toutes = JSON.parse(readFileSync(new URL('../data/recettes.json', import.m
 const nb = async () => parseInt((await p.textContent('.nb-resultats')).trim(), 10);
 
 await p.goto(serveur.url + '/');
+await p.waitForSelector('text=Qui utilise ce téléphone');
+verif(true, 'mode local : choix de la personne au premier lancement');
+await p.click('text=Je suis Marie');
 await p.waitForSelector('.carte');
 verif(await nb() === 1610, '1610 recettes listées');
 verif(await p.locator('.carte').count() === 40, '40 cartes par page, « Afficher plus » disponible');
@@ -39,7 +43,7 @@ await p.click('.puce:text-is("30 min")');
 const attendu = toutes.filter((r) => r.categorie === 'Plats' && r.regimes_compatibles.includes('vegan')
   && !r.allergenes.includes('fruits_a_coque') && r.temps.total_min <= 30).length;
 verif(await nb() === attendu, `Plats + végan + sans fruits à coque + ≤ 30 min : ${await nb()} = ${attendu}`);
-verif(await p.locator('.bandeau.info').count() === 1, 'bandeau « allergènes exclus » affiché');
+verif(await p.locator('.bandeau.info', { hasText: 'Allergènes exclus' }).count() === 1, 'bandeau « allergènes exclus » affiché');
 await p.click('.filtres >> text=Tout effacer');
 verif(await nb() === 1610, 'tout effacer');
 await p.click('.puce:text-is("Facile")'); await p.click('.puce:text-is("Hiver")'); await p.click('.puce:text-is("Four")');
@@ -86,8 +90,6 @@ verif(await p.locator('.liste .carte').count() === 0 && (await p.textContent('.e
 
 // Profil : choix de la personne, besoins, garde-fou grossesse, conservation locale
 await p.goto(serveur.url + '/#/profil');
-await p.waitForSelector('text=Qui utilise ce téléphone');
-await p.click('text=Je suis Marie');
 await p.waitForSelector('h1:has-text("Profil de Marie")');
 verif(!(await p.textContent('body')).includes('Chargement…'), 'plus de « Chargement… » résiduel à l\'écran');
 await p.click('.puce:text-is("Femme")');

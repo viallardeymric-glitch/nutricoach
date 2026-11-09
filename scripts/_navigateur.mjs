@@ -31,3 +31,9 @@ export async function servir() {
   await new Promise((ok) => serveur.listen(0, '127.0.0.1', ok));
   return { url: `http://127.0.0.1:${serveur.address().port}`, fermer: () => serveur.close() };
 }
+
+/** Force le mode local (sans compte ni synchronisation) pour tester l'appli hors Firebase. */
+export async function modeLocal(contexte) {
+  await contexte.route('**/js/core/firebase-config.js', (r) => r.fulfill({ contentType: 'text/javascript',
+    body: "export const FIREBASE_CONFIG = null; export const FOYER = 'foyer';" }));
+}

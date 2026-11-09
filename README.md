@@ -5,7 +5,13 @@ PWA de coach alimentaire pour deux (Eymric et Marie). Hébergée sur GitHub Page
 Cahier des charges : `cahier-des-charges.md`. Règles de travail : `CLAUDE.md`.
 
 ## État
-Phase 1 (noyau) : liste, recherche, filtres, fiche recette, nombre de personnes, favoris, hors-ligne. Les phases suivantes sont décrites dans le cahier des charges.
+- Phase 1 (noyau) : liste, recherche, filtres, fiche recette, nombre de personnes, favoris, hors-ligne.
+- Phase 2 (en cours) : profils et besoins, alertes de profil, connexion Firebase (un compte chacun), favoris et profils synchronisés, vue « Nous deux », code PIN. Pas encore : notifications à l'autre, régimes avancés, objectifs à date, profils enfant/ado/bébé, option « privé ».
+- Les phases suivantes sont décrites dans le cahier des charges.
+
+## Compte et synchro
+`js/core/firebase-config.js` contient la configuration web du projet Firebase (publique par conception). Les données sont sous `households/foyer/…` et les règles Firestore (à coller dans la console, elles contiennent les deux adresses et ne sont pas dans le dépôt) n'autorisent que les deux comptes. Mettre `FIREBASE_CONFIG` à `null` pour revenir au mode local.
+Les données de santé (profils) ne vont que dans Firestore, jamais dans le dépôt.
 
 ## Arborescence
 - `index.html`, `manifest.webmanifest`, `sw.js`, `icons/`, `css/app.css`, `vendor/`
@@ -19,7 +25,8 @@ node scripts/build-index.mjs          # régénère data/index.json (après tout
 node --test tests/*.test.mjs          # tests unitaires
 node scripts/verifier.mjs             # contrôle des 1 610 recettes, de l'index, du service worker (lancé avant chaque commit)
 node scripts/verifier-affichage.mjs   # affiche les 1 610 fiches dans Chromium (Playwright requis)
-node scripts/test-navigateur.mjs      # parcours complet au format téléphone (Playwright requis)
+node scripts/test-navigateur.mjs      # parcours complet au format téléphone, mode local (Playwright requis)
+node scripts/test-synchro.mjs         # connexion + synchro à deux téléphones avec un faux Firebase (Playwright requis)
 git config core.hooksPath scripts/hooks   # lance verifier.mjs avant chaque commit (à faire une fois par clone)
 ```
 
