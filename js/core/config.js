@@ -8,3 +8,6 @@ export const PERSONNES = {
   E: { prenom: 'Eymric', couleur: '#2f6fdb' },
   M: { prenom: 'Marie', couleur: '#e0489a' },
 };
+
+// Nombre de convives pour les courses (le couple). Les quantités des recettes sont recalculées pour ce nombre.
+export const NB_CONVIVES = 2;

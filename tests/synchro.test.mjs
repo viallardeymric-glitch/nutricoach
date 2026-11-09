@@ -64,3 +64,25 @@ test('planning ↔ documents', () => {
   assert.deepEqual(Object.keys(d).sort(), ['date', 'diner', 'modifie']);
   assert.ok(!('dejeuner' in d));
 });
+
+import { articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, docsVersStock, stockVersDoc, docsVersScans, scanVersDoc } from '../js/core/synchro.js';
+test('courses : un document par article, liste par défaut toujours présente, documents invalides ignorés', () => {
+  const a = articleVersDoc({ id: 'g-1', liste: 'semaine', nom: 'Farine', quantite: 450, unite: 'g', rayon: 'epicerie_sucree', cle: 'farine|g', par: 'M', recettes: ['REC-000001'] });
+  assert.ok(Object.values(a).every((v) => v !== undefined) && Object.keys(a).length <= 60);
+  assert.equal(idDocArticle('semaine', 'g-1'), 'semaine__g-1');
+  assert.ok(!/^__.*__$/.test(idDocArticle('semaine', 'g-1')), 'identifiant autorisé par Firestore');
+  const { listes, articles } = docsVersCourses([a, listeVersDoc({ id: 'marche', nom: 'Marché' }), { kind: 'article', liste: 'x' }, { kind: 'inconnu' }]);
+  assert.deepEqual(listes.map((l) => l.id), ['semaine', 'marche']);
+  assert.equal(articles.length, 1);
+  assert.equal(articles[0].nom, 'Farine');
+  assert.equal(docsVersCourses([{ ...a, id: 'semaine__g-1' }]).articles[0].id, 'g-1', 'l\'identifiant de document Firestore est retiré');
+  assert.equal(docsVersCourses([]).listes.length, 1);
+});
+test('stock et scans', () => {
+  const s = stockVersDoc({ cle: "pomme de terre|g", nom: 'Pommes de terre', quantite: 500, unite: 'g' });
+  assert.ok(!idDocStock(s.cle).includes('/'));
+  assert.equal(docsVersStock([s, { nom: 'x' }]).length, 1);
+  const sc = scanVersDoc({ code: '3017620422003', produit: { nom: 'Pâte', marque: 'X' }, par: 'E' });
+  const l = docsVersScans([sc, { code: 'abc', produit: { nom: 'x' } }, { code: '3017620422003', produit: {} }, { ...sc, code: '5449000000996', t: sc.t + 5 }]);
+  assert.deepEqual(l.map((x) => x.code), ['5449000000996', '3017620422003']);
+});

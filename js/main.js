@@ -7,12 +7,15 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans } from './core/synchro.js';
+import { useCollection } from './core/collection.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
 import { calculerBesoins } from './lib/besoins.js';
 import { profilComplet } from './lib/profils.js';
 import { contraintesCouple, semaineDe, nomJour, REPAS, saisonDe } from './lib/planning.js';
+import { cleArticle, ajouterAuStock } from './lib/courses.js';
+import { rayonDe } from './data/rayons.js';
 import { BarreOnglets } from './ui/composants.js';
 import { Accueil } from './views/accueil.js';
 import { Liste } from './views/liste.js';
@@ -24,10 +27,13 @@ import { Profil, ChoixPersonne } from './views/profil.js';
 import { Connexion } from './views/connexion.js';
 import { Verrou } from './views/verrou.js';
 import { NousDeux } from './views/nous-deux.js';
+import { Courses } from './views/courses.js';
+import { Scanner, Produit, Historique } from './views/scanner.js';
+import { Plus, appliquerTheme } from './views/plus.js';
 
 /**
  * Écran courant d'après l'ancre. Retourne { ecran, id?, portions?, section? } avec ecran parmi
- * accueil, recettes, favoris, semaine, coach, nous, profil, fiche, cuisine.
+ * accueil, recettes, favoris, semaine, courses, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
  */
 export function lireRoute(hash) {
   const [chemin, requete = ''] = hash.split('?');
@@ -35,12 +41,15 @@ export function lireRoute(hash) {
   if (m) return { ecran: 'fiche', id: m[1] };
   m = chemin.match(/^#\/cuisine\/(REC-\d+)$/);
   if (m) return { ecran: 'cuisine', id: m[1], portions: Math.min(20, Math.max(1, Number(new URLSearchParams(requete).get('p')) || 2)) };
+  m = chemin.match(/^#\/produit\/(\d{8,14})$/);
+  if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
   if (m) return { ecran: 'profil', section: m[1] || null };
-  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/coach': 'coach', '#/nous': 'nous' };
+  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
-const ONGLET_DE = { accueil: 'accueil', nous: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', coach: 'coach', profil: 'profil' };
+const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', scan: 'scan', produit: 'scan', scans: 'scan',
+  plus: 'plus', sources: 'plus', coach: 'plus', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
   const [hash, setHash] = useState(location.hash);
@@ -56,10 +65,12 @@ let defilSauvegarde = 0; // position de la liste, retrouvée au retour d'une fic
 const ONGLETS = [
   { id: 'accueil', href: '#/', icone: '🏠', nom: 'Accueil' },
   { id: 'recettes', href: '#/recettes', icone: '🍽️', nom: 'Recettes' },
-  { id: 'semaine', href: '#/semaine', icone: '📅', nom: 'Semaine' },
-  { id: 'coach', href: '#/coach', icone: '💬', nom: 'Coach' },
-  { id: 'profil', href: '#/profil', icone: '👤', nom: 'Profil' },
+  { id: 'semaine', href: '#/semaine', icone: '📅', nom: 'Planning' },
+  { id: 'scan', href: '#/scan', icone: '📷', nom: 'Scanner', centre: true },
+  { id: 'courses', href: '#/courses', icone: '🛒', nom: 'Courses' },
+  { id: 'plus', href: '#/plus', icone: '☰', nom: 'Plus' },
 ];
+const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
 function App() {
   const route = useRoute();
@@ -81,6 +92,7 @@ function App() {
   const masqueA = useRef(null);
 
   useEffect(() => { chargerIndex().then(setIndex).catch(() => setErreur(true)); }, []);
+  useEffect(() => { appliquerTheme(lire('theme', 'lagon')); }, []);
   const surListe = route.ecran === 'recettes' || route.ecran === 'favoris';
   useEffect(() => { window.scrollTo(0, surListe ? defilSauvegarde : 0); }, [route.ecran, route.section]);
 
@@ -148,6 +160,27 @@ function App() {
       });
     }
   };
+  // --- Courses, stock et scans : un document par article / produit, partagés dans le couple.
+  const colCourses = useCollection('shoppingLists', session.docsCourses, connecte);
+  const colStock = useCollection('pantry', session.docsStock, connecte);
+  const colScans = useCollection('scans', session.docsScans, connecte);
+  const donneesCourses = useMemo(() => docsVersCourses(colCourses.items), [colCourses.items]);
+  const stock = useMemo(() => docsVersStock(colStock.items), [colStock.items]);
+  const scans = useMemo(() => docsVersScans(colScans.items), [colScans.items]);
+  const opsCourses = {
+    ecrireArticle: (a) => colCourses.ecrire(idDocArticle(a.liste, a.id), articleVersDoc(a)),
+    supprimerArticle: (a) => colCourses.supprimer(idDocArticle(a.liste, a.id)),
+    ecrireListe: (l) => colCourses.ecrire(l.id, listeVersDoc(l)),
+    ecrireStock: (s) => colStock.ecrire(idDocStock(s.cle), stockVersDoc(s)),
+    supprimerStock: (s) => colStock.supprimer(idDocStock(s.cle)),
+  };
+  const opsScan = {
+    ecrireScan: (s) => colScans.ecrire(s.code, scanVersDoc(s)),
+    ajouterAuxCourses: (p) => opsCourses.ecrireArticle({ id: nouvelId(), liste: 'semaine', nom: p.nom, quantite: 1, unite: 'pièce', cle: cleArticle(p.nom, 'pièce'),
+      rayon: rayonDe(`${p.nom} ${(p.categories || []).join(' ').replace(/-/g, ' ')}`), par: moi, source: 'scan', coche: false, cochePar: '', recettes: [] }),
+    ajouterAuStock: (p) => { const [s] = ajouterAuStock(stock, [{ nom: p.nom, quantite: 1, unite: 'pièce', rayon: rayonDe(`${p.nom} ${(p.categories || []).join(' ').replace(/-/g, ' ')}`) }]); opsCourses.ecrireStock(s); },
+    cocher: (a) => opsCourses.ecrireArticle({ ...a, coche: true, cochePar: moi }),
+  };
   // Les menus respectent les contraintes des DEUX personnes quand le profil de l'autre est connu.
   const autre = moi === 'E' ? 'M' : 'E';
   const profilAutre = connecte && session.profils ? session.profils[autre] : null;
@@ -183,6 +216,13 @@ function App() {
       contraintes=${contraintes} cibleKcal=${cibleKcal} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
       ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} />`}
+    ${route.ecran === 'courses' && html`<${Courses} donnees=${donneesCourses} stock=${stock} ops=${opsCourses} moi=${moi}
+      profils=${{ [moi]: profil, [autre]: profilAutre }} plan=${plan} catalogue=${index} />`}
+    ${route.ecran === 'scan' && html`<${Scanner} />`}
+    ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
+      articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
+    ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
+    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
     ${route.ecran === 'coach' && html`<${Coach} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} />`}
     ${route.ecran === 'nous' && html`<${NousDeux} moi=${moi} profils=${session.profils} favorisNuage=${session.favorisNuage}

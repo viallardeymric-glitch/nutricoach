@@ -69,11 +69,11 @@ export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleK
       <//>
 
       <div class="raccourcis">
+        <a class="raccourci" href="#/scan"><span>📷</span><strong>Scanner</strong><span class="sous">Noter un produit</span></a>
+        <a class="raccourci" href="#/courses"><span>🛒</span><strong>Courses</strong><span class="sous">Liste commune et stock</span></a>
         <a class="raccourci" href="#/coach"><span>💬</span><strong>Coach IA</strong><span class="sous">Une question ? Une idée ?</span></a>
-        <a class="raccourci" href="#/favoris"><span>♥</span><strong>Mes favoris</strong><span class="sous">${nbFavoris} recette${nbFavoris > 1 ? 's' : ''}</span></a>
         ${nuage ? html`<a class="raccourci" href="#/nous"><span>👫</span><strong>Nous deux</strong><span class="sous">Votre situation à tous les deux</span></a>`
-          : html`<a class="raccourci" href="#/semaine"><span>📅</span><strong>Ma semaine</strong><span class="sous">Menus du déjeuner et du dîner</span></a>`}
-        <a class="raccourci" href="#/recettes"><span>🍽️</span><strong>Recettes</strong><span class="sous">1 610 à découvrir</span></a>
+          : html`<a class="raccourci" href="#/favoris"><span>♥</span><strong>Mes favoris</strong><span class="sous">${nbFavoris} recette${nbFavoris > 1 ? 's' : ''}</span></a>`}
       </div>
     </div>
   </div>`;

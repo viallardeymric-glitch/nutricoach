@@ -68,3 +68,48 @@ export function jourVersDoc(date, repas) {
   for (const r of REPAS_IDS) if (repas[r]) doc[r] = repas[r];
   return doc;
 }
+
+// ---------- Courses (shoppingLists), stock (pantry), scans ----------
+// Chaque article est son PROPRE document (shoppingLists/{liste}__{article}) : deux personnes qui cochent ou ajoutent en même
+// temps ne s'écrasent jamais. Les listes sont des documents de type « liste » dans la même collection.
+export const LISTE_PAR_DEFAUT = { id: 'semaine', nom: 'Courses de la semaine' };
+export const idDocArticle = (liste, id) => `${liste}__${id}`;
+
+export function articleVersDoc(a) {
+  return {
+    kind: 'article', liste: a.liste, id: a.id, nom: String(a.nom).slice(0, 80), quantite: a.quantite, unite: a.unite, rayon: a.rayon || 'autre',
+    cle: a.cle || '', coche: Boolean(a.coche), par: a.par || '', cochePar: a.cochePar || '', source: a.source || 'manuel',
+    recettes: (a.recettes || []).slice(0, 20), modifie: Date.now(),
+  };
+}
+export function listeVersDoc(l) { return { kind: 'liste', id: l.id, nom: String(l.nom).slice(0, 60), archivee: Boolean(l.archivee), cree: l.cree || Date.now(), par: l.par || '' }; }
+
+/** Documents « shoppingLists » → { listes, articles } ; la liste par défaut existe toujours. */
+export function docsVersCourses(docs) {
+  const listes = [];
+  const articles = [];
+  for (const d of docs) {
+    if (d.kind === 'liste' && d.id) listes.push({ id: d.id, nom: d.nom || d.id, archivee: Boolean(d.archivee), cree: d.cree || 0, par: d.par || '' });
+    else if (d.kind === 'article' && d.liste && d.id && d.nom && typeof d.quantite === 'number') {
+      const id = String(d.id).startsWith(d.liste + '__') ? String(d.id).slice(d.liste.length + 2) : d.id;
+      articles.push({ id, liste: d.liste, nom: d.nom, quantite: d.quantite, unite: d.unite || 'pièce', rayon: d.rayon || 'autre', cle: d.cle || '',
+        coche: Boolean(d.coche), par: d.par || '', cochePar: d.cochePar || '', source: d.source || 'manuel', recettes: d.recettes || [], modifie: d.modifie || 0 });
+    }
+  }
+  if (!listes.some((l) => l.id === LISTE_PAR_DEFAUT.id)) listes.unshift({ ...LISTE_PAR_DEFAUT, archivee: false, cree: 0, par: '' });
+  return { listes, articles };
+}
+
+export const idDocStock = (cle) => encodeURIComponent(cle).slice(0, 150);
+export function stockVersDoc(s) { return { cle: s.cle, nom: String(s.nom).slice(0, 80), quantite: s.quantite, unite: s.unite, rayon: s.rayon || 'autre', maj: Date.now() }; }
+export const docsVersStock = (docs) => docs.filter((d) => d.cle && typeof d.quantite === 'number').map((d) => ({ cle: d.cle, nom: d.nom || d.cle, quantite: d.quantite, unite: d.unite, rayon: d.rayon || 'autre' }));
+
+export function scanVersDoc(s) {
+  return { code: s.code, produit: s.produit, t: s.t || Date.now(), par: s.par || '', favoriPar: s.favoriPar || [], eviterPar: s.eviterPar || [], saisie: Boolean(s.saisie) };
+}
+/** Documents « scans » → [{ code, produit, t, par, favoriPar, eviterPar }], les plus récents d'abord. */
+export function docsVersScans(docs) {
+  return docs.filter((d) => /^\d{8,14}$/.test(d.code || '') && d.produit && d.produit.nom)
+    .map((d) => ({ code: d.code, produit: d.produit, t: d.t || 0, par: d.par || '', favoriPar: d.favoriPar || [], eviterPar: d.eviterPar || [], saisie: Boolean(d.saisie) }))
+    .sort((a, b) => b.t - a.t);
+}

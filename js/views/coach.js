@@ -55,7 +55,7 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison }) {
   };
 
   if (!reg.cle) {
-    return html`<div><${Entete} titre="Coach IA" sous="Vos questions de cuisine et de nutrition" />
+    return html`<div><${Entete} titre="Coach IA" sous="Vos questions de cuisine et de nutrition" retour=${{ href: '#/plus', nom: 'Plus' }} />
       <div class="contenu">
         <${Bandeau} type="info" titre="Activez votre coach"><p>Le coach utilise Gemini. Il faut une clé personnelle, gratuite et sans carte bancaire.</p><//>
         <${ReglagesCoach} onChange=${setReg} />
@@ -63,7 +63,7 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison }) {
       </div></div>`;
   }
   return html`<div class="coach-page">
-    <${Entete} titre="Coach IA" sous=${reg.partagerProfil ? 'Réponses personnalisées avec votre profil' : 'Réponses générales (profil non partagé)'} />
+    <${Entete} titre="Coach IA" sous=${reg.partagerProfil ? 'Réponses personnalisées avec votre profil' : 'Réponses générales (profil non partagé)'} retour=${{ href: '#/plus', nom: 'Plus' }} />
     <div class="coach-fil">
       ${messages.length === 0 && html`<div class="coach-accueil"><p>Bonjour ${prenom} ! Que puis-je faire pour vous ?</p>
         <div class="puces sans-marge">${SUGGESTIONS.map((s) => html`<button type="button" class="puce" key=${s} onClick=${() => envoyer(s)}>${s}</button>`)}</div></div>`}

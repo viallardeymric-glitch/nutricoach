@@ -163,7 +163,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section }) {
 
   const reglageCoach = chargerReglagesCoach();
   return html`<div>
-    <${Entete} grand=${true} titre=${html`<${Pastille} qui=${moi} /> ${PERSONNES[moi].prenom}`}
+    <${Entete} grand=${true} retour=${{ href: '#/plus', nom: 'Plus' }} titre=${html`<${Pastille} qui=${moi} /> ${PERSONNES[moi].prenom}`}
       sous=${b ? `${OBJECTIFS[b.objectif]} · ${b.cible} kcal par jour` : 'Complétez votre profil pour calculer vos besoins'} />
     <div class="contenu">
       <button type="button" class=${'interrupteur' + (p.appliquer !== false ? ' actif' : '')} aria-pressed=${p.appliquer !== false}

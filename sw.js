@@ -1,21 +1,21 @@
 // Service worker NutriCoach : l'appli, l'index et les recettes consultées fonctionnent hors ligne.
 // Pour publier une mise à jour : changer VERSION ici ET les ?v=N de index.html (scripts/verifier.mjs le contrôle).
-const VERSION = '6';
+const VERSION = '7';
 const CACHE = `nutricoach-${VERSION}`;
 const DONNEES = 'nutricoach-donnees'; // recettes : conservées d'une version à l'autre
 const FICHIERS = [
   './', 'index.html', 'manifest.webmanifest', '.nojekyll',
   'css/app.css',
   'js/main.js',
-  'js/core/catalogue.js', 'js/core/coach.js', 'js/core/config.js', 'js/core/favoris.js', 'js/core/firebase-config.js', 'js/core/nuage.js', 'js/core/pin.js',
+  'js/core/camera.js', 'js/core/catalogue.js', 'js/core/coach.js', 'js/core/collection.js', 'js/core/config.js', 'js/core/favoris.js', 'js/core/firebase-config.js', 'js/core/nuage.js', 'js/core/off.js', 'js/core/pin.js',
   'js/core/profil.js', 'js/core/session.js', 'js/core/stockage.js', 'js/core/synchro.js',
-  'js/data/libelles.js', 'js/data/pictogrammes.js',
-  'js/lib/adaptation.js', 'js/lib/besoins.js', 'js/lib/cuisine.js', 'js/lib/planning.js', 'js/lib/profils.js', 'js/lib/recettes.js',
+  'js/data/additifs.js', 'js/data/deconseilles.js', 'js/data/libelles.js', 'js/data/pictogrammes.js', 'js/data/rayons.js', 'js/data/sources.js',
+  'js/lib/adaptation.js', 'js/lib/alertes.js', 'js/lib/besoins.js', 'js/lib/courses.js', 'js/lib/cuisine.js', 'js/lib/planning.js', 'js/lib/profils.js', 'js/lib/recettes.js', 'js/lib/scan.js',
   'js/lib/texte-riche.js', 'js/lib/texte.js',
   'js/ui/composants.js',
-  'js/views/accueil.js', 'js/views/coach.js', 'js/views/connexion.js', 'js/views/cuisine.js', 'js/views/fiche.js', 'js/views/liste.js',
-  'js/views/nous-deux.js', 'js/views/profil.js', 'js/views/semaine.js', 'js/views/verrou.js',
-  'vendor/preact-htm.js', 'vendor/firebase.js', 'vendor/LISEZMOI.txt',
+  'js/views/accueil.js', 'js/views/coach.js', 'js/views/connexion.js', 'js/views/courses.js', 'js/views/cuisine.js', 'js/views/fiche.js', 'js/views/liste.js',
+  'js/views/nous-deux.js', 'js/views/plus.js', 'js/views/profil.js', 'js/views/scanner.js', 'js/views/semaine.js', 'js/views/verrou.js',
+  'vendor/preact-htm.js', 'vendor/firebase.js', 'vendor/zxing.js', 'vendor/LISEZMOI.txt',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];
