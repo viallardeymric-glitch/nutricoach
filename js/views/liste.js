@@ -30,7 +30,7 @@ function Filtres({ f, setF, regimesDispo, effacer }) {
   </section>`;
 }
 
-function Carte({ r, favori, onFavori, onOuvrir, risques }) {
+function Carte({ r, favori, onFavori, onOuvrir, risques, par }) {
   return html`<li class="carte">
     <a class="carte-lien" href=${'#/recette/' + r.id} onClick=${onOuvrir}>
       <${Pictogramme} recette=${r} />
@@ -41,6 +41,7 @@ function Carte({ r, favori, onFavori, onOuvrir, risques }) {
         ${risques.length > 0 && html`<span class="alerte-carte">⚠ Déconseillé : ${risques.map((x) => lib(PROFILS, x).toLowerCase()).join(', ')}</span>`}
       </span>
     </a>
+    ${par.length > 0 && html`<span class="par">${par.map((q) => html`<${Pastille} key=${q} qui=${q} />`)}</span>`}
     <${Coeur} actif=${favori} onClick=${onFavori} />
   </li>`;
 }
@@ -55,7 +56,7 @@ function resume(profil, fp) {
   return morceaux.length ? ' (' + morceaux.join(', ') + ')' : '';
 }
 
-export function Liste({ index, erreur, f, setF, favoris, onFavori, favorisSeulement, onOuvrir, moi, profil, onAppliquerProfil }) {
+export function Liste({ index, erreur, f, setF, favoris, onFavori, favorisSeulement, onOuvrir, moi, profil, onAppliquerProfil, favorisTous, favorisPar }) {
   const regimesDispo = useMemo(() => {
     if (!index) return [];
     const presents = new Set(index.recettes.flatMap((r) => r.regimes));
@@ -70,7 +71,7 @@ export function Liste({ index, erreur, f, setF, favoris, onFavori, favorisSeulem
     regimes: [...new Set([...f.regimes, ...fp.regimes])],
     allergenes: [...new Set([...f.allergenes, ...fp.allergenes])],
     exclusions: fp.exclusions,
-  }, favoris) : []), [index, f, favorisSeulement, favoris, fp]);
+  }, favorisTous) : []), [index, f, favorisSeulement, favorisTous, fp]);
   const nbFiltres = nombreFiltres({ ...f, favoris: false });
   const effacer = () => setF((s) => ({ ...FILTRES_VIDES, ouvert: s.ouvert, nb: TAILLE_PAGE }));
 
@@ -111,7 +112,7 @@ export function Liste({ index, erreur, f, setF, favoris, onFavori, favorisSeulem
         <ul class="liste">
           ${resultats.slice(0, f.nb).map((r) => html`<${Carte} key=${r.id} r=${r}
             favori=${favoris.has(r.id)} onFavori=${() => onFavori(r.id)} onOuvrir=${onOuvrir}
-            risques=${r.risques.filter((x) => risquesProfil.includes(x))} />`)}
+            risques=${r.risques.filter((x) => risquesProfil.includes(x))} par=${favorisPar.get(r.id) || []} />`)}
         </ul>
         ${resultats.length > f.nb && html`<button type="button" class="bouton secondaire centre"
           onClick=${() => setF((s) => ({ ...s, nb: s.nb + TAILLE_PAGE }))}>Afficher plus</button>`}`}`;

@@ -104,6 +104,7 @@ ul, ol { margin: 0; }
 .bouton.secondaire { background: var(--carte); color: var(--accent); border: 1px solid var(--accent); }
 .bouton.centre { margin: 1rem auto 2rem; }
 .bouton:active { filter: brightness(.9); }
+.bouton:disabled { opacity: .5; }
 
 /* Liste */
 .nb-resultats { margin: .6rem 1rem .2rem; color: var(--gris); font-size: .9rem; }
@@ -211,3 +212,14 @@ ul, ol { margin: 0; }
 .alerte-carte { color: var(--alerte); font-size: .85rem; font-weight: 600; }
 .profil-applique { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .92rem; }
 .profil-applique .lien { flex: none; padding: 0 .25rem; }
+
+/* Connexion, verrou, Nous deux */
+.connexion { max-width: 420px; margin: 0 auto; padding: calc(2rem + env(safe-area-inset-top)) 1.25rem 2rem; }
+.connexion h1 { font-size: 1.8rem; color: var(--accent); margin-bottom: .5rem; }
+.connexion .bouton.grand { width: 100%; margin: 1rem 0 .5rem; }
+.connexion .lien { display: block; margin: 0 auto; }
+.pin { width: 100%; height: 64px; font-size: 2rem; letter-spacing: .6rem; text-align: center; border: 1px solid var(--bord); border-radius: var(--rayon-bouton); background: var(--carte); color: var(--texte); }
+.par { display: flex; gap: .15rem; margin-right: .1rem; font-size: .8rem; }
+.carte-nous { background: var(--carte); border: 1px solid var(--bord); border-radius: var(--rayon); padding: .9rem 1rem; margin: .9rem 0; }
+.carte-nous h2 { font-size: 1.1rem; margin-bottom: .35rem; }
+.carte-nous p { margin: .25rem 0; }

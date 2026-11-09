@@ -71,6 +71,6 @@ export function profilVide(id) {
   return {
     id, sexe: '', age: '', poids_kg: '', taille_cm: '', activite: 'legere', objectif: 'equilibre',
     grossesse: 0, allaitement: false, sportif: false, convalescence: false,
-    conditions: [], regimes: [], allergenes: [], exclusions: '', appliquer: true,
+    conditions: [], regimes: [], allergenes: [], exclusions: '', appliquer: true, modifie: 0,
   };
 }
