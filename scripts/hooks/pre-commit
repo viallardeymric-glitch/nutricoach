@@ -1,3 +1,5 @@
 #!/bin/sh
 # Lancé avant chaque commit. Activation : git config core.hooksPath scripts/hooks
-exec node "$(git rev-parse --show-toplevel)/scripts/verifier.mjs"
+racine="$(git rev-parse --show-toplevel)"
+node --test "$racine"/tests/*.test.mjs >/dev/null 2>&1 || { echo "✗ Les tests unitaires échouent : node --test tests/*.test.mjs"; exit 1; }
+exec node "$racine/scripts/verifier.mjs"

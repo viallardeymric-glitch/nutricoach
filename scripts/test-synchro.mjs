@@ -75,7 +75,7 @@ async function seConnecter(p, email, mdp, qui) {
   await p.fill('input[type=email]', email); await p.fill('input[type=password]', mdp);
   await p.click('button[type=submit]');
   if (qui) { await p.waitForSelector('text=Qui utilise ce téléphone'); await p.click(`text=Je suis ${qui}`); }
-  await p.waitForSelector('.carte');
+  await p.waitForSelector('.entete.grand');
 }
 const nb = async (p) => parseInt((await p.textContent('.nb-resultats')).trim(), 10);
 
@@ -94,11 +94,12 @@ await eymric.fill('input[type=password]', 'secret-E');
 await eymric.click('button[type=submit]');
 await eymric.waitForSelector('text=Qui utilise ce téléphone');
 await eymric.click('text=Je suis Eymric');
-await eymric.waitForSelector('.carte');
+await eymric.waitForSelector('.entete.grand');
 verif(true, 'bon mot de passe : choix « Je suis Eymric » puis liste');
 await seConnecter(marie, 'marie@test.fr', 'secret-M', 'Marie');
 
 // 2. Favori d'Eymric -> visible chez Marie en direct, avec la pastille E
+await eymric.goto(serveur.url + '/#/recettes'); await eymric.waitForSelector('.carte');
 await eymric.fill('input[type=search]', 'poulet roti');
 await eymric.click('.carte .coeur >> nth=0');
 const idFav = [...base.keys()].find((k) => k.startsWith('households/foyer/favorites/'));
@@ -121,21 +122,45 @@ await eymric.waitForFunction(() => document.querySelectorAll('.liste .carte .pas
   () => verif(true, 'Marie retire son favori : il disparaît chez Eymric, le sien reste'), () => verif(false, 'retrait synchronisé'));
 
 // 4. Profil de Marie -> « Nous deux » chez Eymric
-await marie.goto(serveur.url + '/#/profil');
+await marie.goto(serveur.url + '/#/profil/infos'); await marie.waitForSelector('input[type=date]');
 await marie.click('.puce:text-is("Femme")');
+await marie.fill('input[type=date]', '1991-05-14');
 const champs = marie.locator('.grille input');
-await champs.nth(0).fill('34'); await champs.nth(1).fill('62'); await champs.nth(2).fill('168');
+await champs.nth(0).fill('62'); await champs.nth(1).fill('168');
+await marie.goto(serveur.url + '/#/profil/situation');
 await marie.click('.puce:text-is("2e trimestre")');
+await marie.goto(serveur.url + '/#/profil/regimes'); await marie.waitForSelector('.puce.exclu');
+await marie.click('.puce.exclu:text-is("Lait")');
 await marie.waitForTimeout(1200);
 const docMarie = base.get('households/foyer/profiles/M');
-verif(docMarie && docMarie.grossesse === 2 && docMarie.age === 34 && !('intrus' in docMarie), 'profil de Marie écrit à households/foyer/profiles/M');
+verif(docMarie && docMarie.grossesse === 2 && docMarie.naissance === '1991-05-14' && docMarie.allergenes.includes('lait') && !('intrus' in docMarie), 'profil de Marie écrit à households/foyer/profiles/M');
 verif(Object.values(docMarie || {}).every((v) => v !== undefined) && Object.keys(docMarie).length <= 60, 'document profil valide pour les règles (≤ 60 champs)');
 await eymric.goto(serveur.url + '/#/nous');
 await eymric.waitForSelector('.carte-nous >> text=Enceinte', { timeout: 2000 }).then(
   () => verif(true, '« Nous deux » : Eymric voit la situation de Marie (enceinte) en direct'),
   () => verif(false, '« Nous deux » : profil de Marie'));
-verif((await eymric.textContent('.fiche-corps')).includes('kcal par jour'), '« Nous deux » : besoins de Marie affichés');
+verif((await eymric.textContent('.contenu')).includes('kcal par jour'), '« Nous deux » : besoins de Marie affichés');
 if (captures) await eymric.screenshot({ path: `${captures}/nous.png` });
+
+// 4 bis. Menu de la semaine partagé : généré chez Eymric, il tient compte du profil de Marie (sans lait, enceinte)
+await eymric.goto(serveur.url + '/#/semaine'); await eymric.waitForSelector('.actions-semaine');
+await eymric.waitForSelector('text=sans lait', { timeout: 2000 }).then(
+  () => verif(true, 'semaine : les contraintes de Marie (sans lait) sont prises en compte chez Eymric'),
+  () => verif(false, 'semaine : contraintes de Marie'));
+await eymric.click('text=Générer ma semaine'); await eymric.waitForSelector('.jour .mini');
+const docsPlan = [...base.keys()].filter((k) => k.startsWith('households/foyer/planning/'));
+verif(docsPlan.length === 7 && docsPlan.every((k) => /planning\/\d{4}-\d{2}-\d{2}$/.test(k)), `menu écrit dans households/foyer/planning/AAAA-MM-JJ (${docsPlan.length} jours)`);
+const complet = new Map(JSON.parse((await import('node:fs')).readFileSync(new URL('../data/recettes.json', import.meta.url), 'utf8')).map((r) => [r.id, r]));
+const idsPlan = docsPlan.flatMap((k) => [base.get(k).dejeuner, base.get(k).diner]).filter(Boolean);
+verif(idsPlan.length === 14 && idsPlan.every((id) => !complet.get(id).allergenes.includes('lait') && !complet.get(id).deconseille_a.some((d) => d.profil === 'femme_enceinte')),
+  'SÉCURITÉ : aucun repas avec lait ni déconseillé à une femme enceinte (profil de Marie)');
+await marie.goto(serveur.url + '/#/semaine');
+await marie.waitForSelector('.jour .mini', { timeout: 2000 }).then(
+  () => verif(true, 'Marie voit le menu d\'Eymric en moins de 2 s'), () => verif(false, 'Marie voit le menu'));
+verif(await marie.locator('.jour .mini').count() === 14, 'Marie : les 14 repas du même menu');
+await marie.click('.jour .repas-jour >> nth=0 >> [aria-label^="Retirer"]');
+await eymric.waitForFunction(() => document.querySelectorAll('.jour .mini').length === 13, null, { timeout: 2000 }).then(
+  () => verif(true, 'Marie retire un repas : disparu chez Eymric'), () => verif(false, 'retrait de repas synchronisé'));
 
 // 5. Favoris déjà gardés en local avant la connexion : ils rejoignent le nuage
 const tardif = await telephone('Tardif');
@@ -146,7 +171,7 @@ await tardif.waitForTimeout(500);
 verif(base.has('households/foyer/favorites/REC-000077_E'), 'favori local migré vers le nuage à la première connexion');
 
 // 6. PIN
-await marie.goto(serveur.url + '/#/profil');
+await marie.goto(serveur.url + '/#/profil/securite');
 await marie.click('text=Définir un code');
 const codes = marie.locator('input[inputmode=numeric]');
 await codes.nth(0).fill('4821'); await codes.nth(1).fill('4821');
@@ -161,12 +186,12 @@ await marie.fill('input.pin', '1111'); await marie.click('button[type=submit]');
 await marie.waitForSelector('text=Code incorrect');
 verif(true, 'mauvais code refusé');
 await marie.fill('input.pin', '4821'); await marie.click('button[type=submit]');
-await marie.waitForSelector('h1:has-text("Profil de Marie")');
+await marie.waitForSelector('h1:has-text("Code PIN")');
 verif(true, 'bon code : appli déverrouillée');
 if (captures) await marie.screenshot({ path: `${captures}/profil-pin.png` });
 
 // 7. Déconnexion
-await marie.goto(serveur.url + '/#/profil');
+await marie.goto(serveur.url + '/#/profil/compte');
 await marie.click('text=Se déconnecter');
 await marie.waitForSelector('form.connexion');
 verif(true, 'déconnexion : retour à l\'écran de connexion');

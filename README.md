@@ -6,7 +6,8 @@ Cahier des charges : `cahier-des-charges.md`. Règles de travail : `CLAUDE.md`.
 
 ## État
 - Phase 1 (noyau) : liste, recherche, filtres, fiche recette, nombre de personnes, favoris, hors-ligne.
-- Phase 2 (en cours) : profils et besoins, alertes de profil, connexion Firebase (un compte chacun), favoris et profils synchronisés, vue « Nous deux », code PIN. Pas encore : notifications à l'autre, régimes avancés, objectifs à date, profils enfant/ado/bébé, option « privé ».
+- Phase 2 (en cours) : profils (date de naissance) et besoins, alertes de profil, connexion Firebase (un compte chacun), favoris, profils et menus synchronisés, vue « Nous deux », code PIN.
+- Début des phases 3, 5 et 8 : accueil avec « ce soir » et idées de saison, menus de la semaine pour le couple (sans courses ni stock pour l'instant), coach IA (Gemini, clé personnelle), mode cuisine pas à pas avec minuteur. Pas encore : notifications à l'autre, régimes avancés, objectifs à date, profils enfant/ado/bébé, option « privé ».
 - Les phases suivantes sont décrites dans le cahier des charges.
 
 ## Compte et synchro
@@ -22,7 +23,7 @@ Les données de santé (profils) ne vont que dans Firestore, jamais dans le dép
 ## Commandes (Node 20+)
 ```bash
 node scripts/build-index.mjs          # régénère data/index.json (après tout changement du catalogue)
-node --test tests/*.test.mjs          # tests unitaires
+node --test tests/*.test.mjs          # tests unitaires (lancés aussi avant chaque commit)
 node scripts/verifier.mjs             # contrôle des 1 610 recettes, de l'index, du service worker (lancé avant chaque commit)
 node scripts/verifier-affichage.mjs   # affiche les 1 610 fiches dans Chromium (Playwright requis)
 node scripts/test-navigateur.mjs      # parcours complet au format téléphone, mode local (Playwright requis)
