@@ -26,7 +26,7 @@ export function favorisParRecette(favoris) {
   return m;
 }
 
-const CHAMPS_PROFIL = ['sexe', 'age', 'poids_kg', 'taille_cm', 'activite', 'objectif', 'grossesse', 'allaitement',
+const CHAMPS_PROFIL = ['sexe', 'naissance', 'age', 'poids_kg', 'taille_cm', 'activite', 'objectif', 'grossesse', 'allaitement',
   'sportif', 'convalescence', 'conditions', 'regimes', 'allergenes', 'exclusions', 'appliquer', 'modifie'];
 
 /** Profil → document Firestore : seuls les champs connus, jamais de valeur undefined. */
@@ -45,4 +45,26 @@ export function choisirVersion(local, nuage) {
   if (n > l) return 'nuage';
   if (l > n) return 'local';
   return 'identique';
+}
+
+// ---------- Planning : un document par jour (planning/AAAA-MM-JJ) ----------
+const REPAS_IDS = ['dejeuner', 'diner'];
+
+/** Documents « planning » → { 'AAAA-MM-JJ': { dejeuner, diner } } (jours et recettes invalides ignorés). */
+export function docsVersPlan(docs) {
+  const plan = {};
+  for (const d of docs) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.id)) continue;
+    const jour = {};
+    for (const repas of REPAS_IDS) if (/^REC-\d+$/.test(d[repas])) jour[repas] = d[repas];
+    if (Object.keys(jour).length) plan[d.id] = jour;
+  }
+  return plan;
+}
+
+/** Repas d'un jour → document Firestore (champs présents seulement). */
+export function jourVersDoc(date, repas) {
+  const doc = { date, modifie: Date.now() };
+  for (const r of REPAS_IDS) if (repas[r]) doc[r] = repas[r];
+  return doc;
 }

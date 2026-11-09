@@ -51,3 +51,16 @@ test('reverrouillage après 1 minute en arrière-plan', () => {
   assert.equal(doitVerrouiller(1000, 1000 + 60_000), true);
   assert.equal(doitVerrouiller(null, 99999), false);
 });
+
+import { docsVersPlan, jourVersDoc } from '../js/core/synchro.js';
+test('planning ↔ documents', () => {
+  const plan = docsVersPlan([
+    { id: '2026-11-09', dejeuner: 'REC-000010', diner: 'REC-000020' },
+    { id: '2026-11-10', diner: 'REC-000030', dejeuner: 'n\'importe quoi' },
+    { id: 'pas-une-date', diner: 'REC-000040' }, { id: '2026-11-11' },
+  ]);
+  assert.deepEqual(plan, { '2026-11-09': { dejeuner: 'REC-000010', diner: 'REC-000020' }, '2026-11-10': { diner: 'REC-000030' } });
+  const d = jourVersDoc('2026-11-09', { diner: 'REC-000020' });
+  assert.deepEqual(Object.keys(d).sort(), ['date', 'diner', 'modifie']);
+  assert.ok(!('dejeuner' in d));
+});
