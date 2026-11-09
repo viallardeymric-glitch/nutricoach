@@ -6,3 +6,6 @@ firebase.js : Firebase JS SDK 11.10.0 (modules app, auth, firestore), empaqueté
 Exports : initializeApp ; getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail ;
 initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, setDoc, deleteDoc, onSnapshot.
 Licence Apache-2.0. Source : https://www.npmjs.com/package/firebase/v/11.10.0
+
+zxing.js : @zxing/browser 0.2.1 + @zxing/library 0.23.0 (lecture de codes-barres, pour Safari/iPhone qui n'a pas BarcodeDetector),
+empaqueté avec esbuild. Exports : BrowserMultiFormatReader, DecodeHintType, BarcodeFormat. Licence Apache-2.0.
