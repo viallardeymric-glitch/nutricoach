@@ -192,3 +192,17 @@ ul, ol { margin: 0; }
 }
 .onglets a span { font-size: 1.35rem; line-height: 1; }
 .onglets a.actif { color: var(--accent); font-weight: 600; }
+
+/* Profil */
+.pastille { display: inline-flex; align-items: center; justify-content: center; width: 1.7em; height: 1.7em; border-radius: 50%; color: #fff; font-weight: 700; font-size: .85em; vertical-align: middle; }
+.pastille.E { background: #2f6fdb; }
+.pastille.M { background: #e0489a; }
+.bouton.grand { width: 100%; height: 64px; margin: .75rem 0; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: .6rem; }
+.sans-marge { padding: 0; flex-wrap: wrap; margin-bottom: .5rem; }
+.grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin: .5rem 0; }
+.champ { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; color: var(--gris); margin: .5rem 0; }
+.champ input { height: 48px; padding: 0 .75rem; font-size: 16px; border: 1px solid var(--bord); border-radius: var(--rayon-bouton); background: var(--carte); color: var(--texte); min-width: 0; }
+.erreur-champ { color: var(--alerte); }
+.grosse-valeur { font-size: 1.1rem; margin-bottom: .5rem; }
+.grosse-valeur strong { font-size: 2rem; color: var(--accent); }
+.entete h1 .pastille { margin-right: .3rem; }

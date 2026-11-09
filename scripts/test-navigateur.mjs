@@ -84,6 +84,26 @@ verif(await nb() === 1, 'favori conservé après rechargement');
 await p.click('.liste .coeur');
 verif(await p.locator('.liste .carte').count() === 0 && (await p.textContent('.etat')).includes('Aucun favori'), 'favori retiré : état vide soigné');
 
+// Profil : choix de la personne, besoins, garde-fou grossesse, conservation locale
+await p.goto(serveur.url + '/#/profil');
+await p.waitForSelector('text=Qui utilise ce téléphone');
+await p.click('text=Je suis Marie');
+await p.waitForSelector('text=Profil de Marie');
+verif(!(await p.textContent('body')).includes('Chargement…'), 'plus de « Chargement… » résiduel à l\'écran');
+await p.click('.puce:text-is("Femme")');
+const champs = p.locator('.grille input');
+await champs.nth(0).fill('34'); await champs.nth(1).fill('62'); await champs.nth(2).fill('168');
+await p.waitForSelector('.besoins');
+const kcal = parseInt(await p.textContent('.grosse-valeur strong'), 10);
+verif(kcal > 1500 && kcal < 2400, `besoins calculés : ${kcal} kcal`);
+await p.click('.puce:text-is("Perdre du poids")');
+await p.click('.puce:text-is("2e trimestre")');
+verif((await p.textContent('.besoins')).includes('aucun régime amincissant'), 'grossesse + perte de poids : objectif ramené au maintien');
+verif((await p.textContent('.besoins')).includes('sage-femme'), 'mention « à savoir » grossesse');
+if (captures) await p.screenshot({ path: `${captures}/profil.png`, fullPage: true });
+await p.reload(); await p.waitForSelector('.besoins');
+verif(await p.locator('.grille input').nth(1).inputValue() === '62' && await p.locator('.puce[aria-pressed="true"]:text-is("2e trimestre")').count() === 1, 'profil conservé après rechargement');
+
 // Installation et hors ligne
 await p.goto(serveur.url + '/');
 await p.waitForSelector('.carte');

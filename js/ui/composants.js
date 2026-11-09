@@ -28,3 +28,8 @@ export function BarreOnglets({ onglets, actif }) {
       aria-current=${o.id === actif ? 'page' : undefined}><span aria-hidden="true">${o.icone}</span>${o.nom}</a>`)}
   </nav>`;
 }
+
+/** Pastille « E » (bleu) ou « M » (rose) : qui a fait quoi. */
+export function Pastille({ qui }) {
+  return html`<span class=${'pastille ' + qui} aria-label=${qui === 'E' ? 'Eymric' : 'Marie'}>${qui}</span>`;
+}
