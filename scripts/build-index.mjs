@@ -30,6 +30,7 @@ export function construireIndex(parFichier) {
         regimes: r.regimes_compatibles,
         allergenes: r.allergenes,
         temps: r.temps.total_min,
+        kcal: Math.round(r.nutrition_par_portion.calories_kcal),
         difficulte: r.difficulte,
         saisons: r.saisons,
         appareils: r.appareils_possibles,

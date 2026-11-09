@@ -7,6 +7,16 @@ export const FILTRES_VIDES = Object.freeze({
   exclusions: [], // aliments à éviter (mots normalisés) : voir listeExclusions
 });
 
+/** Ajoute à chaque entrée de l'index les textes normalisés utilisés par la recherche et les exclusions. */
+export function preparerRecettes(liste) {
+  return liste.map((r) => ({
+    ...r,
+    _titre: normaliser(r.titre),
+    _autres: normaliser([...r.ingredients, ...r.tags].join(' | ')),
+    _ingr: normaliser(r.ingredients.join(' | ')),
+  }));
+}
+
 /** Nombre de filtres actifs (hors texte de recherche). */
 export function nombreFiltres(f) {
   return f.categories.length + f.regimes.length + f.allergenes.length + (f.tempsMax ? 1 : 0)

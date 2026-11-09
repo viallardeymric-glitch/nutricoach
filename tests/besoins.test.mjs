@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculerBesoins } from '../js/lib/besoins.js';
-import { validerProfil, profilsARisque, profilVide, profilComplet } from '../js/lib/profils.js';
+import { validerProfil, profilsARisque, profilVide, profilComplet, ageDepuis } from '../js/lib/profils.js';
 
 const femme = { sexe: 'femme', age: 35, poids_kg: 60, taille_cm: 165, activite: 'legere', objectif: 'maintien' };
 const homme = { sexe: 'homme', age: 40, poids_kg: 80, taille_cm: 180, activite: 'moderee', objectif: 'maintien' };
@@ -53,10 +53,13 @@ test('macros cohérentes : calories retrouvées, glucides jamais en dessous de 1
 });
 
 test('validation du profil', () => {
-  assert.deepEqual(Object.keys(validerProfil(profilVide('E'))).sort(), ['age', 'poids_kg', 'sexe', 'taille_cm']);
+  assert.deepEqual(Object.keys(validerProfil(profilVide('E'))).sort(), ['naissance', 'poids_kg', 'sexe', 'taille_cm']);
   assert.ok(profilComplet({ ...profilVide('E'), ...femme }));
   assert.ok(validerProfil({ ...femme, poids_kg: 10 }).poids_kg);
-  assert.ok(validerProfil({ ...femme, age: 12 }).age);
+  assert.ok(validerProfil({ ...femme, age: 12 }).naissance, 'mineur refusé');
+  assert.ok(validerProfil({ ...femme, naissance: '2015-03-02' }).naissance);
+  assert.ok(validerProfil({ ...femme, naissance: '1990-02-31' }).naissance, 'date impossible');
+  assert.deepEqual(validerProfil({ ...femme, age: undefined, naissance: '1990-05-14' }), {});
   assert.ok(validerProfil({ ...femme, taille_cm: '' }).taille_cm);
 });
 
@@ -67,4 +70,14 @@ test('profils à risque (alertes de la fiche recette)', () => {
   assert.ok(profilsARisque({ ...homme, age: 70 }).includes('senior'));
   assert.deepEqual(profilsARisque({ ...homme, conditions: ['diabete', 'hypertension'] }).sort(), ['diabetique', 'hypertendu']);
   assert.ok(profilsARisque({ ...homme, regimes: ['diabetique'] }).includes('diabetique'));
+});
+
+test('âge calculé depuis la date de naissance', () => {
+  const ref = new Date(2026, 10, 9);
+  assert.equal(ageDepuis('1990-11-09', ref), 36);
+  assert.equal(ageDepuis('1990-11-10', ref), 35, 'anniversaire demain');
+  assert.equal(ageDepuis('1990-12-31', ref), 35);
+  assert.equal(ageDepuis('2000-02-29', new Date(2026, 1, 28)), 25);
+  assert.equal(ageDepuis('', ref), null);
+  assert.equal(ageDepuis('1990-13-01', ref), null);
 });

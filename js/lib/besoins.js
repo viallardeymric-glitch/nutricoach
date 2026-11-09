@@ -1,6 +1,8 @@
 // Besoins énergétiques et repères nutritionnels. Estimations générales, jamais un avis médical.
 // Formule de Mifflin-St Jeor pour le métabolisme de base. Fonctions pures, testées dans tests/besoins.test.mjs.
 
+import { ageDe } from './profils.js';
+
 export const ACTIVITES = {
   sedentaire: { nom: 'Sédentaire', coef: 1.2, aide: 'Peu ou pas d\'exercice' },
   legere: { nom: 'Légère', coef: 1.375, aide: '1 à 3 séances par semaine' },
@@ -25,7 +27,8 @@ const arrondir = (v, pas) => Math.round(v / pas) * pas;
  */
 export function calculerBesoins(p) {
   const messages = [];
-  const bmr = Math.round(10 * p.poids_kg + 6.25 * p.taille_cm - 5 * p.age + (p.sexe === 'homme' ? 5 : -161));
+  const age = ageDe(p);
+  const bmr = Math.round(10 * p.poids_kg + 6.25 * p.taille_cm - 5 * age + (p.sexe === 'homme' ? 5 : -161));
   const tdee = Math.round(bmr * (ACTIVITES[p.activite]?.coef ?? ACTIVITES.sedentaire.coef));
   const imc = Math.round((p.poids_kg / ((p.taille_cm / 100) ** 2)) * 10) / 10;
   const trimestre = p.grossesse || 0;
@@ -55,7 +58,7 @@ export function calculerBesoins(p) {
   cible = arrondir(cible, 10);
 
   let parKg = 1.0;
-  if (p.age >= 65) parKg = Math.max(parKg, 1.2);
+  if (age >= 65) parKg = Math.max(parKg, 1.2);
   if (p.sportif || objectif === 'perte' || objectif === 'seche') parKg = Math.max(parKg, 1.6);
   if (objectif === 'prise') parKg = Math.max(parKg, 1.8);
   if (trimestre > 0) parKg = Math.max(parKg, 1.1);

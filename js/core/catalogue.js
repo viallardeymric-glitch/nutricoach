@@ -1,6 +1,6 @@
 // Chargement du catalogue : index léger au démarrage, fiches complètes à l'ouverture.
 // Les fichiers de recettes sont ceux que l'index déclare (« fichiers ») : en ajouter ne demande aucun changement de code.
-import { normaliser } from '../lib/texte.js';
+import { preparerRecettes } from '../lib/recettes.js';
 
 let promesseIndex = null;
 const promessesFichiers = new Map();
@@ -12,12 +12,7 @@ export function chargerIndex() {
       .then((r) => { if (!r.ok) throw new Error(`index ${r.status}`); return r.json(); })
       .then((index) => ({
         fichiers: index.fichiers,
-        recettes: index.recettes.map((r) => ({
-          ...r,
-          _titre: normaliser(r.titre),
-          _autres: normaliser([...r.ingredients, ...r.tags].join(' | ')),
-          _ingr: normaliser(r.ingredients.join(' | ')),
-        })),
+        recettes: preparerRecettes(index.recettes),
       }))
       .catch((e) => { promesseIndex = null; throw e; });
   }
