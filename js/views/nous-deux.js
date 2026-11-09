@@ -4,7 +4,7 @@ import { PERSONNES } from '../core/config.js';
 import { REGIMES, ALLERGENES } from '../data/libelles.js';
 import { OBJECTIFS, calculerBesoins } from '../lib/besoins.js';
 import { profilComplet } from '../lib/profils.js';
-import { Pastille, Bandeau } from '../ui/composants.js';
+import { Pastille, Bandeau, Entete } from '../ui/composants.js';
 
 function situation(p) {
   const s = [];
@@ -39,8 +39,8 @@ function Carte({ id, profil, nbFavoris, moi }) {
 export function NousDeux({ moi, profils, favorisNuage, erreurSynchro }) {
   const nb = (q) => (favorisNuage || []).filter((f) => f.par === q).length;
   return html`<div>
-    <header class="entete"><h1>Nous deux</h1></header>
-    <div class="fiche-corps">
+    <${Entete} titre="Nous deux" sous="Votre situation à tous les deux" retour=${{ href: '#/', nom: 'Accueil' }} />
+    <div class="contenu">
       ${erreurSynchro && html`<${Bandeau} type="alerte"><p>La synchronisation est interrompue. Vos modifications sont gardées sur ce téléphone et partiront dès que possible.</p><//>`}
       ${!profils ? html`<p class="etat">Chargement…</p>` : ['E', 'M'].map((id) => html`<${Carte} key=${id} id=${id}
         profil=${profils[id]} nbFavoris=${nb(id)} moi=${moi} />`)}

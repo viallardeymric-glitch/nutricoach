@@ -2,6 +2,7 @@
 import { html, useState, useEffect } from '../../vendor/preact-htm.js';
 import { PORTIONS_MIN, PORTIONS_MAX } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
+import { lire, ecrire } from '../core/stockage.js';
 import { REGIMES, ALLERGENES, PROFILS, NUTRITION, REGLAGES, DIFFICULTES, COUTS, lib, libSousCategorie } from '../data/libelles.js';
 import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
 import { conflitsProfil } from '../lib/profils.js';
@@ -71,6 +72,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
       <p class="desc">${r.description}</p>
       <${AlerteProfil} r=${r} moi=${moi} profil=${profil} />
       <${Avertissements} liste=${r.deconseille_a} />
+      <a class="bouton cuisiner" href=${`#/cuisine/${r.id}?p=${portions}`}>👩‍🍳 Cuisiner pas à pas</a>
       ${r.allergenes.length > 0 && html`<div class="etiquettes" aria-label="Allergènes">
         <strong>Contient :</strong>
         ${r.allergenes.map((a) => html`<span class="etiquette allergene">${lib(ALLERGENES, a)}</span>`)}</div>`}
@@ -134,14 +136,14 @@ export function Fiche({ id, index, favori, onFavori, moi, profil }) {
       .then((x) => {
         if (!actif) return;
         if (!x) { setErreur(true); return; }
-        setR(x); setPortions(x.portions_base);
+        setR(x); setPortions(Math.min(Math.max(PORTIONS_MAX, x.portions_base), Math.max(1, lire('portionsDefaut', 2))));
         document.title = `${x.titre} – NutriCoach`;
       })
       .catch(() => actif && setErreur(true));
     return () => { actif = false; document.title = 'NutriCoach'; };
   }, [id, index, essai]);
 
-  const barre = html`<div class="fiche-barre"><a class="retour" href="#/">← Recettes</a></div>`;
+  const barre = html`<div class="fiche-barre"><a class="retour" href="#/recettes">← Recettes</a></div>`;
   if (!r) {
     return html`<div class="fiche">${barre}<div class="fiche-corps">
       ${entree && html`<h1>${entree.titre}</h1>`}
@@ -151,6 +153,7 @@ export function Fiche({ id, index, favori, onFavori, moi, profil }) {
         : html`<p class="etat">Chargement de la recette…</p>`}
     </div></div>`;
   }
-  return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${setPortions}
+  const choisir = (f) => setPortions((p) => { const v = typeof f === 'function' ? f(p) : f; ecrire('portionsDefaut', v); return v; });
+  return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${choisir}
     favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} /></div>`;
 }
