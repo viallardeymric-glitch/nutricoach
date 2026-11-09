@@ -33,3 +33,33 @@ export function BarreOnglets({ onglets, actif }) {
 export function Pastille({ qui }) {
   return html`<span class=${'pastille ' + qui} aria-label=${qui === 'E' ? 'Eymric' : 'Marie'}>${qui}</span>`;
 }
+
+/** En-tête coloré d'un écran. `retour` : { href, nom } pour un lien « ← … ». */
+export function Entete({ titre, sous, retour, grand, children }) {
+  return html`<header class=${'entete' + (grand ? ' grand' : '')}>
+    ${retour && html`<a class="retour-entete" href=${retour.href}>← ${retour.nom}</a>`}
+    <h1>${titre}</h1>${sous && html`<p class="entete-sous">${sous}</p>`}${children}</header>`;
+}
+
+export function Section({ titre, lien, children }) {
+  return html`<section class="section">
+    <div class="section-tete"><h2>${titre}</h2>${lien && html`<a href=${lien.href}>${lien.nom}</a>`}</div>${children}</section>`;
+}
+
+/** Ligne de menu (page Profil) : icône, titre, résumé, flèche. */
+export function Rang({ icone, titre, sous, href }) {
+  return html`<a class="rang" href=${href}><span class="rang-icone" aria-hidden="true">${icone}</span>
+    <span class="rang-texte"><strong>${titre}</strong>${sous && html`<span class="sous">${sous}</span>`}</span>
+    <span class="chevron" aria-hidden="true">›</span></a>`;
+}
+
+/** Recette compacte (entrée de l'index) : pictogramme, titre, temps et calories, alerte de profil éventuelle. */
+export function MiniRecette({ r, risques = [], children, large }) {
+  return html`<div class=${'mini' + (large ? ' large' : '')}>
+    <a class="mini-lien" href=${'#/recette/' + r.id}>
+      <${Pictogramme} recette=${r} />
+      <span class="mini-texte"><strong>${r.titre}</strong>
+        <span class="sous">⏱ ${r.temps} min${r.kcal ? ` · ${r.kcal} kcal` : ''}</span>
+        ${risques.length > 0 && html`<span class="alerte-carte">⚠ Déconseillé : ${risques.join(', ')}</span>`}</span>
+    </a>${children}</div>`;
+}
