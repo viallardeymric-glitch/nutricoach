@@ -3,7 +3,8 @@
 PWA de coach alimentaire partagée entre deux utilisateurs (Eymric et Marie). Sur GitHub Pages.
 
 ## Stack
-- Preact + htm via CDN, aucun build, aucun npm.
+- Preact + htm en copies locales dans vendor/ (jamais de CDN), aucun build, aucun npm pour l'appli.
+- Cahier des charges de référence : docs/cahier-des-charges.md. Suivi : docs/avancement.md. Règles : tests unitaires (node --test tests/*.test.mjs) et node scripts/verifier.mjs avant chaque commit.
 - Firebase Spark (gratuit) pour la synchro entre appareils.
 - Installable sur téléphone (manifest + service worker).
 - Français uniquement, ton simple.

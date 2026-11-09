@@ -2,12 +2,12 @@
 
 PWA de coach alimentaire pour deux (Eymric et Marie). Hébergée sur GitHub Pages, sans compilation : Preact + htm en copie locale (`vendor/`).
 
-Cahier des charges : `cahier-des-charges.md`. Règles de travail : `CLAUDE.md`.
+Cahier des charges : `docs/cahier-des-charges.md` (suivi : `docs/avancement.md`). Règles de travail : `CLAUDE.md`.
 
 ## État
 - Phase 1 (noyau) : liste, recherche, filtres, fiche recette, nombre de personnes, favoris, hors-ligne.
 - Phase 2 (en cours) : profils (date de naissance) et besoins, alertes de profil, connexion Firebase (un compte chacun), favoris, profils et menus synchronisés, vue « Nous deux », code PIN.
-- Début des phases 3, 5 et 8 : accueil avec « ce soir » et idées de saison, menus de la semaine pour le couple (sans courses ni stock pour l'instant), coach IA (Gemini, clé personnelle), mode cuisine pas à pas avec minuteur. Pas encore : notifications à l'autre, régimes avancés, objectifs à date, profils enfant/ado/bébé, option « privé ».
+- Courses et stock partagés, scan de produits (note sur 100, alertes de profil, alternatives), accueil, menus de la semaine, coach IA, mode cuisine : voir `docs/avancement.md` pour l'état exact par rapport au cahier.
 - Les phases suivantes sont décrites dans le cahier des charges.
 
 ## Compte et synchro
