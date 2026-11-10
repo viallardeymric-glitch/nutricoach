@@ -277,7 +277,8 @@ verif(await p.locator('.carte-grossesse.ok').count() > 5 && await p.locator('.ca
 verif((await p.getAttribute('.onglets a.actif', 'href')) === '#/grossesse' && await p.locator('.onglets a:has-text("Grossesse")').count() === 1, 'grossesse : onglet dédié dans la barre du bas, actif sur la page');
 verif(await p.locator('.onglets a').count() === 5, 'ergonomie : 5 entrées au plus dans la barre du bas (grossesse déclarée)');
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
-{ const t = await p.textContent('.rangs'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : Recettes, Ma semaine, Courses et Suivi sont dans « Plus »'); }
+verif(await p.evaluate(() => document.querySelector('.contenu').firstElementChild.classList.contains('carte-profil')), 'plus : le profil est en premier');
+{ const t = await p.textContent('.contenu'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : Recettes, Ma semaine, Courses et Suivi sont dans « Plus »'); }
 await p.goto(serveur.url + '/#/'); await p.waitForSelector('.raccourcis');
 { const t = await p.textContent('.raccourcis'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : raccourcis vers Recettes, Ma semaine, Courses et Suivi sur l\'accueil'); }
 await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
@@ -742,6 +743,18 @@ await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
 await p.click('.puce:text-is("Rose")');
 verif(await p.evaluate(() => document.documentElement.dataset.theme) === 'rose', 'thème de couleur changé');
+// Restauration d'une sauvegarde : valeurs restaurées, secrets ignorés
+await p.setInputFiles('input[aria-label="Restaurer une sauvegarde"]', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('pas une sauvegarde') });
+await p.waitForSelector('text=pas une sauvegarde');
+verif(true, 'restauration : fichier invalide refusé clairement');
+await p.evaluate(() => localStorage.setItem('nutricoach.pin', '{"sel":"origine"}'));
+p.once('dialog', (d) => d.accept());
+await p.setInputFiles('input[aria-label="Restaurer une sauvegarde"]', { name: 's.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ 'nutricoach.theme': '"marine"', 'nutricoach.pin': '{"sel":"pirate"}' })) });
+await p.waitForFunction(() => document.documentElement.dataset.theme === 'marine', null, { timeout: 5000 });
+verif(await p.evaluate(() => localStorage.getItem('nutricoach.pin')) === '{"sel":"origine"}', 'restauration : données restaurées, le code PIN du téléphone n\'est jamais écrasé');
+await p.evaluate(() => localStorage.removeItem('nutricoach.pin'));
+await p.reload(); await p.waitForSelector('.carte-profil');
+await p.click('.puce:text-is("Rose")');
 await p.click('.puce:text-is("Lagon")');
 await p.goto(serveur.url + '/#/sources'); await p.waitForSelector('text=Santé publique France');
 verif((await p.textContent('.contenu')).includes('lait cru') && (await p.textContent('.contenu')).includes('ne remplacent pas'), 'sources : règles d\'alerte et mention affichées');

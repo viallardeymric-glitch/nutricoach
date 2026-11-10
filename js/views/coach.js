@@ -22,7 +22,7 @@ export function ReglagesCoach({ onChange }) {
     <p class="note">Si coché, votre profil (âge, objectifs, allergies, situation) et vos menus sont envoyés à Google (Gemini) et/ou Groq avec chaque question, avec ce que l'appli sait de vous : conjoint(e) et enfants, grossesse, sport et phase d'entraînement, menu, courses, frigo, poids et journal du jour. Décochez pour ne rien partager. Le coach s'adapte au profil de la personne connectée sur ce téléphone (grossesse, allaitement, allergies… : Profil → Ma situation). La clé ne se synchronise pas : saisissez la même sur chaque téléphone.</p>
     <label class="champ"><span>Modèle Gemini</span>
       <input type="text" value=${reg.modele} onInput=${(e) => maj({ modele: e.target.value.trim() || MODELE_PAR_DEFAUT })} /></label>
-    <h3 class="petit-titre">Deuxième IA : Groq (gratuite, très rapide)</h3>
+    <h2 class="petit-titre">Deuxième IA : Groq (gratuite, très rapide)</h2>
     <label class="champ"><span>Clé Groq (facultative)</span>
       <input type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé Groq ici" value=${reg.cleGroq || ''}
         onInput=${(e) => maj({ cleGroq: e.target.value.trim() })} /></label>

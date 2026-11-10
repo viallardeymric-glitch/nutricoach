@@ -347,6 +347,7 @@ function App() {
   const onglets = enceinte ? ONGLETS_GROSSESSE : ONGLETS;
   const ongletActif = onglets.some((o) => o.id === ONGLET_DE[route.ecran]) ? ONGLET_DE[route.ecran] : 'plus';
   return html`
+    <main>
     <div hidden=${!surListe}>
       <${Liste} index=${index} erreur=${erreur} f=${f} setF=${setF} favoris=${favorisMiens} favorisTous=${favorisTous} favorisPar=${favorisPar}
         onFavori=${onFavori} favorisSeulement=${route.ecran === 'favoris'} onOuvrir=${() => { defilSauvegarde = window.scrollY; }}
@@ -368,7 +369,7 @@ function App() {
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
     ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
-    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} moi=${moi} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
+    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} moi=${moi} profil=${profil} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
     ${route.ecran === 'coach' && html`<${Coach} extra=${contexteCoach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'grossesse' && html`<${Grossesse} profil=${profil} />`}
@@ -381,6 +382,7 @@ function App() {
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
       onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
+    </main>
     ${!plein && html`<${BarreOnglets} onglets=${onglets} actif=${ongletActif} />`}`;
 }
 

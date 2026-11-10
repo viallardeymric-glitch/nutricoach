@@ -35,7 +35,7 @@ export function ChoixPersonne({ onChoisir }) {
 function Champ({ etiquette, erreur, children }) {
   return html`<label class="champ"><span>${etiquette}</span>${children}${erreur && html`<small class="erreur-champ">${erreur}</small>`}</label>`;
 }
-const Groupe = ({ titre, aide, children }) => html`<div class="groupe-profil"><h3 class="petit-titre">${titre}</h3>${aide && html`<p class="note">${aide}</p>`}${children}</div>`;
+const Groupe = ({ titre, aide, children }) => html`<div class="groupe-profil"><h2 class="petit-titre">${titre}</h2>${aide && html`<p class="note">${aide}</p>`}${children}</div>`;
 const Choix = ({ children }) => html`<div class="puces libres">${children}</div>`;
 
 function Nombre({ p, champ, unite, titre, maj, erreurs }) {
@@ -103,7 +103,7 @@ function SectionPin({ pin }) {
         <${Puce} actif=${false} onClick=${() => { setOuvert(false); setMessage(''); }}>Annuler<//></div>
     </div>`}
     <p class="note">Le code verrouille l'écran de l'appli. Il ne remplace pas le verrouillage de votre téléphone.</p>
-    <h3 class="petit-titre">Face ID / Touch ID</h3><${Biometrie} pin=${pin} />
+    <h2 class="petit-titre">Face ID / Touch ID</h2><${Biometrie} pin=${pin} />
   </div>`;
 }
 
@@ -202,7 +202,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
         <${Groupe} titre="Activité physique" aide=${ACTIVITES[p.activite]?.aide}>
           <${Choix}>${Object.entries(ACTIVITES).map(([k, a]) => html`<${Puce} key=${k} actif=${p.activite === k}
             onClick=${() => maj({ activite: k })}>${a.nom}<//>`)}<//><//>
-        <h3 class="petit-titre">Mes besoins</h3><${Besoins} b=${b} complet=${complet} />
+        <h2 class="petit-titre">Mes besoins</h2><${Besoins} b=${b} complet=${complet} />
         <p class="note">Ces informations sont générales et ne remplacent pas l'avis d'un médecin, d'une sage-femme ou d'un diététicien.</p>`}
       ${section === 'situation' && html`
         ${femme && html`<${Groupe} titre="Grossesse"><${Choix}>${TRIMESTRES.map(([v, n]) => html`<${Puce} key=${v} actif=${p.grossesse === v}
@@ -236,7 +236,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
           <p class="note">Vos favoris, vos menus et votre profil sont synchronisés avec l'autre téléphone.</p>
           <button type="button" class="bouton secondaire" onClick=${compte.onDeconnecter}>Se déconnecter</button>`
           : html`<p>Mode local : vos données restent sur ce téléphone.</p>`}
-        <h3 class="petit-titre">Ce téléphone</h3>
+        <h2 class="petit-titre">Ce téléphone</h2>
         <p>Utilisé par <strong>${PERSONNES[moi].prenom}</strong>.</p>
         <button type="button" class="lien" onClick=${() => onMoi(moi === 'E' ? 'M' : 'E')}>Ce n'est pas moi : passer à ${PERSONNES[moi === 'E' ? 'M' : 'E'].prenom}</button>`}
     </div></div>`;

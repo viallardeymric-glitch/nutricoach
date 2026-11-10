@@ -6,7 +6,10 @@ import { SOURCES, VERSION_REGLES, MENTION_GENERALE } from '../data/sources.js';
 import { REGLES_ALERTE } from '../data/deconseilles.js';
 import { VERSION_ADDITIFS } from '../data/additifs.js';
 import { PROFILS, lib } from '../data/libelles.js';
-import { Entete, Rang, Puce } from '../ui/composants.js';
+import { Entete, Rang, Puce, Bandeau } from '../ui/composants.js';
+import { construireSauvegarde, lireSauvegarde } from '../lib/sauvegarde.js';
+import { PERSONNES } from '../core/config.js';
+import { ageDepuis } from '../lib/profils.js';
 import { chargerAppareils, enregistrerAppareils, MODELES_THERMOMIX } from '../core/appareils.js';
 
 export const THEMES = { lagon: 'Lagon', rose: 'Rose', soleil: 'Soleil', marine: 'Marine' };
@@ -38,17 +41,31 @@ function Appareils() {
 }
 
 function sauvegarder() {
-  const copie = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k.startsWith('nutricoach.') && !/\.(pin|coach\.reglages)$/.test(k) && k !== 'nutricoach.pin' && k !== 'nutricoach.coach.reglages') copie[k] = localStorage.getItem(k);
-  }
+  const copie = construireSauvegarde(localStorage);
   const url = URL.createObjectURL(new Blob([JSON.stringify(copie, null, 1)], { type: 'application/json' }));
   const a = Object.assign(document.createElement('a'), { href: url, download: `nutricoach-sauvegarde-${new Date().toISOString().slice(0, 10)}.json` });
   a.click(); URL.revokeObjectURL(url);
 }
 
-export function Plus({ enceinte = false, nuage, section, moi }) {
+function Restaurer() {
+  const [msg, setMsg] = useState(null);
+  const lireFichier = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const r = lireSauvegarde(await f.text());
+    if (r.erreur) { setMsg({ type: 'alerte', texte: r.erreur }); return; }
+    if (!window.confirm(`Restaurer ${r.entrees.length} élément${r.entrees.length > 1 ? 's' : ''} ? Cela remplace les données de ce téléphone (profil, favoris, menus, courses…).`)) return;
+    for (const [k, v] of r.entrees) localStorage.setItem(k, v);
+    setMsg({ type: 'info', texte: 'Données restaurées. L\'appli va redémarrer…' });
+    setTimeout(() => location.reload(), 900);
+  };
+  return html`<div>
+    ${msg && html`<${Bandeau} type=${msg.type}><p>${msg.texte}</p><//>`}
+    <label class="bouton secondaire fichier">📂 Restaurer une sauvegarde<input type="file" accept=".json,application/json" aria-label="Restaurer une sauvegarde" onChange=${lireFichier} /></label></div>`;
+}
+
+export function Plus({ enceinte = false, nuage, section, moi, profil = null }) {
   const [theme, setTheme] = useState(() => lire('theme', themeParDefaut(moi)));
   if (section === 'sources') {
     const par = {};
@@ -64,21 +81,45 @@ export function Plus({ enceinte = false, nuage, section, moi }) {
         <p class="note">Ces règles sont générales et simplifiées. Elles sont versionnées (${VERSION_REGLES}) et doivent être relues par un professionnel de santé. Table d'additifs : version ${VERSION_ADDITIFS}.</p>
       </div></div>`;
   }
+  const prenom = PERSONNES[moi] ? PERSONNES[moi].prenom : '';
+  const age = profil && profil.naissance ? ageDepuis(profil.naissance) : null;
+  const situation = [];
+  if (profil) {
+    if (profil.sexe) situation.push(profil.sexe === 'femme' ? 'Femme' : 'Homme');
+    if (age != null) situation.push(`${age} ans`);
+    if (profil.grossesse > 0) situation.push(`enceinte (${profil.grossesse === 1 ? '1er' : profil.grossesse + 'e'} trim.)`);
+    if (profil.allaitement) situation.push('allaitement');
+    if (profil.sportif) situation.push('sportif');
+  }
   return html`<div><${Entete} grand=${true} titre="Plus" sous="Tout le reste de NutriCoach" />
     <div class="contenu">
+      <a class="carte-profil" href="#/profil"><span class="avatar" aria-hidden="true">${prenom ? prenom[0] : '👤'}</span>
+        <span class="rang-texte"><strong>Mon profil${prenom ? ` : ${prenom}` : ''}</strong>
+          <span class="sous">${situation.length ? situation.join(' · ') : 'À compléter : date de naissance, objectif, régimes, allergies'}</span></span><span class="chevron" aria-hidden="true">›</span></a>
+      <h2 class="petit-titre">Au quotidien</h2>
       <div class="rangs">
         <${Rang} icone="🍽️" titre="Recettes" sous="1 610 recettes à chercher" href="#/recettes" />
         ${enceinte && html`<${Rang} icone="📅" titre="Ma semaine" sous="Menus et planning" href="#/semaine" />`}
         <${Rang} icone="🛒" titre="Courses" sous="Liste commune et stock" href="#/courses" />
-        <${Rang} icone="📈" titre="Suivi" sous="Poids, journal, eau" href="#/suivi" />
-        ${enceinte && html`<${Rang} icone="🤰" titre="Grossesse : que puis-je manger ?" sous="Autorisé, déconseillé, interdit" href="#/grossesse" />`}
-        <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />
-        ${nuage && html`<${Rang} icone="👫" titre="Nous deux" sous="Votre situation à tous les deux" href="#/nous" />`}
         <${Rang} icone="🧊" titre="Frigo magique" sous="Recettes avec ce que j'ai, anti-gaspi" href="#/frigo" />
         <${Rang} icone="🍱" titre="Batch cooking" sous="Une session, toute la semaine" href="#/batch" />
-        <${Rang} icone="🏃" titre="Sport et compétition" sous="Plan nutritionnel, séances, ravitaillement" href="#/sport" />
+        <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />
+      </div>
+      <h2 class="petit-titre">Santé et sport</h2>
+      <div class="rangs">
+        <${Rang} icone="📈" titre="Suivi" sous="Poids, journal, eau" href="#/suivi" />
+        ${enceinte && html`<${Rang} icone="🤰" titre="Grossesse : que puis-je manger ?" sous="Autorisé, déconseillé, interdit" href="#/grossesse" />`}
+        <${Rang} icone="🏃" titre="Sport et compétition" sous="Plan nutritionnel, ravitaillement" href="#/sport" />
         <${Rang} icone="🕘" titre="Historique des scans" sous="Produits scannés, partagés" href="#/scans" />
-        <${Rang} icone="👤" titre="Profil" sous="Informations, objectifs, régimes, sécurité" href="#/profil" />
+      </div>
+      ${nuage && html`<h2 class="petit-titre">À deux</h2>
+      <div class="rangs"><${Rang} icone="👫" titre="Nous deux" sous="Votre situation à tous les deux" href="#/nous" />
+        <${Rang} icone="🧒" titre="Enfants" sous="Profils, allergies, portions" href="#/profil/enfants" /></div>`}
+      <h2 class="petit-titre">Réglages</h2>
+      <div class="rangs">
+        <${Rang} icone="💬" titre="Coach IA : clés Gemini et Groq" sous="Réponses rapides avec les deux IA" href="#/profil/coach" />
+        <${Rang} icone="📷" titre="Photos des recettes" sous="Clés Pexels et Unsplash, miniatures" href="#/profil/photos" />
+        <${Rang} icone="🔒" titre="Code PIN et Face ID" sous="Protéger l'appli" href="#/profil/securite" />
         <${Rang} icone="📚" titre="Sources et règles d'alerte" sous="HAS, ANSES, Santé publique France, PNNS" href="#/sources" />
       </div>
       <h2 class="petit-titre">Thème de couleur</h2>
@@ -90,7 +131,8 @@ export function Plus({ enceinte = false, nuage, section, moi }) {
       <details class="repli"><summary>Adapter à votre supermarché</summary><${OrdreRayons} /></details>
       <h2 class="petit-titre">Mes données</h2>
       <button type="button" class="bouton secondaire" onClick=${sauvegarder}>💾 Sauvegarder les données de ce téléphone</button>
-      <p class="note">Le fichier ne contient ni votre code PIN ni votre clé du coach. Gardez-le en lieu sûr : il contient votre profil.</p>
+      <${Restaurer} />
+      <p class="note">Le fichier ne contient ni code PIN, ni Face ID, ni aucune clé (coach, photos), ni identifiants Open Food Facts : à ressaisir après une restauration. Gardez-le en lieu sûr, il contient votre profil et votre santé. Si vous êtes connectés, vos données restent aussi dans la base partagée.</p>
       <p class="note">NutriCoach — ${MENTION_GENERALE}</p>
     </div></div>`;
 }

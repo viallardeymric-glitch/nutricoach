@@ -67,3 +67,6 @@ Si « Personnaliser les réponses » est coché, le coach reçoit : votre profil
 
 ## Batch cooking : jours et portions
 Choisissez le nombre de jours à couvrir (1 à 14) et les portions par repas : par défaut une par personne de la famille (Eymric, Marie et chaque enfant compté dans les menus, soit 3 aujourd'hui). « Remplir d'après mon menu » reprend les recettes de votre planning.
+
+## « Plus » : mieux rangé
+En haut, votre profil. Puis : Au quotidien (recettes, courses, frigo, batch, favoris), Santé et sport (suivi, grossesse, sport, scans), À deux (Nous deux, enfants), Réglages (coach, photos, code PIN, sources), thème, appareils, rayons, et vos données (sauvegarder et **restaurer**). La sauvegarde ne contient jamais de code PIN ni de clé.
