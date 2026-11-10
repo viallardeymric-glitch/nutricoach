@@ -229,6 +229,8 @@ await p.click('text=Effacer la conversation');
 verif(await p.locator('.bulle').count() === 0, 'coach : conversation effacée');
 
 // Courses : générées depuis le menu, rayons, cochage, saisie libre, alertes de profil, stock
+await p.goto(serveur.url + '/#/recette/REC-000001'); await p.waitForSelector('.score-sante');
+{ const t = await p.textContent('.fiche .score-sante, .score-sante'); verif(/Score santé : \d+\/100/.test(t) && t.includes('Sel') && t.includes('Fibres') && t.includes('pas un avis médical'), 'fiche : score santé détaillé avec rappel'); }
 await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
 verif((await p.textContent('.etat')).includes('La liste est vide'), 'courses : état vide soigné');
 await p.click('text=Depuis le menu de la semaine'); await p.waitForSelector('.article');
@@ -492,6 +494,9 @@ await p.waitForSelector('text=Choisissez où placer ce repas');
 await p.locator('.mini-action:has-text("⇄ Ici")').nth(2).click();
 const idsApres = await idsSemaine();
 verif(JSON.stringify(idsApres) !== JSON.stringify(idsAvant) && [...idsApres].sort().join() === [...idsAvant].sort().join(), 'semaine : deux repas échangés (mêmes recettes, autres places)');
+// Score santé du menu
+verif(/Score santé du menu : \d+\/100/.test(await p.textContent('[data-score-semaine]')), 'semaine : score santé du menu affiché');
+verif(await p.locator('.jour .badge-sante').count() >= 5, 'semaine : score santé de chaque jour');
 // Glisser-déposer avec la poignée (pointer events : doigt ou souris)
 {
   const avantGlisse = await idsSemaine();

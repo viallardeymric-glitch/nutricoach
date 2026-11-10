@@ -43,3 +43,6 @@ Un produit saisi à la main (ou lu par photo) peut être envoyé à Open Food Fa
 
 ## Déplacer un repas au doigt
 Dans « Ma semaine », posez le doigt sur la poignée ⠿ d'un repas, glissez-le sur un autre repas et lâchez : les deux se remplacent. La page défile toute seule près des bords. Lâcher ailleurs ne change rien.
+
+## Score santé des recettes et des menus
+Chaque fiche affiche un score santé sur 100 (sel, sucres, fibres, protéines, graisses : 20 points chacun). « Ma semaine » affiche le score du menu et celui de chaque jour. C'est une estimation par portion, pas un avis médical.

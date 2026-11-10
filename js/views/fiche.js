@@ -14,6 +14,8 @@ import { METHODES, methodeOriginale } from '../lib/methodes.js';
 import { reecrire, chargerReecriture, oublierReecriture } from '../core/reecriture.js';
 import { chargerAppareils } from '../core/appareils.js';
 import { chargerReglagesCoach } from '../core/coach.js';
+import { noterRecette, MENTION_SCORE_SANTE } from '../lib/sante.js';
+import { LIBELLE_COULEUR } from '../lib/scan.js';
 import { photoDeRecette } from '../core/photos.js';
 import { Pictogramme, Coeur, Bandeau, Pastille, Puce } from '../ui/composants.js';
 
@@ -126,6 +128,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
   const facteur = portions / r.portions_base;
   const t = r.temps;
   const nutri = nutAdaptee ? { ...r.nutrition_par_portion, calories_kcal: nutAdaptee.kcal, proteines_g: nutAdaptee.p, glucides_g: nutAdaptee.g, lipides_g: nutAdaptee.l } : r.nutrition_par_portion;
+  const sante = noterRecette({ nutrition_par_portion: nutri });
   const c = r.conservation;
   const maxPortions = Math.max(PORTIONS_MAX, r.portions_base);
   const conseils = conseilsAdaptation(r, portions);
@@ -195,6 +198,10 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
           ${c.reechauffage && html`<li>${c.reechauffage}</li>`}
         </ul>`}
 
+      ${sante && html`<div class=${'score-sante ' + sante.couleur}>
+        <p class="score-sante-tete"><strong>Score santé : ${sante.note}/100</strong> · ${LIBELLE_COULEUR[sante.couleur]}</p>
+        <ul class="score-sante-details">${sante.details.map((d) => html`<li key=${d.rubrique}><span>${d.rubrique}</span><span class="sous">${d.texte}</span><strong>${d.points}/${d.max}</strong></li>`)}</ul>
+        <p class="note">${MENTION_SCORE_SANTE}</p></div>`}
       <h2 class="petit-titre">Nutrition par portion <small>(valeurs estimées)</small></h2>
       <table class="nutrition"><tbody>
         ${NUTRITION.map(([k, nom, u]) => nutri[k] != null && html`<tr key=${k}>

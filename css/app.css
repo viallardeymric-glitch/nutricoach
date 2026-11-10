@@ -470,3 +470,13 @@ p { margin: 0 0 .5rem; }
 .glisser-fantome { position: fixed; z-index: 1000; transform: translate(-50%, -120%); max-width: 70vw; padding: .45rem .8rem; border-radius: var(--rayon); background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.3); pointer-events: none; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.glisse { user-select: none; -webkit-user-select: none; overscroll-behavior: contain; }
 .repas-jour.depot { outline: 3px solid var(--accent); background: var(--accent-clair); border-radius: var(--rayon); }
+
+/* Score santé */
+.score-sante { margin: .8rem 0; padding: .7rem .9rem; border-radius: var(--rayon); border-left: 6px solid var(--gris); background: var(--carte); }
+.score-sante.excellent { border-color: #1a9e5c; } .score-sante.bon { border-color: #7bb339; } .score-sante.mediocre { border-color: #f0932b; } .score-sante.mauvais { border-color: #d63031; }
+.score-sante-tete { margin: 0 0 .3rem; }
+.score-sante-details { list-style: none; margin: 0; padding: 0; }
+.score-sante-details li { display: flex; gap: .6rem; justify-content: space-between; padding: .2rem 0; border-top: 1px solid var(--bord); }
+.score-sante-details li .sous { flex: 1; text-align: right; }
+.badge-sante { font-size: .8rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; color: #fff; background: var(--gris); }
+.badge-sante.excellent { background: #1a9e5c; } .badge-sante.bon { background: #7bb339; } .badge-sante.mediocre { background: #f0932b; } .badge-sante.mauvais { background: #d63031; }

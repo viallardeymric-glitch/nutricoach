@@ -6,6 +6,8 @@ import { nomRegime } from '../data/regimes.js';
 import { REPAS_COMPLETS, repasActifs, ajouterJours, cleDate, dateDepuisCle, lundiDe, nomJour, nomMois, saisonDe, semaineDe, proposer, genererSemaine, graine } from '../lib/planning.js';
 import { risquesPour } from '../lib/profils.js';
 import { budgetMenu } from '../lib/budget.js';
+import { noterMenu, MENTION_SCORE_SANTE } from '../lib/sante.js';
+import { LIBELLE_COULEUR } from '../lib/scan.js';
 import { lire, ecrire } from '../core/stockage.js';
 import { demarrerGlisser } from '../core/glisser.js';
 import { Entete, MiniRecette, Bandeau, Puce } from '../ui/composants.js';
@@ -30,6 +32,8 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
   const miens = profil && profil.appliquer !== false ? risquesPour(profil) : [];
   const risques = (r) => r.risques.filter((x) => miens.includes(x)).map((x) => lib(PROFILS, x).toLowerCase());
   const nbRepas = jours.reduce((n, j) => n + Object.keys(plan[j] || {}).length, 0);
+  const parJourScore = (j) => noterMenu(Object.values(plan[j] || {}).map((id) => parId.get(id)));
+  const scoreSemaine = nbRepas > 0 ? noterMenu(jours.flatMap((j) => Object.values(plan[j] || {}).map((id) => parId.get(id)))) : null;
   const cout = useMemo(() => budgetMenu(plan, jours, parId, convives), [plan, jours.join('|'), parId, convives]);
   const cibleBudget = Number(String(budget).replace(',', '.')) || 0;
 
@@ -83,6 +87,9 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
         <button type="button" class="bouton" disabled=${!index} onClick=${() => completer(plan)}>✨ ${nbRepas ? 'Compléter la semaine' : 'Générer ma semaine'}</button>
         ${nbRepas > 0 && html`<button type="button" class="bouton secondaire" onClick=${toutRefaire}>Tout refaire</button>`}
       </div>
+      ${scoreSemaine && html`<div class=${'score-sante ' + scoreSemaine.couleur} data-score-semaine>
+        <p class="score-sante-tete">💚 <strong>Score santé du menu : ${scoreSemaine.note}/100</strong> · ${LIBELLE_COULEUR[scoreSemaine.couleur]}</p>
+        <p class="note">${MENTION_SCORE_SANTE} Moyenne des repas de la semaine, pondérée par les calories.</p></div>`}
       ${nbRepas > 0 && html`<div class="budget-semaine">
         <p class="budget-ligne">💶 Budget estimé de la semaine : <strong>${cout.total} €</strong> pour ${String(convives).replace('.', ',')} portions adultes (≈ ${String(cout.parPersonneParJour).replace('.', ',')} € par personne et par jour).</p>
         <label class="champ ligne"><span>Mon budget (€)</span><input type="text" inputmode="decimal" value=${budget} placeholder="facultatif" onInput=${(e) => { setBudget(e.target.value); ecrire('budget.semaine', e.target.value); }} aria-label="Budget de la semaine" /></label>
@@ -95,7 +102,8 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
         return html`<section class=${'jour' + (j === aujourdhui ? ' aujourdhui' : '')} key=${j}>
           <div class="jour-tete"><strong>${nomJour(d)} ${d.getDate()}</strong>
             ${j === aujourdhui && html`<span class="badge">Aujourd'hui</span>`}
-            ${kcal > 0 && html`<span class="sous">≈ ${kcal} kcal</span>`}</div>
+            ${kcal > 0 && html`<span class="sous">≈ ${kcal} kcal</span>`}
+            ${(() => { const sj = parJourScore(j); return sj && html`<span class=${'badge-sante ' + sj.couleur} title="Score santé du jour">💚 ${sj.note}</span>`; })()}</div>
           ${slots.map((rp) => {
             const r = parId.get(repas[rp.id]);
             const cible = selection && !(selection.j === j && selection.repas === rp.id);
