@@ -268,18 +268,18 @@ p { margin: 0 0 .5rem; }
 .bulle.moi { margin-left: auto; background: var(--accent); color: #fff; border-bottom-right-radius: 6px; }
 .bulle.coach { background: var(--carte); border-bottom-left-radius: 6px; }
 .bulle.attente { color: var(--gris); font-style: italic; }
-.coach-saisie { position: sticky; bottom: calc(var(--barre) + env(safe-area-inset-bottom)); display: flex; gap: .5rem; padding: .6rem 1rem; background: var(--fond); max-width: 720px; width: 100%; margin: 0 auto; }
+.coach-saisie { position: sticky; bottom: calc(var(--barre) + 26px + env(safe-area-inset-bottom)); display: flex; gap: .5rem; padding: .6rem 1rem; background: var(--fond); max-width: 720px; width: 100%; margin: 0 auto; }
 .coach-saisie input { flex: 1; min-width: 0; height: 50px; padding: 0 1rem; border: 1px solid var(--bord); border-radius: 999px; background: var(--carte); color: var(--texte); font-size: 16px; }
 .coach-saisie .bouton { width: 50px; min-height: 50px; padding: 0; border-radius: 50%; }
 .coach-efface { display: block; margin: 0 auto; }
 .coach-note { text-align: center; padding: 0 1rem; }
 
 /* ---------- Thèmes de couleur (lagon par défaut) ---------- */
-[data-theme="rose"] { --accent: #c2185b; --accent-fonce: #8e0e44; --accent-clair: #fde7f0; --info-fond: #fdeaf2; --info-bord: #f3b5cf; }
+[data-theme="rose"] { --accent: #c2185b; --accent-fonce: #8e0e44; --accent-clair: #fde7f0; --info-fond: #fdeaf2; --info-bord: #f3b5cf; --fond: #fdeef4; --bord: #f1d3e0; }
 [data-theme="soleil"] { --accent: #c76b00; --accent-fonce: #8f4a00; --accent-clair: #fff0d9; --info-fond: #fff4e2; --info-bord: #f1cc92; }
 [data-theme="marine"] { --accent: #1f5fae; --accent-fonce: #143f78; --accent-clair: #e2edfb; --info-fond: #e8f0fb; --info-bord: #b0c9ec; }
 @media (prefers-color-scheme: dark) {
-  [data-theme="rose"] { --accent: #f06292; --accent-fonce: #b0305f; --accent-clair: #3a1e2b; --info-fond: #35202b; --info-bord: #6e3550; }
+  [data-theme="rose"] { --accent: #f06292; --accent-fonce: #b0305f; --accent-clair: #3a1e2b; --info-fond: #35202b; --info-bord: #6e3550; --fond: #1f1218; --carte: #2a1a22; --bord: #4a2a3a; }
   [data-theme="soleil"] { --accent: #ffa726; --accent-fonce: #b36a00; --accent-clair: #3a2c14; --info-fond: #352a15; --info-bord: #6b5126; }
   [data-theme="marine"] { --accent: #64a4ee; --accent-fonce: #2f68ad; --accent-clair: #1c2a3f; --info-fond: #17263a; --info-bord: #2f4d77; }
 }
@@ -496,11 +496,7 @@ body.glisse { user-select: none; -webkit-user-select: none; overscroll-behavior:
 /* Appli : pas de zoom (pincement, double toucher) ; champs à 16 px pour éviter le zoom automatique d'iOS */
 html, body { touch-action: pan-x pan-y; }
 input, select, textarea { font-size: 16px; }
-.onglets.dense a { font-size: .56rem; letter-spacing: -.01em; }
-.onglets.dense a.centre { flex: 0 0 58px; }
 /* Onglets : 8 entrées sur un téléphone */
-.onglets a { font-size: .64rem; min-width: 0; }
-.onglets a.centre { flex: 0 0 64px; }
 /* Coach : texte copiable, pièces jointes, saisie multi-lignes */
 .bulle, .coach-fil { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
 .bulle .copier { display: block; margin-top: .3rem; font-size: .8rem; }
@@ -508,5 +504,6 @@ input, select, textarea { font-size: 16px; }
 .coach-pieces { display: flex; flex-wrap: wrap; gap: .4rem; padding: .3rem 1rem 0; max-width: 720px; margin: 0 auto; }
 .piece { display: inline-flex; gap: .3rem; align-items: center; padding: .2rem .6rem; border-radius: 999px; background: var(--accent-clair); font-size: .85rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .piece button { border: 0; background: transparent; color: inherit; }
-.coach-saisie textarea { flex: 1; min-width: 0; min-height: 50px; max-height: 140px; padding: .8rem 1rem; border: 1px solid var(--bord); border-radius: 24px; background: var(--carte); color: inherit; font: inherit; resize: none; user-select: text; -webkit-user-select: text; }
+.coach-saisie { align-items: flex-end; }
+.coach-saisie textarea { flex: 1; min-width: 0; height: 50px; min-height: 50px; max-height: 140px; padding: 13px 1rem; line-height: 24px; border: 1px solid var(--bord); border-radius: 25px; background: var(--carte); color: var(--texte); font: inherit; font-size: 16px; resize: none; overflow-y: auto; user-select: text; -webkit-user-select: text; }
 .coach-saisie .joindre { width: 50px; min-height: 50px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }

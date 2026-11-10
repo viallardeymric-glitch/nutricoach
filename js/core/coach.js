@@ -6,7 +6,9 @@ export const MODELE_PAR_DEFAUT = 'gemini-2.5-flash';
 const URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const MAX_HISTORIQUE = 40;
 
-export const chargerReglagesCoach = () => ({ cle: '', modele: MODELE_PAR_DEFAUT, partagerProfil: false, ...lire('coach.reglages', {}) });
+export const MODELE_GROQ_PAR_DEFAUT = 'llama-3.3-70b-versatile';
+const URL_GROQ = 'https://api.groq.com/openai/v1';
+export const chargerReglagesCoach = () => ({ cle: '', modele: MODELE_PAR_DEFAUT, cleGroq: '', modeleGroq: MODELE_GROQ_PAR_DEFAUT, partagerProfil: false, ...lire('coach.reglages', {}) });
 export const enregistrerReglagesCoach = (r) => ecrire('coach.reglages', r);
 export const chargerConversation = () => { const c = lire('coach.conversation', []); return Array.isArray(c) ? c : []; };
 export const enregistrerConversation = (c) => ecrire('coach.conversation', c.slice(-MAX_HISTORIQUE));
@@ -109,10 +111,71 @@ async function posterGemini({ cle, modele, corps }, appeler) {
   return rep.json();
 }
 
+/** Gemini 2.5 flash « réfléchit » avant de répondre (plusieurs secondes) : on coupe ce mode pour les conversations. */
+function rapide(modele, corps) {
+  if (/gemini-2\.5-flash/.test(modele) && !/lite/.test(modele)) corps.generationConfig = { ...corps.generationConfig, thinkingConfig: { thinkingBudget: 0 } };
+  return corps;
+}
+
+// ---------- Groq (second fournisseur, gratuit, très rapide) ----------
+export function messagesGroq({ historique, contexte }) {
+  const systeme = contexte ? `${CONSIGNES}\n\nContexte de l'utilisateur :\n${contexte}` : CONSIGNES;
+  return [{ role: 'system', content: systeme }, ...historique.map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.texte }))];
+}
+export function messageErreurGroq(statut) {
+  if (statut === 401 || statut === 403) return 'La clé Groq est refusée. Vérifiez-la dans les réglages du coach.';
+  if (statut === 429) return 'Quota Groq atteint pour le moment. Réessayez dans un moment.';
+  if (statut === 404 || statut === 400) return 'Ce modèle Groq n\'existe pas. Changez le modèle dans les réglages du coach.';
+  if (statut === 0) return 'Pas de réseau. Le coach a besoin d\'internet.';
+  return 'Groq est indisponible pour le moment.';
+}
+/** Meilleur modèle de discussion dans la liste Groq ([{ id }]) : Llama 3.3 70B, sinon un autre Llama, sinon le premier modèle texte. */
+export function choisirModeleGroq(modeles) {
+  const ids = (modeles || []).map((m) => m.id).filter((id) => id && !/whisper|guard|tts|orpheus|playai|safeguard|distil|embed/i.test(id));
+  for (const re of [/llama-3\.3-70b/, /llama-3\.1-70b/, /llama-?[34].*(versatile|maverick|scout)/, /llama.*instant/, /llama/]) { const t = ids.find((id) => re.test(id)); if (t) return t; }
+  return ids[0] || null;
+}
+export async function demanderAGroq({ cle, modele = MODELE_GROQ_PAR_DEFAUT, historique, contexte }, appeler = fetch) {
+  if (!cle) throw new Error('Ajoutez votre clé Groq dans les réglages du coach.');
+  const poster = (m) => appeler(`${URL_GROQ}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cle}` },
+    body: JSON.stringify({ model: m, messages: messagesGroq({ historique, contexte }), temperature: 0.7, max_tokens: 900 }) });
+  let rep;
+  try { rep = await poster(modele); } catch { throw new Error(messageErreurGroq(0)); }
+  if (rep.status === 404 || rep.status === 400) {
+    try {
+      const l = await appeler(`${URL_GROQ}/models`, { headers: { Authorization: `Bearer ${cle}` } });
+      const autre = l.ok ? choisirModeleGroq((await l.json()).data) : null;
+      if (autre && autre !== modele) { rep = await poster(autre); if (rep.ok) enregistrerReglagesCoach({ ...chargerReglagesCoach(), modeleGroq: autre }); }
+    } catch { /* on garde l'erreur d'origine */ }
+  }
+  if (!rep.ok) throw new Error(messageErreurGroq(rep.status));
+  const json = await rep.json();
+  const texte = String((json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '').trim();
+  if (!texte) throw new Error('Groq n\'a pas pu répondre. Reformulez la question.');
+  return texte;
+}
+
+/**
+ * Interroge les fournisseurs configurés EN MÊME TEMPS et garde la première réponse réussie (moins d'attente).
+ * Groq ne lit pas les photos ni les PDF : s'il y en a, seul Gemini répond. Retourne { texte, via: 'Gemini' | 'Groq' }.
+ */
+export async function repondre({ reg, historique, contexte, pieces = [] }, appelerBrut = fetch) {
+  const appeler = (url, o = {}) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), 40000); return Promise.resolve(appelerBrut(url, { ...o, signal: c.signal })).finally(() => clearTimeout(t)); };
+  const binaires = pieces.some((p) => p.data);
+  const courses = [];
+  if (reg.cle) courses.push(demanderAuCoach({ cle: reg.cle, modele: reg.modele, historique, contexte, pieces }, appeler).then((texte) => ({ texte, via: 'Gemini' })));
+  if (reg.cleGroq && !binaires) courses.push(demanderAGroq({ cle: reg.cleGroq, modele: reg.modeleGroq, historique, contexte }, appeler).then((texte) => ({ texte, via: 'Groq' })));
+  if (!courses.length) throw new Error(binaires && reg.cleGroq && !reg.cle ? 'Groq ne lit pas les photos ni les PDF : ajoutez une clé Gemini pour les joindre.' : 'Ajoutez une clé Gemini ou Groq dans les réglages du coach.');
+  return new Promise((resolve, reject) => {
+    const erreurs = []; let restants = courses.length;
+    for (const c of courses) c.then(resolve, (e) => { erreurs.push(e); if (--restants === 0) reject(erreurs[0]); });
+  });
+}
+
 /** Appelle Gemini ; retourne le texte ou lève une Error au message lisible. `appeler` est injectable pour les tests. */
 export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, historique, contexte, pieces = [] }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
-  const texte = extraireTexte(await posterGemini({ cle, modele, corps: construireRequete({ historique, contexte, pieces }) }, appeler));
+  const texte = extraireTexte(await posterGemini({ cle, modele, corps: rapide(modele, construireRequete({ historique, contexte, pieces })) }, appeler));
   if (!texte) throw new Error('Le coach n\'a pas pu répondre à cette question. Reformulez-la.');
   return texte;
 }

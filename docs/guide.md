@@ -55,3 +55,9 @@ Quand vous indiquez une grossesse ou un allaitement (Profil → Infos : Femme, p
 
 ## Comme une vraie appli
 Le zoom (pincement, double toucher) est bloqué. Quand une grossesse ou un allaitement est indiqué, un onglet 🤰 Grossesse apparaît dans la barre du bas. Les enfants ajoutés sur un téléphone apparaissent sur l'autre (profils partagés).
+
+## Deux IA en même temps (Gemini + Groq)
+Dans Profil → Coach IA, ajoutez aussi une clé Groq (gratuite, console.groq.com/keys). L'appli interroge alors Gemini et Groq en même temps et affiche la première réponse (le nom de l'IA est indiqué sous la réponse). Groq ne lit pas les photos ni les PDF : dans ce cas, seul Gemini répond. Les clés restent sur le téléphone.
+
+## Barre du bas simplifiée
+5 entrées : Accueil, Planning, 📷 Scanner, Coach, Plus (quand une grossesse est déclarée : Accueil, Scanner, Grossesse, Coach, Plus). Recettes, Planning, Courses et Suivi sont aussi sur l'Accueil et dans « Plus ». Marie a le thème rose par défaut (changeable dans Plus).

@@ -250,6 +250,9 @@ verif([...base.keys()].some((c) => c.startsWith('households/foyer/profiles/enfan
 await marie.goto(serveur.url + '/#/profil/enfants');
 await marie.waitForSelector('text=Compté dans les menus et les courses', { timeout: 4000 }).then(
   () => verif(true, 'enfant ajouté par Eymric : Marie le voit sur son téléphone'), async () => { verif(false, 'enfant partagé'); console.log('DEBUG', (await marie.textContent('.contenu:visible')).replace(/\s+/g, ' ').slice(0, 300), marie.url()); });
+// Marie : fond rose par défaut (thème choisi pour elle) ; Eymric garde le thème lagon
+verif(await marie.evaluate(() => document.documentElement.dataset.theme) === 'rose', 'thème : Marie a le thème rose par défaut');
+verif(await eymric.evaluate(() => document.documentElement.dataset.theme) === 'lagon', 'thème : Eymric garde le thème lagon');
 // 4 sexies. Fil d'activité : « Eymric a ajouté… » depuis la dernière visite de Marie
 await marie.addInitScript(() => { const v = sessionStorage.getItem('test_dv'); if (v) localStorage.setItem('nutricoach.derniere_visite', v); });
 await marie.evaluate((t) => sessionStorage.setItem('test_dv', String(t)), Date.now() - 3600000);

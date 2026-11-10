@@ -42,7 +42,7 @@ import { chargerAppareils } from './core/appareils.js';
 import { definirPartage, photoEnCache, photoPartagee, photoDeRecette, peutChercherMiniature } from './core/photos.js';
 import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
-import { Plus, appliquerTheme } from './views/plus.js';
+import { Plus, appliquerTheme, themeParDefaut } from './views/plus.js';
 
 /**
  * Écran courant d'après l'ancre. Retourne { ecran, id?, portions?, section? } avec ecran parmi
@@ -61,8 +61,8 @@ export function lireRoute(hash) {
   const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/batch': 'batch', '#/frigo': 'frigo', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/grossesse': 'grossesse', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
-const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', batch: 'plus', frigo: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
-  plus: 'plus', sources: 'plus', coach: 'coach', grossesse: 'grossesse', nous: 'plus', profil: 'plus' };
+const ONGLET_DE = { accueil: 'accueil', recettes: 'accueil', favoris: 'accueil', fiche: 'accueil', cuisine: 'accueil', semaine: 'semaine', courses: 'plus', suivi: 'plus', sport: 'plus', batch: 'plus', frigo: 'plus',
+  scan: 'scan', produit: 'scan', scans: 'scan', plus: 'plus', sources: 'plus', coach: 'coach', grossesse: 'grossesse', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
   const [hash, setHash] = useState(location.hash);
@@ -75,20 +75,18 @@ function useRoute() {
 }
 
 let defilSauvegarde = 0; // position de la liste, retrouvée au retour d'une fiche
+// Barre du bas : 5 entrées au plus (la caméra au centre). Planning, Courses, Suivi, Recettes… sont dans « Plus » et sur l'Accueil.
 const ONGLETS = [
   { id: 'accueil', href: '#/', icone: '🏠', nom: 'Accueil' },
-  { id: 'recettes', href: '#/recettes', icone: '🍽️', nom: 'Recettes' },
   { id: 'semaine', href: '#/semaine', icone: '📅', nom: 'Planning' },
   { id: 'scan', href: '#/scan', icone: '📷', nom: 'Scanner', centre: true },
-  { id: 'courses', href: '#/courses', icone: '🛒', nom: 'Courses' },
-  { id: 'suivi', href: '#/suivi', icone: '📈', nom: 'Suivi' },
   { id: 'coach', href: '#/coach', icone: '💬', nom: 'Coach' },
   { id: 'plus', href: '#/plus', icone: '☰', nom: 'Plus' },
 ];
+// Grossesse déclarée : l'onglet Grossesse prend la place du Planning (toujours accessible depuis l'Accueil et « Plus »).
+const ONGLETS_GROSSESSE = [ONGLETS[0], ONGLETS[2], { id: 'grossesse', href: '#/grossesse', icone: '🤰', nom: 'Grossesse' }, ONGLETS[3], ONGLETS[4]];
 // Appli « native » : pas de zoom au pincement ni au double toucher (Safari iOS ignore user-scalable : on bloque aussi les gestes).
 for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, (e) => e.preventDefault());
-// Onglet « Grossesse » dédié, ajouté dès que la grossesse ou l'allaitement est déclaré.
-const ONGLETS_GROSSESSE = [...ONGLETS.slice(0, -2), { id: 'grossesse', href: '#/grossesse', icone: '🤰', nom: 'Grossesse' }, ...ONGLETS.slice(-2)];
 const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
 function App() {
@@ -111,7 +109,7 @@ function App() {
   const masqueA = useRef(null);
 
   useEffect(() => { chargerIndex().then(setIndex).catch(() => setErreur(true)); }, []);
-  useEffect(() => { appliquerTheme(lire('theme', 'lagon')); }, []);
+  useEffect(() => { appliquerTheme(lire('theme', themeParDefaut(moi))); }, [moi]);
   const surListe = route.ecran === 'recettes' || route.ecran === 'favoris';
   useEffect(() => { window.scrollTo(0, surListe ? defilSauvegarde : 0); }, [route.ecran, route.section]);
 
@@ -334,6 +332,8 @@ function App() {
   const personnes = profilAutre ? ['E', 'M'] : [moi];
   void versionPhotos;                                                  // change quand une photo arrive : redessine les miniatures
   const enceinte = Boolean(profil && (profil.grossesse > 0 || profil.allaitement));
+  const onglets = enceinte ? ONGLETS_GROSSESSE : ONGLETS;
+  const ongletActif = onglets.some((o) => o.id === ONGLET_DE[route.ecran]) ? ONGLET_DE[route.ecran] : 'plus';
   return html`
     <div hidden=${!surListe}>
       <${Liste} index=${index} erreur=${erreur} f=${f} setF=${setF} favoris=${favorisMiens} favorisTous=${favorisTous} favorisPar=${favorisPar}
@@ -356,7 +356,7 @@ function App() {
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
     ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
-    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
+    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} moi=${moi} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
     ${route.ecran === 'coach' && html`<${Coach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'grossesse' && html`<${Grossesse} profil=${profil} />`}
@@ -369,7 +369,7 @@ function App() {
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
       onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
-    ${!plein && html`<${BarreOnglets} onglets=${enceinte ? ONGLETS_GROSSESSE : ONGLETS} actif=${ONGLET_DE[route.ecran]} />`}`;
+    ${!plein && html`<${BarreOnglets} onglets=${onglets} actif=${ongletActif} />`}`;
 }
 
 const racine = document.getElementById('app');

@@ -10,6 +10,8 @@ import { Entete, Rang, Puce } from '../ui/composants.js';
 import { chargerAppareils, enregistrerAppareils, MODELES_THERMOMIX } from '../core/appareils.js';
 
 export const THEMES = { lagon: 'Lagon', rose: 'Rose', soleil: 'Soleil', marine: 'Marine' };
+/** Thème d'une personne tant qu'elle n'en a pas choisi un : rose pour Marie. */
+export const themeParDefaut = (moi) => (moi === 'M' ? 'rose' : 'lagon');
 export const appliquerTheme = (t) => { document.documentElement.dataset.theme = THEMES[t] ? t : 'lagon'; };
 
 function OrdreRayons() {
@@ -46,8 +48,8 @@ function sauvegarder() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-export function Plus({ enceinte = false, nuage, section }) {
-  const [theme, setTheme] = useState(() => lire('theme', 'lagon'));
+export function Plus({ enceinte = false, nuage, section, moi }) {
+  const [theme, setTheme] = useState(() => lire('theme', themeParDefaut(moi)));
   if (section === 'sources') {
     const par = {};
     for (const r of REGLES_ALERTE) for (const p of r.profils) (par[p] = par[p] || []).push(r);
@@ -65,6 +67,10 @@ export function Plus({ enceinte = false, nuage, section }) {
   return html`<div><${Entete} grand=${true} titre="Plus" sous="Tout le reste de NutriCoach" />
     <div class="contenu">
       <div class="rangs">
+        <${Rang} icone="🍽️" titre="Recettes" sous="1 610 recettes à chercher" href="#/recettes" />
+        ${enceinte && html`<${Rang} icone="📅" titre="Ma semaine" sous="Menus et planning" href="#/semaine" />`}
+        <${Rang} icone="🛒" titre="Courses" sous="Liste commune et stock" href="#/courses" />
+        <${Rang} icone="📈" titre="Suivi" sous="Poids, journal, eau" href="#/suivi" />
         ${enceinte && html`<${Rang} icone="🤰" titre="Grossesse : que puis-je manger ?" sous="Autorisé, déconseillé, interdit" href="#/grossesse" />`}
         <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />
         ${nuage && html`<${Rang} icone="👫" titre="Nous deux" sous="Votre situation à tous les deux" href="#/nous" />`}

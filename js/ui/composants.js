@@ -51,7 +51,7 @@ export function Bandeau({ type = 'info', titre, children }) {
 }
 
 export function BarreOnglets({ onglets, actif }) {
-  return html`<nav class=${'onglets' + (onglets.length > 8 ? ' dense' : '')} aria-label="Navigation">
+  return html`<nav class=${'onglets'} aria-label="Navigation">
     ${onglets.map((o) => html`<a key=${o.id} href=${o.href} class=${(o.centre ? 'centre ' : '') + (o.id === actif ? 'actif' : '')}
       aria-current=${o.id === actif ? 'page' : undefined} aria-label=${o.nom}><span aria-hidden="true">${o.icone}</span>${o.centre ? '' : o.nom}</a>`)}
   </nav>`;

@@ -70,3 +70,58 @@ test('modèle disparu (404) : le coach détecte un modèle flash disponible et r
   const sans = async (url) => (/\/models\?/.test(url) ? { ok: true, status: 200, json: async () => ({ models: [] }) } : { ok: false, status: 404, json: async () => ({}) });
   await assert.rejects(demanderAuCoach({ cle: 'k', historique: [{ role: 'user', texte: 'a' }], contexte: '' }, sans), /modèle/);
 });
+
+import { repondre, demanderAGroq, choisirModeleGroq, messagesGroq } from '../js/core/coach.js';
+const reponseGemini = (t) => ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: t }] } }] }) });
+const reponseGroq = (t) => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: t } }] }) });
+const histo = [{ role: 'user', texte: 'Bonjour' }];
+
+test('Groq : requête au format OpenAI avec clé en en-tête, réponse lue', async () => {
+  let vu = null;
+  const t = await demanderAGroq({ cle: 'gsk_x', historique: [{ role: 'user', texte: 'a' }, { role: 'coach', texte: 'b' }, { role: 'user', texte: 'c' }], contexte: 'Saison : hiver' }, async (url, o) => { vu = { url, o }; return reponseGroq('Salut'); });
+  assert.equal(t, 'Salut');
+  assert.equal(vu.url, 'https://api.groq.com/openai/v1/chat/completions');
+  assert.equal(vu.o.headers.Authorization, 'Bearer gsk_x');
+  const corps = JSON.parse(vu.o.body);
+  assert.deepEqual(corps.messages.map((m) => m.role), ['system', 'user', 'assistant', 'user']);
+  assert.ok(corps.messages[0].content.includes('Saison : hiver'));
+  assert.ok(!vu.url.includes('gsk_x'));
+  assert.equal(choisirModeleGroq([{ id: 'whisper-large-v3' }, { id: 'llama-3.1-8b-instant' }, { id: 'llama-3.3-70b-versatile' }]), 'llama-3.3-70b-versatile');
+  assert.equal(choisirModeleGroq([]), null);
+});
+test('Groq : modèle retiré (404) → détection d\'un autre modèle, puis réponse', async () => {
+  const appels = [];
+  const t = await demanderAGroq({ cle: 'k', modele: 'ancien', historique: histo, contexte: '' }, async (url, o) => {
+    appels.push(url);
+    if (url.endsWith('/models')) return { ok: true, status: 200, json: async () => ({ data: [{ id: 'llama-3.3-70b-versatile' }] }) };
+    return JSON.parse(o.body).model === 'ancien' ? { ok: false, status: 404, json: async () => ({}) } : reponseGroq('ok');
+  });
+  assert.equal(t, 'ok');
+  await assert.rejects(demanderAGroq({ cle: 'k', historique: histo, contexte: '' }, async () => ({ ok: false, status: 401, json: async () => ({}) })), /clé Groq est refusée/);
+});
+test('deux IA en même temps : la plus rapide gagne, l\'autre en panne ne gêne pas', async () => {
+  const attente = (ms, v) => new Promise((r) => setTimeout(() => r(v), ms));
+  const lent = async (url) => (url.includes('groq') ? attente(5, reponseGroq('réponse Groq')) : attente(60, reponseGemini('réponse Gemini')));
+  const r = await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, lent);
+  assert.deepEqual(r, { texte: 'réponse Groq', via: 'Groq' });
+  const groqKo = async (url) => (url.includes('groq') ? { ok: false, status: 500, json: async () => ({}) } : attente(20, reponseGemini('ok Gemini')));
+  assert.equal((await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, groqKo)).via, 'Gemini');
+  const toutKo = async () => ({ ok: false, status: 500, json: async () => ({}) });
+  await assert.rejects(repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, toutKo));
+  await assert.rejects(repondre({ reg: {}, historique: histo, contexte: '' }, toutKo), /clé Gemini ou Groq/);
+});
+test('photo ou PDF joint : seul Gemini est interrogé (Groq ne lit pas les images)', async () => {
+  const urls = [];
+  const f = async (url) => { urls.push(url); return reponseGemini('vu'); };
+  const r = await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '', pieces: [{ mime: 'image/jpeg', data: 'X' }] }, f);
+  assert.equal(r.via, 'Gemini');
+  assert.ok(urls.every((u) => !u.includes('groq')));
+  await assert.rejects(repondre({ reg: { cleGroq: 'b' }, historique: histo, contexte: '', pieces: [{ mime: 'image/jpeg', data: 'X' }] }, f), /Groq ne lit pas/);
+});
+test('Gemini 2.5 flash : mode « réflexion » coupé pour répondre plus vite', async () => {
+  let corps = null;
+  await demanderAuCoach({ cle: 'k', modele: 'gemini-2.5-flash', historique: histo, contexte: '' }, async (u, o) => { corps = JSON.parse(o.body); return reponseGemini('ok'); });
+  assert.equal(corps.generationConfig.thinkingConfig.thinkingBudget, 0);
+  await demanderAuCoach({ cle: 'k', modele: 'gemini-3-flash', historique: histo, contexte: '' }, async (u, o) => { corps = JSON.parse(o.body); return reponseGemini('ok'); });
+  assert.equal(corps.generationConfig.thinkingConfig, undefined);
+});

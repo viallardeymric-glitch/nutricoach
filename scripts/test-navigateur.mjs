@@ -246,6 +246,18 @@ await p.click('.bulle.coach .copier');
 await p.waitForSelector('text=Copié');
 verif(true, 'coach : bouton Copier');
 verif(await p.evaluate(() => getComputedStyle(document.querySelector('.bulle')).userSelect) === 'text', 'coach : le texte des bulles est sélectionnable (copier-coller)');
+// Deuxième IA (Groq) : les deux sont interrogées en même temps
+let appelsGroq = 0;
+await p.route('https://api.groq.com/**', async (route) => { appelsGroq++; await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ choices: [{ message: { content: 'Réponse rapide de Groq' } }] }) }); });
+await p.evaluate(() => { const r = JSON.parse(localStorage.getItem('nutricoach.coach.reglages') || '{}'); localStorage.setItem('nutricoach.coach.reglages', JSON.stringify({ ...r, cleGroq: 'gsk_TEST' })); });
+await p.reload(); await p.waitForSelector('.coach-saisie');
+const avantGemini = requetes.length;
+await p.fill('.coach-saisie textarea', 'Une idée de dessert ?'); await p.click('.coach-saisie button[type=submit]');
+await p.waitForSelector('.bulle.coach .copier');
+verif(appelsGroq === 1 && requetes.length === avantGemini + 1, 'coach : Gemini et Groq interrogés en même temps');
+verif(/Gemini|Groq/.test(await p.textContent('.bulle.coach .sous')), 'coach : la réponse indique quelle IA a répondu');
+verif((await p.getAttribute('.coach-saisie textarea', 'style') || '').indexOf('height: 140') < 0 && (await p.locator('.coach-saisie textarea').evaluate((e) => e.getBoundingClientRect().height)) <= 52, 'coach : la zone de saisie retrouve sa taille après l\'envoi');
+await p.unroute('https://api.groq.com/**');
 await p.click('text=Effacer la conversation');
 
 // Guide grossesse
@@ -261,6 +273,14 @@ await p.fill('input[aria-label="Chercher un aliment"]', '');
 await p.click('.puce:has-text("Autorisé")');
 verif(await p.locator('.carte-grossesse.ok').count() > 5 && await p.locator('.carte-grossesse.interdit').count() === 0, 'grossesse : filtre « Autorisé »');
 verif((await p.getAttribute('.onglets a.actif', 'href')) === '#/grossesse' && await p.locator('.onglets a:has-text("Grossesse")').count() === 1, 'grossesse : onglet dédié dans la barre du bas, actif sur la page');
+verif(await p.locator('.onglets a').count() === 5, 'ergonomie : 5 entrées au plus dans la barre du bas (grossesse déclarée)');
+await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
+{ const t = await p.textContent('.rangs'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : Recettes, Ma semaine, Courses et Suivi sont dans « Plus »'); }
+await p.goto(serveur.url + '/#/'); await p.waitForSelector('.raccourcis');
+{ const t = await p.textContent('.raccourcis'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : raccourcis vers Recettes, Ma semaine, Courses et Suivi sur l\'accueil'); }
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+verif((await p.getAttribute('.onglets a.actif', 'href')) === '#/plus', 'ergonomie : sur Courses, l\'onglet « Plus » reste actif');
+await p.goto(serveur.url + '/#/grossesse'); await p.waitForSelector('.carte-grossesse');
 verif(/user-scalable=no/.test(await p.getAttribute('meta[name=viewport]', 'content')) && /maximum-scale=1/.test(await p.getAttribute('meta[name=viewport]', 'content')), 'zoom : bloqué (viewport)');
 verif(await p.evaluate(() => getComputedStyle(document.body).touchAction) === 'pan-x pan-y', 'zoom : pincement et double toucher bloqués (touch-action)');
 verif(await p.evaluate(() => { const e = new Event('gesturestart', { cancelable: true }); document.dispatchEvent(e); return e.defaultPrevented; }), 'zoom : gestes de pincement Safari bloqués');

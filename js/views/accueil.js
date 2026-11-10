@@ -77,10 +77,11 @@ export function Accueil({ enceinte = false, moi, profil, besoins, index, plan, c
       <//>
 
       <div class="raccourcis">
-        <a class="raccourci" href="#/frigo"><span>🧊</span><strong>Frigo magique</strong><span class="sous">Cuisiner ce que j'ai</span></a>
-        <a class="raccourci" href="#/scan"><span>📷</span><strong>Scanner</strong><span class="sous">Noter un produit</span></a>
+        <a class="raccourci" href="#/recettes"><span>🍽️</span><strong>Recettes</strong><span class="sous">Chercher parmi 1 610</span></a>
+        <a class="raccourci" href="#/semaine"><span>📅</span><strong>Ma semaine</strong><span class="sous">Menus et planning</span></a>
         <a class="raccourci" href="#/courses"><span>🛒</span><strong>Courses</strong><span class="sous">Liste commune et stock</span></a>
-        <a class="raccourci" href="#/coach"><span>💬</span><strong>Coach IA</strong><span class="sous">Une question ? Une idée ?</span></a>
+        <a class="raccourci" href="#/suivi"><span>📈</span><strong>Suivi</strong><span class="sous">Poids, journal, eau</span></a>
+        <a class="raccourci" href="#/frigo"><span>🧊</span><strong>Frigo magique</strong><span class="sous">Cuisiner ce que j'ai</span></a>
         ${nuage ? html`<a class="raccourci" href="#/nous"><span>👫</span><strong>Nous deux</strong><span class="sous">Votre situation à tous les deux</span></a>`
           : html`<a class="raccourci" href="#/favoris"><span>♥</span><strong>Mes favoris</strong><span class="sous">${nbFavoris} recette${nbFavoris > 1 ? 's' : ''}</span></a>`}
       </div>

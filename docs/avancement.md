@@ -50,3 +50,7 @@ Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Th
 ## Coach en onglet et guide grossesse
 - ✅ Onglet Coach dans la barre du bas ; pièces jointes (photo, PDF, texte), coller image/texte, copier les réponses, suggestions adaptées à la grossesse.
 - ✅ Guide « Grossesse : puis-je manger ? » (≈ 36 fiches aliments, recherche, filtres), visible quand la grossesse est déclarée. 🟡 Contenu à faire relire par un professionnel de santé.
+
+## Rapidité, Groq, ergonomie
+- ✅ Second fournisseur d'IA Groq ; Gemini et Groq interrogés en même temps (première réponse affichée) ; mode « réflexion » de Gemini 2.5 coupé ; modèle détecté automatiquement s'il est retiré. Non testé avec les vrais serveurs Groq / Gemini.
+- ✅ Barre du bas à 5 entrées ; zone de saisie du coach corrigée ; thème rose (fond rose) par défaut pour Marie.
