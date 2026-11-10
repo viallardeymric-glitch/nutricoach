@@ -51,6 +51,6 @@ export function NousDeux({ moi, profils, favorisNuage, erreurSynchro, journal = 
       ${erreurSynchro && html`<${Bandeau} type="alerte"><p>La synchronisation est interrompue. Vos modifications sont gardées sur ce téléphone et partiront dès que possible.</p><//>`}
       ${!profils ? html`<p class="etat">Chargement…</p>` : ['E', 'M'].map((id) => html`<${Carte} key=${id} id=${id}
         profil=${profils[id]} nbFavoris=${nb(id)} moi=${moi} journal=${journal} poids=${poids} />`)}
-      <p class="note">Tout est partagé entre vous deux par défaut. Vous pouvez garder une pesée privée dans l'onglet Suivi (elle est alors masquée dans l'appli de l'autre).</p>
+      <p class="note">Tout est partagé entre vous deux par défaut.</p>
     </div></div>`;
 }

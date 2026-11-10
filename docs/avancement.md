@@ -10,7 +10,7 @@ La suite de contrôles : 135 tests unitaires, vérification des 1 610 recettes e
 - **Icônes** : émojis, pas de Font Awesome.
 - **Notifications** : pas de push quand l'appli est fermée (serveur d'envoi indisponible sur l'offre gratuite) ; fil « Depuis votre dernière visite » sur l'accueil.
 - **Règles d'alerte, régimes médicaux, apports du sport, substitutions** : repères généraux **à faire relire par un professionnel de santé** (`docs/sources.md`).
-- **« Privé »** (pesées, poids) masque la donnée dans l'appli de l'autre ; ce n'est pas un chiffrement.
+- **Tout est partagé** entre Eymric et Marie, y compris les pesées (le mode « privé » a été retiré à la demande d’Eymric).
 - **Face ID / Touch ID** : porte d'entrée de l'appli (WebAuthn local), pas un chiffrement des données.
 - **Séances** : plus de saisie ni d’import de séances (retirés à la demande d’Eymric) ; le plan sportif suit la semaine type de la phase.
 

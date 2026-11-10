@@ -98,7 +98,6 @@ function CourbePoids({ poids, moi }) {
 function Poids({ poids, moi, ecrirePoids, besoins }) {
   const [kg, setKg] = useState('');
   const [mes, setMes] = useState({});
-  const [prive, setPrive] = useState(false);
   const mien = serieDePoids(poids, moi);
   const dernier = mien[mien.length - 1];
   const v30 = variationPoids(mien, 30);
@@ -107,7 +106,7 @@ function Poids({ poids, moi, ecrirePoids, besoins }) {
     const v = Number(String(kg).replace(',', '.'));
     if (!(v > 20 && v < 400)) return;
     const mesures = Object.fromEntries(Object.entries(mes).map(([k, x]) => [k, Number(String(x).replace(',', '.'))]));
-    ecrirePoids({ date: cleDate(new Date()), par: moi, kg: Math.round(v * 10) / 10, mesures, prive });
+    ecrirePoids({ date: cleDate(new Date()), par: moi, kg: Math.round(v * 10) / 10, mesures });
     setKg(''); setMes({});
   };
   return html`<div>
@@ -120,11 +119,10 @@ function Poids({ poids, moi, ecrirePoids, besoins }) {
         <label class="champ"><span>Poids (kg)</span><input type="text" inputmode="decimal" value=${kg} onInput=${(e) => setKg(e.target.value)} placeholder="ex. 62,4" /></label>
         <details class="repli"><summary>Mensurations (facultatif)</summary><div class="grille deux">${Object.entries(MESURES).map(([k, n]) => html`<label class="champ" key=${k}><span>${n} (cm)</span>
           <input type="text" inputmode="decimal" value=${mes[k] || ''} onInput=${(e) => setMes({ ...mes, [k]: e.target.value })} /></label>`)}</div></details>
-        <label class="case"><input type="checkbox" checked=${prive} onChange=${(e) => setPrive(e.target.checked)} /><span>Garder cette pesée privée (l'autre ne la voit pas dans l'appli)</span></label>
         <button type="submit" class="bouton grand" disabled=${!kg.trim()}>Enregistrer</button></form>
-      <p class="note">Partagé par défaut dans le couple. « Privé » masque la donnée dans l'appli de l'autre ; ce n'est pas un chiffrement.</p><//>
+      <p class="note">Les pesées sont partagées dans le couple.</p><//>
     ${mien.length > 0 && html`<${Section} titre="Historique"><ul class="articles">${[...mien].reverse().slice(0, 12).map((p) => html`<li class="article" key=${p.date}><span class="article-texte plein"><strong>${nf(p.kg)} kg</strong>
-      <span class="sous">${p.date}${p.prive ? ' · 🔒 privé' : ''}${Object.entries(p.mesures || {}).map(([k, v]) => ` · ${MESURES[k] || k} ${nf(v)} cm`).join('')}</span></span></li>`)}</ul><//>`}
+      <span class="sous">${p.date}${Object.entries(p.mesures || {}).map(([k, v]) => ` · ${MESURES[k] || k} ${nf(v)} cm`).join('')}</span></span></li>`)}</ul><//>`}
   </div>`;
 }
 

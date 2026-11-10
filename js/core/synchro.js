@@ -121,7 +121,7 @@ export function docsVersScans(docs) {
 // ---------- Journal alimentaire (journal) et poids (weights) ----------
 const DATE_OK = /^\d{4}-\d{2}-\d{2}$/;
 export function journalVersDoc(e) {
-  const d = { type: e.type === 'eau' ? 'eau' : 'repas', date: e.date, par: e.par, t: e.t || Date.now(), prive: Boolean(e.prive) };
+  const d = { type: e.type === 'eau' ? 'eau' : 'repas', date: e.date, par: e.par, t: e.t || Date.now(), };
   if (d.type === 'eau') return { ...d, ml: Math.round(e.ml) };
   return { ...d, repas: e.repas || 'collation', nom: String(e.nom).slice(0, 80), kcal: Math.round(e.kcal || 0), p: e.p || 0, g: e.g || 0, l: e.l || 0,
     source: e.source || 'manuel', ref: e.ref || '', portion: e.portion || '' };
@@ -129,20 +129,18 @@ export function journalVersDoc(e) {
 /** Documents « journal » → entrées valides (id = identifiant du document). */
 export function docsVersJournal(docs) {
   return docs.filter((d) => DATE_OK.test(d.date || '') && PERSONNES_IDS.includes(d.par) && (d.type === 'eau' ? d.ml > 0 : d.type === 'repas' && d.nom))
-    .map((d) => ({ ...d, kcal: d.kcal || 0, p: d.p || 0, g: d.g || 0, l: d.l || 0, prive: Boolean(d.prive) }));
+    .map((d) => ({ ...d, kcal: d.kcal || 0, p: d.p || 0, g: d.g || 0, l: d.l || 0 }));
 }
 export const idDocPoids = (date, par) => `${date}_${par}`;
 export function poidsVersDoc(p) {
   const mesures = {};
   for (const [k, v] of Object.entries(p.mesures || {})) if (Number.isFinite(v) && v > 0) mesures[k] = v;
-  return { date: p.date, par: p.par, kg: p.kg, mesures, prive: Boolean(p.prive), t: Date.now() };
+  return { date: p.date, par: p.par, kg: p.kg, mesures, t: Date.now() };
 }
 export function docsVersPoids(docs) {
   return docs.filter((d) => DATE_OK.test(d.date || '') && PERSONNES_IDS.includes(d.par) && Number.isFinite(d.kg) && d.kg > 20 && d.kg < 400)
-    .map((d) => ({ id: d.id, date: d.date, par: d.par, kg: d.kg, mesures: d.mesures || {}, prive: Boolean(d.prive) }));
+    .map((d) => ({ id: d.id, date: d.date, par: d.par, kg: d.kg, mesures: d.mesures || {} }));
 }
-/** Ce que `qui` a le droit de voir : tout, sauf les données marquées « privé » de l'autre personne (affichage seulement). */
-export const visiblePour = (items, qui) => items.filter((x) => !x.prive || x.par === qui);
 
 // ---------- Enfants du foyer : documents profiles/enfant-xxx ----------
 export function enfantVersDoc(e) {

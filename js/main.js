@@ -7,7 +7,7 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, idDocPhoto, photoVersDoc, docsVersPhotos, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, idDocPhoto, photoVersDoc, docsVersPhotos, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { biometrieActive, desactiverBiometrie } from './core/biometrie.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
@@ -191,8 +191,8 @@ function App() {
   };
   const colJournal = useCollection('journal', session.docsJournal, connecte);
   const colPoids = useCollection('weights', session.docsPoids, connecte);
-  const journal = useMemo(() => visiblePour(docsVersJournal(colJournal.items), moi), [colJournal.items, moi]);
-  const poids = useMemo(() => visiblePour(docsVersPoids(colPoids.items), moi), [colPoids.items, moi]);
+  const journal = useMemo(() => docsVersJournal(colJournal.items), [colJournal.items, moi]);
+  const poids = useMemo(() => docsVersPoids(colPoids.items), [colPoids.items, moi]);
   const colSeances = useCollection('workouts', session.docsSeances, connecte);
   const seances = useMemo(() => docsVersSeances(colSeances.items), [colSeances.items]);
   const opsSport = {

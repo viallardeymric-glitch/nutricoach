@@ -207,7 +207,7 @@ verif((await marie.textContent('.sans-marge-liste')).includes('Yaourt nature'), 
 await marie.goto(serveur.url + '/#/produit/3017620422003'); await marie.waitForSelector('.produit .jauge');
 verif((await marie.textContent('.bandeau.alerte')).includes('lait'), 'le même produit : alerte selon le profil de Marie (lait)');
 
-// 4 quinquies. Suivi partagé : journal, hydratation, poids (et « privé »)
+// 4 quinquies. Suivi partagé : journal, hydratation, poids 
 await eymric.goto(serveur.url + '/#/suivi'); await eymric.waitForSelector('.bilan-jour');
 await eymric.locator('section.section:has(h2:text-is("☀️ Déjeuner")) .ajout').click();
 await eymric.click('.ajout-repas .puce:text-is("Libre")');
@@ -224,10 +224,6 @@ await marie.goto(serveur.url + '/#/nous');
 await marie.waitForSelector('.carte-nous >> text=200 kcal', { timeout: 2000 }).then(
   () => verif(true, '« Nous deux » : Marie voit le journal d\'Eymric (200 kcal) en moins de 2 s'), async () => { verif(false, 'journal partagé'); console.log('   DEBUG', (await marie.textContent('.contenu')).replace(/\s+/g, ' ').slice(0, 400)); });
 verif((await marie.textContent('.contenu')).includes('80,5 kg'), '« Nous deux » : Marie voit le poids d\'Eymric (partagé par défaut)');
-await eymric.getByLabel('Poids (kg)').fill('80,5');
-await eymric.check('.case input'); await eymric.click('role=button[name="Enregistrer"]');
-await marie.waitForFunction(() => !document.body.textContent.includes('80,5 kg'), null, { timeout: 2000 }).then(
-  () => verif(true, 'option « privé » : le poids n\'apparaît plus chez Marie'), () => verif(false, 'poids privé masqué'));
 
 // 4 septies. Photos partagées : trouvée par Eymric (avec une clé), affichée chez Marie (sans clé), sans nouvelle recherche
 await eymric.evaluate(() => localStorage.setItem('nutricoach.photos.reglages', JSON.stringify({ fournisseur: 'pexels', cles: { pexels: 'CLE-EYMRIC' } })));
