@@ -1,5 +1,6 @@
 // Écran « Recettes » et « Favoris » : recherche, filtres cumulables et liste.
-import { html, useMemo } from '../../vendor/preact-htm.js';
+import { html, useMemo, useState, useEffect, useRef } from '../../vendor/preact-htm.js';
+import { photoEnCache, photoDeRecette, chargerReglagesPhotos } from '../core/photos.js';
 import { TAILLE_PAGE } from '../core/config.js';
 import { CATEGORIES, REGIMES, ALLERGENES, SAISONS, APPAREILS, DIFFICULTES, TEMPS_MAX, PROFILS, lib, libSousCategorie } from '../data/libelles.js';
 import { filtrerRecettes, nombreFiltres, basculer, FILTRES_VIDES } from '../lib/recettes.js';
@@ -35,10 +36,32 @@ function Filtres({ f, setF, regimesDispo, effacer }) {
   </section>`;
 }
 
+/** Pictogramme, remplacé par la miniature de la recette quand elle est disponible (cherchée seulement une fois la carte visible). */
+function Vignette({ r }) {
+  const [photo, setPhoto] = useState(() => { const c = photoEnCache(r.id); return c && c.url ? c : null; });
+  const ref = useRef(null);
+  useEffect(() => {
+    if (photo || !('IntersectionObserver' in window)) return undefined;
+    let actif = true;
+    let minuteur = null;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { minuteur = setTimeout(() => {
+        const reg = chargerReglagesPhotos();           // réglages lus à ce moment-là : une clé saisie après le démarrage compte
+        if (!reg.miniatures || !Object.values(reg.cles).some(Boolean)) return;
+        obs.disconnect(); photoDeRecette(r, fetch, { miniature: true }).then((p) => actif && p && setPhoto(p)).catch(() => {}); }, 500); }   // 0,5 s visible : on cherche
+      else clearTimeout(minuteur);
+    });
+    if (ref.current) obs.observe(ref.current);
+    return () => { actif = false; clearTimeout(minuteur); obs.disconnect(); };
+  }, [r.id]);
+  const montrer = photo && chargerReglagesPhotos().miniatures;     // miniatures désactivées : pictogramme tout de suite
+  return html`<span class="vignette-zone" ref=${ref}>${montrer ? html`<img class="picto vignette-photo" src=${photo.mini || photo.url} alt="" loading="lazy" />` : html`<${Pictogramme} recette=${r} />`}</span>`;
+}
+
 function Carte({ r, favori, onFavori, onOuvrir, risques, par }) {
   return html`<li class="carte">
     <a class="carte-lien" href=${'#/recette/' + r.id} onClick=${onOuvrir}>
-      <${Pictogramme} recette=${r} />
+      <${Vignette} r=${r} />
       <span class="carte-texte">
         <strong>${r.titre}</strong>
         <span class="sous">${r.categorie} · ${libSousCategorie(r.sous_categorie)}</span>

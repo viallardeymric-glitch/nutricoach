@@ -12,7 +12,7 @@ export function normaliserReglagesPhotos(brut) {
   const fournisseur = FOURNISSEURS[b.fournisseur] ? b.fournisseur : 'pexels';
   const cles = { pexels: '', unsplash: '', ...(b.cles || {}) };
   if (b.cle && !cles[fournisseur]) cles[fournisseur] = b.cle;       // ancien format
-  return { fournisseur, cles };
+  return { fournisseur, cles, miniatures: b.miniatures !== false };
 }
 export const chargerReglagesPhotos = () => normaliserReglagesPhotos(lire('photos.reglages', {}));
 /** Fournisseurs à essayer, dans l'ordre : le principal d'abord, puis l'autre, seulement ceux qui ont une clé. */
@@ -38,11 +38,11 @@ export function lirePhoto(fournisseur, json) {
   if (fournisseur === 'unsplash') {
     const p = json && json.results && json.results[0];
     if (!p || !p.urls) return null;
-    return { url: p.urls.regular || p.urls.small, credit: (p.user && p.user.name) || 'Photographe', lien: ((p.user && p.user.links && p.user.links.html) || 'https://unsplash.com') + '?utm_source=nutricoach&utm_medium=referral', fournisseur: 'Unsplash', telechargement: p.links && p.links.download_location };
+    return { url: p.urls.regular || p.urls.small, mini: p.urls.small || p.urls.regular, credit: (p.user && p.user.name) || 'Photographe', lien: ((p.user && p.user.links && p.user.links.html) || 'https://unsplash.com') + '?utm_source=nutricoach&utm_medium=referral', fournisseur: 'Unsplash', telechargement: p.links && p.links.download_location };
   }
   const p = json && json.photos && json.photos[0];
   if (!p || !p.src) return null;
-  return { url: p.src.large || p.src.medium, credit: p.photographer || 'Photographe', lien: p.photographer_url || p.url || 'https://www.pexels.com', fournisseur: 'Pexels' };
+  return { url: p.src.large || p.src.medium, mini: p.src.medium || p.src.small || p.src.large, credit: p.photographer || 'Photographe', lien: p.photographer_url || p.url || 'https://www.pexels.com', fournisseur: 'Pexels' };
 }
 
 export const messageErreurPhotos = (statut) => (statut === 401 || statut === 403 ? 'La clé de photos est refusée : vérifiez-la dans Profil › Photos.' : statut === 429 ? 'Quota de photos atteint pour cette heure : elles reviendront plus tard.' : 'Photos indisponibles pour le moment.');
@@ -50,14 +50,38 @@ export const messageErreurPhotos = (statut) => (statut === 401 || statut === 403
 const MAX_CACHE = 150;
 export const photoEnCache = (id) => (lire('photos', {}) || {})[id] || null;
 
+// ---------- Miniatures de la liste : quota protégé ----------
+export const MINIATURES_PAR_HEURE = 40;      // recherches de miniatures par heure (le reste du quota sert aux fiches)
+/** Fenêtre d'une heure glissante : { debut, n } → { autorise, etat } (pure, testée). */
+export function quotaMiniatures(etat, maintenant, limite = MINIATURES_PAR_HEURE) {
+  const e = etat && maintenant - etat.debut < 3600000 ? etat : { debut: maintenant, n: 0 };
+  return { autorise: e.n < limite, etat: e };
+}
+/** Deux recherches au plus en même temps : faire défiler la liste ne déclenche pas une rafale. */
+let actives = 0;
+const attente = [];
+function enFile(travail) {
+  return new Promise((ok, ko) => {
+    const lancer = () => { actives++; travail().then(ok, ko).finally(() => { actives--; const suite = attente.shift(); if (suite) suite(); }); };
+    if (actives < 2) lancer(); else attente.push(lancer);
+  });
+}
+
 /**
  * Photo d'une recette : cache d'abord, sinon recherche chez le fournisseur principal puis, s'il échoue (quota, clé refusée,
  * aucune photo), chez l'autre. Retourne la photo, null s'il n'y en a pas ; lève une Error lisible si tous ont échoué.
  */
-export async function photoDeRecette(recette, appeler = fetch) {
+export async function photoDeRecette(recette, appeler = fetch, { miniature = false } = {}) {
   const dejaLa = photoEnCache(recette.id);
   if (dejaLa) return dejaLa.url ? dejaLa : null;                 // « aucune photo » est aussi mémorisé
   const reg = chargerReglagesPhotos();
+  if (miniature) {
+    if (!reg.miniatures) return null;
+    const q = quotaMiniatures(lire('photos.quota', null), Date.now());
+    if (!q.autorise) return null;                                // plafond atteint : pictogramme, rien en cache
+    ecrire('photos.quota', { ...q.etat, n: q.etat.n + 1 });
+    return enFile(() => photoDeRecette(recette, appeler));       // même logique, en file (2 à la fois)
+  }
   const ordre = ordreFournisseurs(reg);
   if (!ordre.length) return null;
   let derniereErreur = null;

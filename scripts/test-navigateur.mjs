@@ -588,6 +588,21 @@ verif((await p.textContent('.fiche-photo figcaption')).includes('Anna Dupont') &
 verif(appelsPhotos === 1, 'photos : une seule recherche à l\'ouverture de la fiche');
 await p.goto(serveur.url + '/#/'); await p.goto(serveur.url + '/#/recette/' + toutes[21].id); await p.waitForSelector('.fiche-photo');
 verif(appelsPhotos === 1, 'photos : photo gardée en cache (aucun nouvel appel)');
+// Miniatures dans la liste des recettes : seulement les cartes visibles, quota protégé, désactivables
+const avantListe = appelsPhotos;
+await p.goto(serveur.url + '/#/recettes'); await p.waitForSelector('.vignette-photo', { timeout: 8000 });
+await p.waitForTimeout(1800);
+const nbVign = await p.locator('.vignette-photo').count();
+verif(nbVign >= 3 && nbVign <= 14, `miniatures : ${nbVign} photos à la place des pictogrammes dans la liste`);
+verif(appelsPhotos - avantListe <= 14, `miniatures : seules les cartes visibles déclenchent une recherche (${appelsPhotos - avantListe} appels, pas 40)`);
+const apresListe = appelsPhotos;
+await p.goto(serveur.url + '/#/recettes'); await p.waitForTimeout(1200);
+verif(appelsPhotos === apresListe, 'miniatures : déjà en cache, aucun nouvel appel au retour sur la liste');
+await p.goto(serveur.url + '/#/profil/photos'); await p.click('role=button[name="✓ Miniatures activées"]');
+await p.evaluate(() => { localStorage.removeItem('nutricoach.photos'); });
+await p.goto(serveur.url + '/#/recettes'); await p.waitForSelector('.carte'); await p.waitForTimeout(1500);
+verif(await p.locator('.vignette-photo').count() === 0 && appelsPhotos === apresListe, 'miniatures désactivées : pictogrammes et aucun appel');
+await p.goto(serveur.url + '/#/profil/photos'); await p.click('role=button[name="Miniatures désactivées"]');
 await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill('mauvaise');
 await p.goto(serveur.url + '/#/recette/' + toutes[22].id); await p.waitForSelector('text=clé de photos est refusée');
 verif(await p.locator('.fiche-hero').count() === 1, 'photos : clé refusée, message clair et pictogramme conservé');

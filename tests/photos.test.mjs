@@ -38,3 +38,17 @@ test('deux clés : ordre d\'essai, ancien format repris, fournisseur sans clé i
   assert.deepEqual(normaliserReglagesPhotos({ fournisseur: 'pexels', cle: 'ANCIENNE' }).cles, { pexels: 'ANCIENNE', unsplash: '' }, 'une seule clé enregistrée avec l\'ancienne version');
   assert.equal(normaliserReglagesPhotos({ fournisseur: 'inconnu' }).fournisseur, 'pexels');
 });
+
+import { quotaMiniatures, MINIATURES_PAR_HEURE } from '../js/core/photos.js';
+test('quota des miniatures : plafond par heure glissante', () => {
+  const t = 1_000_000;
+  assert.deepEqual(quotaMiniatures(null, t), { autorise: true, etat: { debut: t, n: 0 } });
+  assert.equal(quotaMiniatures({ debut: t, n: MINIATURES_PAR_HEURE - 1 }, t + 10).autorise, true);
+  assert.equal(quotaMiniatures({ debut: t, n: MINIATURES_PAR_HEURE }, t + 10).autorise, false);
+  const apres = quotaMiniatures({ debut: t, n: MINIATURES_PAR_HEURE }, t + 3_600_001);
+  assert.ok(apres.autorise && apres.etat.n === 0, 'une heure plus tard : compteur remis à zéro');
+  assert.equal(normaliserReglagesPhotos({}).miniatures, true, 'miniatures activées par défaut');
+  assert.equal(normaliserReglagesPhotos({ miniatures: false }).miniatures, false);
+  assert.equal(lirePhoto('pexels', { photos: [{ src: { large: 'L', medium: 'M' } }] }).mini, 'M');
+  assert.equal(lirePhoto('unsplash', { results: [{ urls: { regular: 'R', small: 'S' } }] }).mini, 'S');
+});

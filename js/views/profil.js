@@ -118,6 +118,7 @@ function SectionPhotos() {
     ${Object.entries(FOURNISSEURS).map(([k, x]) => html`<div key=${k}><${Champ} etiquette=${`Clé ${x.nom} (gratuite)`}><input type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé ici" value=${reg.cles[k]}
       onInput=${(e) => majCle(k, e.target.value)} /><//>
       <p class="note">${k === 'pexels' ? 'Sur pexels.com/api : créez un compte gratuit puis demandez une clé (instantané).' : 'Sur unsplash.com/developers : créez un compte, puis une « application » en mode Demo pour obtenir une « Access Key ».'} Limite : ${x.delai}.</p></div>`)}
+    <${Groupe} titre="Miniatures dans la liste des recettes" aide="Affiche une petite photo à la place du pictogramme pour les recettes que vous voyez à l'écran. Plafonné à 40 recherches par heure pour garder du quota pour les fiches."><${Choix}><${Puce} actif=${reg.miniatures} onClick=${() => maj({ miniatures: !reg.miniatures })}>${reg.miniatures ? '✓ Miniatures activées' : 'Miniatures désactivées'}<//><//><//>
     <p class="note">${actifs.length === 2 ? 'Les deux fournisseurs sont activés : 250 photos par heure en tout.' : actifs.length === 1 ? `${FOURNISSEURS[actifs[0]].nom} est activé.` : 'Aucune clé : les recettes gardent leur pictogramme.'} Chaque photo est cherchée à l'ouverture d'une recette puis gardée sur ce téléphone, avec le nom du photographe. Les clés restent sur ce téléphone : elles ne sont ni synchronisées ni enregistrées dans le dépôt.</p>
   </div>`;
 }
