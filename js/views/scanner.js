@@ -2,10 +2,11 @@
 import { html, useState, useEffect, useRef, useMemo } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { demarrerScan, cameraDisponible } from '../core/camera.js';
-import { chargerProduitOFF, chercherAlternatives } from '../core/off.js';
+import { chargerProduitOFF, chercherAlternatives, envoyerProduitOFF } from '../core/off.js';
 import { codeBarresValide, noterProduit, alertesProduit, LIBELLE_COULEUR, CONSIGNE_TABLEAU, lireTableauIA } from '../lib/scan.js';
 import { chargerReglagesCoach, demanderSurImage } from '../core/coach.js';
 import { reduireImage } from '../core/image.js';
+import { lire, ecrire } from '../core/stockage.js';
 import { risqueAdditif, NIVEAUX_ADDITIFS } from '../data/additifs.js';
 import { MENTION_SCAN } from '../data/sources.js';
 import { ALLERGENES, lib } from '../data/libelles.js';
@@ -100,8 +101,33 @@ function Formulaire({ code, onCreer }) {
     <div class="grille deux">${champ('kcal', 'Énergie', 'kcal')}${champ('graisses', 'Graisses', 'g')}${champ('glucides', 'Glucides', 'g')}${champ('sucres', 'Sucres', 'g')}${champ('satures', 'Graisses saturées', 'g')}${champ('sel', 'Sel', 'g')}${champ('fibres', 'Fibres', 'g')}${champ('proteines', 'Protéines', 'g')}</div>
     <label class="champ"><span>Ingrédients (facultatif)</span><input type="text" value=${v.ingredients} onInput=${maj('ingredients')} /></label>
     <button type="submit" class="bouton grand" disabled=${!v.nom.trim()}>Enregistrer et noter ce produit</button>
-    <p class="note">Le produit est gardé dans votre historique partagé. L'envoi vers Open Food Facts (qui demande un compte) n'est pas encore possible depuis l'appli.</p>
+    <p class="note">Le produit est gardé dans votre historique partagé. Une fois enregistré, vous pourrez le partager avec Open Food Facts (compte gratuit).</p>
   </form>`;
+}
+
+function EnvoiOFF({ produit, scan, ops }) {
+  const [compte, setCompte] = useState(() => ({ utilisateur: '', mot_de_passe: '', ...lire('off.compte', {}) }));
+  const [etat, setEtat] = useState(null);   // { type, texte }
+  const [attente, setAttente] = useState(false);
+  if (scan.envoyeOFF) return html`<${Bandeau} type="info"><p>✓ Ce produit a été envoyé à Open Food Facts. Merci, tout le monde en profite.</p><//>`;
+  const envoyer = async (e) => {
+    e.preventDefault();
+    setAttente(true); setEtat(null);
+    try {
+      await envoyerProduitOFF(produit, compte);
+      ecrire('off.compte', { utilisateur: compte.utilisateur, mot_de_passe: compte.mot_de_passe });
+      ops.ecrireScan({ ...scan, envoyeOFF: true });
+    } catch (err) { setEtat({ type: 'alerte', texte: err.message }); }
+    setAttente(false);
+  };
+  return html`<details class="repli"><summary>Partager ce produit avec Open Food Facts</summary>
+    <form onSubmit=${envoyer}>
+      <p class="note">Open Food Facts est une base ouverte et gratuite. Il faut un compte gratuit (openfoodfacts.org). Vos identifiants restent sur ce téléphone, ils ne sont pas synchronisés. Le produit est envoyé avec les chiffres saisis : vérifiez-les d'abord.</p>
+      <label class="champ"><span>Nom d'utilisateur Open Food Facts</span><input type="text" autocomplete="username" value=${compte.utilisateur} onInput=${(e) => setCompte({ ...compte, utilisateur: e.target.value })} /></label>
+      <label class="champ"><span>Mot de passe Open Food Facts</span><input type="password" autocomplete="current-password" value=${compte.mot_de_passe} onInput=${(e) => setCompte({ ...compte, mot_de_passe: e.target.value })} /></label>
+      ${etat && html`<${Bandeau} type=${etat.type}><p>${etat.texte}</p><//>`}
+      <button type="submit" class="bouton" disabled=${attente}>${attente ? 'Envoi…' : 'Envoyer à Open Food Facts'}</button>
+    </form></details>`;
 }
 
 export function Produit({ code, scans, moi, profil, ops, articlesListe }) {
@@ -172,6 +198,7 @@ export function Produit({ code, scans, moi, profil, ops, articlesListe }) {
     </div>
     ${scan && html`<p class="sous">Scanné par <${Pastille} qui=${scan.par} /> ${scan.saisie ? '· saisi à la main' : ''}</p>`}
     ${retourBandeau}
+    ${scan && scan.saisie && html`<${EnvoiOFF} produit=${produit} scan=${scan} ops=${ops} />`}
     ${alertes.length > 0 && html`<${Bandeau} type=${alertes.some((a) => a.niveau === 'rouge') ? 'alerte' : 'avertissement'} titre=${html`<${Pastille} qui=${moi_} /> À savoir pour ${PERSONNES[moi_].prenom}`}>
       <ul>${alertes.map((a) => html`<li key=${a.id}>${a.niveau === 'rouge' ? '⛔' : '⚠'} ${a.raison}${a.source !== 'profil' ? html` <span class="sous">(${a.source})</span>` : ''}</li>`)}</ul>
       <p class="note"><a href="#/sources">Voir les sources</a></p><//>`}

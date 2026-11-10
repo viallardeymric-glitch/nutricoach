@@ -111,3 +111,35 @@ test('photo du tableau : lecture de la réponse de l\'IA, valeurs invraisemblabl
   assert.equal(lireTableauIA('pas du json'), null);
   assert.equal(lireTableauIA('{"nom":"x","kcal":null}'), null, 'aucun chiffre : null');
 });
+
+import { champsEnvoiOFF, problemeEnvoiOFF } from '../js/lib/scan.js';
+test('envoi vers Open Food Facts : champs et garde-fous', () => {
+  const prod = { code: '4006381333931', nom: 'Pain maison', marque: '', ingredients: '', nutrition: { kcal: 250, graisses: null, satures: 0.5, glucides: null, sucres: 3, fibres: null, proteines: 8, sel: 1.2 } };
+  const compte = { utilisateur: ' eymric ', mot_de_passe: 'x' };
+  const c = champsEnvoiOFF(prod, compte);
+  assert.equal(c.user_id, 'eymric');
+  assert.equal(c.code, '4006381333931');
+  assert.equal(c['nutriment_energy-kcal'], '250');
+  assert.equal(c['nutriment_energy-kcal_unit'], 'kcal');
+  assert.equal(c['nutriment_saturated-fat_unit'], 'g');
+  assert.equal(c.nutriment_fat, undefined, 'valeur absente omise');
+  assert.equal(c.brands, undefined);
+  assert.equal(problemeEnvoiOFF(prod, compte), null);
+  assert.match(problemeEnvoiOFF(prod, { utilisateur: '', mot_de_passe: '' }), /mot de passe/);
+  assert.match(problemeEnvoiOFF({ ...prod, code: '123' }, compte), /code-barres/);
+  assert.match(problemeEnvoiOFF({ ...prod, nutrition: {} }, compte), /valeur nutritionnelle/);
+});
+
+import { envoyerProduitOFF } from '../js/core/off.js';
+test('envoi OFF : succès, mauvais mot de passe, réseau coupé', async () => {
+  const prod = { code: '4006381333931', nom: 'Pain', marque: '', ingredients: '', nutrition: { kcal: 250 } };
+  const compte = { utilisateur: 'e', mot_de_passe: 'x' };
+  let corps = null;
+  const ok = async (url, o) => { corps = String(o.body); return { ok: true, status: 200, json: async () => ({ status: 1 }) }; };
+  assert.equal(await envoyerProduitOFF(prod, compte, { appeler: ok }), true);
+  assert.match(corps, /code=4006381333931/);
+  const ko = async () => ({ ok: true, status: 200, json: async () => ({ status: 0, status_verbose: 'User not signed-in : wrong password' }) });
+  await assert.rejects(envoyerProduitOFF(prod, compte, { appeler: ko }), /incorrect/);
+  await assert.rejects(envoyerProduitOFF(prod, compte, { appeler: async () => { throw new Error('x'); } }), /joindre/);
+  await assert.rejects(envoyerProduitOFF(prod, { utilisateur: '', mot_de_passe: '' }, { appeler: ok }), /mot de passe/);
+});

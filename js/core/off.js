@@ -1,5 +1,5 @@
 // Open Food Facts (gratuit, sans clé) : un produit par code-barres, et des alternatives de la même catégorie.
-import { lireProduitOFF, noterProduit } from '../lib/scan.js';
+import { lireProduitOFF, noterProduit, champsEnvoiOFF, problemeEnvoiOFF } from '../lib/scan.js';
 
 const BASE = 'https://world.openfoodfacts.org';
 const CHAMPS = ['code', 'product_name', 'product_name_fr', 'brands', 'quantity', 'image_front_small_url', 'image_front_url', 'ingredients_text',
@@ -41,4 +41,25 @@ export async function chercherAlternatives(produit, { appeler = fetch, delai = 8
     .filter((x) => x.note >= note0 + ecart)
     .sort((a, b) => b.note - a.note)
     .slice(0, max);
+}
+
+/** Envoie un produit saisi à la main vers Open Food Facts avec le compte de la personne. Lève une Error au message lisible. */
+export async function envoyerProduitOFF(produit, compte, { appeler = fetch, delai = 15000 } = {}) {
+  const probleme = problemeEnvoiOFF(produit, compte);
+  if (probleme) throw new Error(probleme);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), delai);
+  let rep;
+  try {
+    rep = await appeler(`${BASE}/cgi/product_jqm2.pl`, { method: 'POST', body: new URLSearchParams(champsEnvoiOFF(produit, compte)), signal: ctrl.signal });
+  } catch { throw new Error('Impossible de joindre Open Food Facts. Vérifiez votre connexion et réessayez.'); } finally { clearTimeout(t); }
+  if (!rep.ok) throw new Error(`Open Food Facts a répondu ${rep.status}. Réessayez plus tard.`);
+  let json = null;
+  try { json = await rep.json(); } catch { /* réponse non lisible */ }
+  if (!json || json.status !== 1) {
+    const texte = String((json && (json.status_verbose || json.error)) || '');
+    if (/password|user|incorrect|login/i.test(texte)) throw new Error('Nom d\'utilisateur ou mot de passe Open Food Facts incorrect.');
+    throw new Error('Open Food Facts n\'a pas accepté le produit' + (texte ? ` (${texte})` : '') + '.');
+  }
+  return true;
 }

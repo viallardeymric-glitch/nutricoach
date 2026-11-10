@@ -37,3 +37,6 @@ Plus › « Sauvegarder les données de ce téléphone » (fichier JSON, sans co
 
 ## Produit inconnu : photo du tableau nutritionnel
 Dans la fiche d'un produit inconnu, touchez « 📷 Photographier le tableau nutritionnel ». L'IA (Gemini, avec votre clé gratuite du coach) remplit le formulaire. **Vérifiez chaque chiffre** avant d'enregistrer. La photo n'est pas gardée.
+
+## Partager un produit avec Open Food Facts
+Un produit saisi à la main (ou lu par photo) peut être envoyé à Open Food Facts : dans sa fiche, « Partager ce produit avec Open Food Facts ». Il faut un compte gratuit sur openfoodfacts.org. Vos identifiants restent sur le téléphone et ne sont pas synchronisés.

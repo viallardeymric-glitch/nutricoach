@@ -326,6 +326,14 @@ await p.getByLabel('Énergie (kcal)').fill('250'); await p.getByLabel('Sucres (g
 await p.click('text=Enregistrer et noter');
 await p.waitForSelector('.produit .jauge');
 verif((await p.locator('.entete:visible h1').textContent()).includes('Pain maison') && /Note \d+ sur 100/.test(await p.getAttribute('.produit .jauge', 'aria-label')), 'scan : produit inconnu saisi à la main puis noté');
+await p.click('text=Partager ce produit avec Open Food Facts');
+await p.getByLabel("Nom d'utilisateur Open Food Facts").fill('eymric-test'); await p.getByLabel('Mot de passe Open Food Facts').fill('secret');
+let envoiOFF = null;
+await p.route('https://world.openfoodfacts.org/cgi/product_jqm2.pl', async (route) => { envoiOFF = route.request().postData(); await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 1, status_verbose: 'fields saved' }) }); });
+await p.click('text=Envoyer à Open Food Facts');
+await p.waitForSelector('text=a été envoyé à Open Food Facts');
+verif(envoiOFF && envoiOFF.includes('code=4006381333931') && envoiOFF.includes('nutriment_salt=1.2') && envoiOFF.includes('user_id=eymric-test'), 'scan : produit saisi envoyé à Open Food Facts avec les chiffres saisis');
+await p.unroute('https://world.openfoodfacts.org/cgi/product_jqm2.pl');
 await ctx.route('https://world.openfoodfacts.org/**', (r) => r.abort());
 await p.goto(serveur.url + '/#/produit/3017620422003'); await p.waitForSelector('.produit .jauge');
 verif(true, 'scan : produit déjà scanné consultable sans réseau');

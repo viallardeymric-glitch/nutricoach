@@ -109,12 +109,12 @@ export function stockVersDoc(s) { return { cle: s.cle, nom: String(s.nom).slice(
 export const docsVersStock = (docs) => docs.filter((d) => d.cle && typeof d.quantite === 'number').map((d) => ({ cle: d.cle, nom: d.nom || d.cle, quantite: d.quantite, unite: d.unite, rayon: d.rayon || 'autre', peremption: /^\d{4}-\d{2}-\d{2}$/.test(d.peremption || '') ? d.peremption : null }));
 
 export function scanVersDoc(s) {
-  return { code: s.code, produit: s.produit, t: s.t || Date.now(), par: s.par || '', favoriPar: s.favoriPar || [], eviterPar: s.eviterPar || [], saisie: Boolean(s.saisie) };
+  return { code: s.code, produit: s.produit, t: s.t || Date.now(), par: s.par || '', favoriPar: s.favoriPar || [], eviterPar: s.eviterPar || [], saisie: Boolean(s.saisie), envoyeOFF: Boolean(s.envoyeOFF) };
 }
 /** Documents « scans » → [{ code, produit, t, par, favoriPar, eviterPar }], les plus récents d'abord. */
 export function docsVersScans(docs) {
   return docs.filter((d) => /^\d{8,14}$/.test(d.code || '') && d.produit && d.produit.nom)
-    .map((d) => ({ code: d.code, produit: d.produit, t: d.t || 0, par: d.par || '', favoriPar: d.favoriPar || [], eviterPar: d.eviterPar || [], saisie: Boolean(d.saisie) }))
+    .map((d) => ({ code: d.code, produit: d.produit, t: d.t || 0, par: d.par || '', favoriPar: d.favoriPar || [], eviterPar: d.eviterPar || [], saisie: Boolean(d.saisie), envoyeOFF: Boolean(d.envoyeOFF) }))
     .sort((a, b) => b.t - a.t);
 }
 

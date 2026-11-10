@@ -203,3 +203,29 @@ export function lireTableauIA(texte) {
   if (v('satures') != null && v('graisses') != null && v('satures') > v('graisses')) res.satures = '';
   return trouves ? res : null;
 }
+
+// ---------- Envoi d'un produit saisi à la main vers Open Food Facts ----------
+/** Champs du formulaire d'envoi (API « product_jqm2 »). Les valeurs absentes sont omises. */
+export function champsEnvoiOFF(produit, compte) {
+  const n = produit.nutrition || {};
+  const c = {
+    user_id: String(compte.utilisateur || '').trim(), password: String(compte.mot_de_passe || ''),
+    code: produit.code, action: 'process', json: '1', product_name: produit.nom, brands: produit.marque || '',
+    ingredients_text: produit.ingredients || '', nutrition_data_per: '100g',
+    comment: 'Ajouté depuis NutriCoach (saisie manuelle)',
+  };
+  const map = { 'nutriment_energy-kcal': n.kcal, nutriment_fat: n.graisses, 'nutriment_saturated-fat': n.satures, nutriment_carbohydrates: n.glucides,
+    nutriment_sugars: n.sucres, nutriment_fiber: n.fibres, nutriment_proteins: n.proteines, nutriment_salt: n.sel };
+  for (const [k, v] of Object.entries(map)) if (v != null && Number.isFinite(v)) { c[k] = String(v); if (k === 'nutriment_energy-kcal') c['nutriment_energy-kcal_unit'] = 'kcal'; else c[k + '_unit'] = 'g'; }
+  for (const k of ['brands', 'ingredients_text']) if (!c[k]) delete c[k];
+  return c;
+}
+/** Peut-on envoyer ce produit ? (compte, nom et au moins un chiffre nutritionnel) → message d'erreur ou null. */
+export function problemeEnvoiOFF(produit, compte) {
+  if (!compte || !String(compte.utilisateur || '').trim() || !compte.mot_de_passe) return 'Saisissez votre nom d\'utilisateur et votre mot de passe Open Food Facts.';
+  if (!codeBarresValide(produit.code)) return 'Ce code-barres n\'est pas valide.';
+  if (!produit.nom || !produit.nom.trim()) return 'Le nom du produit est obligatoire.';
+  const n = produit.nutrition || {};
+  if (!Object.values(n).some((v) => v != null)) return 'Ajoutez au moins une valeur nutritionnelle avant l\'envoi.';
+  return null;
+}
