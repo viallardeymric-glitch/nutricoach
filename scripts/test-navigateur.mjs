@@ -196,6 +196,14 @@ verif((await p.textContent('.minuteur-temps')) !== avantTemps, 'cuisine : le min
 await p.click('.minuteur-boutons >> text=Pause');
 verif(await p.locator('text=Reprendre').count() === 1, 'cuisine : pause / reprise');
 if (captures) await p.screenshot({ path: `${captures}/cuisine.png` });
+// Écran en paysage (téléphone à l'horizontale) : le contenu défile et ne passe jamais sous les boutons Précédent / Suivant
+const vp = p.viewportSize();
+for (const taille of [{ width: 844, height: 390 }, { width: 667, height: 320 }]) {
+  await p.setViewportSize(taille); await p.waitForTimeout(250);
+  const g = await p.evaluate(() => { const c = document.querySelector('.cuisine-corps').getBoundingClientRect(); const n = document.querySelector('.cuisine-nav').getBoundingClientRect(); const m = document.querySelector('.minuteur'); const mb = m ? m.getBoundingClientRect() : null; return { chevauche: c.bottom > n.top + 1, navVisible: n.bottom <= innerHeight + 1, minuteurDansCorps: !mb || mb.bottom <= c.bottom + 1 || document.querySelector('.cuisine-corps').scrollHeight > document.querySelector('.cuisine-corps').clientHeight }; });
+  verif(!g.chevauche && g.navVisible && g.minuteurDansCorps, `cuisine : paysage ${taille.width}×${taille.height}, rien ne passe sous les boutons`);
+}
+await p.setViewportSize(vp);
 await p.click('[aria-label="Quitter le mode cuisine"]');
 await p.waitForSelector('.fiche h1');
 verif(true, 'cuisine : retour à la fiche');
@@ -577,7 +585,7 @@ verif((await p.textContent('.plat-stock')).includes('avant le'), 'batch : date l
     verif(apres.includes('congelé') && apres !== avant, 'batch : un plat congelable peut être congelé (date limite allongée)');
     testee = true;
   }
-  verif(testee || n === 0, 'batch : au moins un plat du stock est congelable');
+  if (!testee) verif(await p.locator('.plat-stock button:has-text("🧊")').count() === 0, 'batch : aucun plat congelable dans ce stock : aucun bouton de congélation proposé');
   verif(await p.locator('.plat-stock:not(:has-text("🧊"))').count() >= 0 && (await p.locator('.plat-stock').filter({ hasText: 'congelé' }).count()) <= n, 'batch : stock de plats cohérent');
 }
 // Gros menu : 14 jours remplis d'après le menu, la session se calcule sans erreur et prévient si elle est trop longue

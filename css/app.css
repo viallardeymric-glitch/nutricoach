@@ -238,17 +238,17 @@ p { margin: 0 0 .5rem; }
 .carte-nous p { margin: .25rem 0; }
 
 /* ---------- Mode cuisine ---------- */
-.cuisine { position: fixed; inset: 0; z-index: 30; background: var(--fond); display: flex; flex-direction: column; padding: calc(.5rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom)); overflow-y: auto; }
+.cuisine { position: fixed; inset: 0; z-index: 30; background: var(--fond); display: flex; flex-direction: column; padding: calc(.5rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom)); overflow: hidden; }
 .cuisine-fermer { position: absolute; top: calc(.5rem + env(safe-area-inset-top)); right: .75rem; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--carte); box-shadow: var(--ombre); color: var(--texte); text-decoration: none; font-size: 1.2rem; z-index: 2; }
 .cuisine-progres { height: 6px; border-radius: 3px; background: var(--bord); margin: 3.2rem 0 .8rem; }
 .cuisine-progres span { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .25s; }
 .cuisine-titre { color: var(--gris); font-size: .9rem; margin: 0; }
-.cuisine-corps { flex: 1; padding: .8rem 0; }
+.cuisine-corps { flex: 1; min-height: 0; overflow-y: auto; padding: .8rem 0; -webkit-overflow-scrolling: touch; }
 .cuisine-corps h2 { font-size: 1.5rem; margin-bottom: .6rem; }
 .cuisine-etape-num { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; }
 .cuisine-texte { font-size: 1.45rem; line-height: 1.45; font-weight: 500; }
 .reglages.grands span { font-size: 1.05rem; padding: .3rem .8rem; }
-.cuisine-nav { display: grid; grid-template-columns: 1fr 1.4fr; gap: .7rem; position: sticky; bottom: 0; padding-top: .6rem; background: linear-gradient(transparent, var(--fond) 30%); }
+.cuisine-nav { display: grid; grid-template-columns: 1fr 1.4fr; gap: .7rem; flex: none; padding-top: .6rem; }
 .cuisine-nav .bouton { min-height: 60px; font-size: 1.05rem; padding: 0 .8rem; white-space: nowrap; }
 .minuteur { margin: 1.2rem 0; padding: 1rem; background: var(--carte); border-radius: var(--rayon); box-shadow: var(--ombre); text-align: center; }
 .minuteur.fini { background: var(--alerte-fond); }
@@ -533,3 +533,14 @@ input, select, textarea { font-size: 16px; }
 .entete-liens { display: inline-flex; gap: .4rem; }
 .apercu-import { margin-top: .6rem; }
 .page-form-recette textarea { width: 100%; padding: .7rem .85rem; border: 1px solid var(--bord); border-radius: var(--rayon-bouton); background: var(--carte); color: var(--texte); font: inherit; font-size: 16px; resize: vertical; }
+
+/* Mode cuisine : écrans bas (téléphone à l'horizontale) */
+@media (max-height: 520px) {
+  .cuisine { padding-top: calc(.3rem + env(safe-area-inset-top)); padding-bottom: calc(.4rem + env(safe-area-inset-bottom)); }
+  .cuisine-progres { margin: .4rem 3.4rem .4rem 0; }
+  .cuisine-texte { font-size: 1.15rem; line-height: 1.35; }
+  .cuisine-corps h2 { font-size: 1.2rem; }
+  .cuisine-nav .bouton { min-height: 48px; }
+  .minuteur { margin: .6rem 0; padding: .6rem; }
+  .minuteur-temps { font-size: 2rem; }
+}
