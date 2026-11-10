@@ -81,8 +81,8 @@ export function nutritionAdaptee(recette, subs) {
     nb++;
   }
   if (!nb) return null;
-  const r = (v) => Math.round(v * 10) / 10;
-  return { kcal: Math.round(base.calories_kcal + k), p: r(base.proteines_g + p), g: r(base.glucides_g + g), l: r(base.lipides_g + l), nb, total: subs.length };
+  const r = (v) => Math.max(0, Math.round(v * 10) / 10);          // une estimation ne descend jamais sous zéro
+  return { kcal: Math.max(0, Math.round(base.calories_kcal + k)), p: r(base.proteines_g + p), g: r(base.glucides_g + g), l: r(base.lipides_g + l), nb, total: subs.length };
 }
 
 /** Une recette est « adaptable » si chaque ingrédient en conflit avec les contraintes a une substitution. */

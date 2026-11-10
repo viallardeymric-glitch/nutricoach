@@ -4,7 +4,7 @@
 // automatiquement d'après les ingrédients pour que le filtre d'allergènes ne laisse jamais passer une recette qui en contient.
 import { normaliser } from './texte.js';
 import { CATEGORIES, REGIMES, ALLERGENES, SAISONS, APPAREILS, DIFFICULTES, COUTS, PROFILS } from '../data/libelles.js';
-import { MOTS_ALLERGENES, REGLES_ALERTE } from '../data/deconseilles.js';
+import { REGLES_ALERTE, allergenesDansTexte } from '../data/deconseilles.js';
 
 export const ID_PREMIER = 900001;
 export const estRecettePerso = (id) => /^REC-9\d{5}$/.test(String(id || ''));
@@ -81,7 +81,7 @@ const decimal = (v, max) => { const n = nombreDe(v); return n != null && n >= 0 
 /** Allergènes trouvés dans les noms d'ingrédients (liste de mots clés de l'appli). */
 export function allergenesDetectes(ingredients) {
   const t = ` ${normaliser(ingredients.map((i) => i.aliment).join(' | '))} `;
-  return Object.keys(MOTS_ALLERGENES).filter((a) => MOTS_ALLERGENES[a].test(t));
+  return allergenesDansTexte(t);
 }
 /** Avertissements de profil (femme enceinte, enfants…) d'après les ingrédients : mêmes règles que les courses et les scans. */
 export function deconseillesDetectes(ingredients) {

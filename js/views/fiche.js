@@ -3,7 +3,6 @@ import { html, useState, useEffect, useMemo } from '../../vendor/preact-htm.js';
 import { PORTIONS_MIN, PORTIONS_MAX } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { RetraitStock } from './stock-retrait.js';
-import { lire, ecrire } from '../core/stockage.js';
 import { REGIMES, ALLERGENES, PROFILS, NUTRITION, REGLAGES, DIFFICULTES, COUTS, lib, libSousCategorie } from '../data/libelles.js';
 import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
 import { conflitsProfil, portionConseillee } from '../lib/profils.js';
@@ -14,7 +13,6 @@ import { etapesThermomix, recetteThermomix, capaciteBol, ordrePesee, MODELES } f
 import { METHODES, methodeOriginale } from '../lib/methodes.js';
 import { reecrire, chargerReecriture, oublierReecriture } from '../core/reecriture.js';
 import { chargerAppareils } from '../core/appareils.js';
-import { chargerReglagesCoach } from '../core/coach.js';
 import { noterRecette, MENTION_SCORE_SANTE } from '../lib/sante.js';
 import { LIBELLE_COULEUR } from '../lib/scan.js';
 import { photoDeRecette } from '../core/photos.js';
@@ -84,7 +82,6 @@ function Variantes({ r, personnes, appliquees, onAppliquer, premier }) {
 /** Choix de la méthode : version d'origine, Thermomix (si disponible) ou réécriture par l'IA (proposition à vérifier). */
 function Methodes({ r, methode, setMethode, modele, setModele, reecriture, erreur, enCours, onReecrire }) {
   const origine = methodeOriginale(r);
-  const dispo = new Set([origine, ...r.appareils_possibles.map((a) => (a === 'classique' ? 'plaque' : a))]);
   const reel = methode === origine || (methode === 'thermomix' && recetteThermomix(r));
   return html`<div>
     <h2 class="petit-titre">Méthode de cuisson</h2>

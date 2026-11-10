@@ -1,6 +1,6 @@
 // Alertes de profil sur un aliment (courses, journal, scan) : allergies, aliments évités, aliments déconseillés.
 import { normaliser } from './texte.js';
-import { REGLES_ALERTE, MOTS_ALLERGENES } from '../data/deconseilles.js';
+import { REGLES_ALERTE, MOTS_ALLERGENES, allergenesDansTexte } from '../data/deconseilles.js';
 import { risquesPour, listeExclusions } from './profils.js';
 import { ALLERGENES, lib } from '../data/libelles.js';
 
@@ -13,8 +13,9 @@ export function alertesTexte(texte, profil) {
   const t = ` ${normaliser(texte)} `;
   const risques = risquesPour(profil);
   const res = [];
+  const detectes = allergenesDansTexte(t);
   for (const a of profil.allergenes || []) {
-    if (MOTS_ALLERGENES[a] && MOTS_ALLERGENES[a].test(t)) {
+    if (MOTS_ALLERGENES[a] && detectes.includes(a)) {
       res.push({ id: `allergie-${a}`, niveau: 'rouge', source: 'profil', raison: `Contient probablement du ${lib(ALLERGENES, a).toLowerCase()}, que vous évitez.` });
     }
   }

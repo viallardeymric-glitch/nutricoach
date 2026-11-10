@@ -10,7 +10,6 @@ import { lire, ecrire } from '../core/stockage.js';
 import { risqueAdditif, NIVEAUX_ADDITIFS } from '../data/additifs.js';
 import { MENTION_SCAN } from '../data/sources.js';
 import { ALLERGENES, lib } from '../data/libelles.js';
-import { rayonDe } from '../data/rayons.js';
 import { cleAliment } from '../lib/courses.js';
 import { Entete, Bandeau, Pastille, Puce } from '../ui/composants.js';
 

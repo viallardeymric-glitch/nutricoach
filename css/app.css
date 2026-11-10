@@ -544,3 +544,7 @@ input, select, textarea { font-size: 16px; }
   .minuteur { margin: .6rem 0; padding: .6rem; }
   .minuteur-temps { font-size: 2rem; }
 }
+
+/* Audit : les champs d'une grille peuvent rétrécir (formulaire de recette, nutrition) */
+.grille > *, .champ { min-width: 0; }
+.champ input, .champ textarea, .champ select { max-width: 100%; }

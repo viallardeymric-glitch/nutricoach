@@ -1,8 +1,7 @@
 // Suivi : journal alimentaire et hydratation du jour, poids et mensurations (courbes), bilan de la semaine.
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
-import { PERSONNES } from '../core/config.js';
-import { REPAS as REPAS_PLANNING, cleDate, dateDepuisCle, ajouterJours, nomJour, nomMois, semaineDe, lundiDe } from '../lib/planning.js';
-import { REPAS_JOURNAL, VERRE_ML, MESURES, entreeDepuisRecette, entreeDepuisProduit, bilanJour, objectifEau, serieDePoids, tendancePoids, variationPoids, cheminCourbe, bilanSemaine, serieDeSuivi, repasSelonHeure } from '../lib/suivi.js';
+import { cleDate, dateDepuisCle, ajouterJours, nomJour, nomMois, semaineDe } from '../lib/planning.js';
+import { REPAS_JOURNAL, VERRE_ML, MESURES, entreeDepuisRecette, entreeDepuisProduit, bilanJour, objectifEau, serieDePoids, tendancePoids, variationPoids, cheminCourbe, bilanSemaine, serieDeSuivi } from '../lib/suivi.js';
 import { filtrerRecettes, FILTRES_VIDES } from '../lib/recettes.js';
 import { budgetPoints, pointsMaison } from '../data/regimes.js';
 import { Entete, Section, Pastille, Bandeau, Puce } from '../ui/composants.js';

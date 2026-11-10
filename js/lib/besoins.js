@@ -88,6 +88,14 @@ export function calculerBesoins(p, aujourdhui = new Date()) {
       messages.push('L\'apport a été relevé au minimum de sécurité : en dessous, un régime ne serait pas raisonnable.');
     }
   }
+  // Garde-fous de sécurité : 2e et 3e trimestres ou allaitement : au moins 1 800 kcal ; dans tous les cas : au moins 1 200 kcal
+  if ((trimestre >= 2 || p.allaitement) && cible < 1800) {
+    cible = 1800;
+    messages.push('Pendant la grossesse (2e et 3e trimestres) ou l\'allaitement, l\'apport conseillé ne descend pas sous 1 800 kcal par jour.');
+  } else if (cible < 1200) {
+    cible = 1200;
+    messages.push('L\'apport conseillé ne descend jamais sous 1 200 kcal par jour.');
+  }
   cible = arrondir(cible, 10);
 
   let parKg = 1.0;

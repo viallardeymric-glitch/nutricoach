@@ -1,12 +1,11 @@
 // Courses et stock : liste commune au foyer, cochage en direct, rayons, génération depuis le menu, alertes de profil.
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
-import { PERSONNES } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { RAYONS } from '../data/rayons.js';
 import { lire } from '../core/stockage.js';
 import { semaineDe, ajouterJours, dateDepuisCle } from '../lib/planning.js';
 import { alertesTexte } from '../lib/alertes.js';
-import { analyserSaisie, articlesDepuisPlan, deduireStock, ajouterAuStock, planifierMiseAJour, versBase, cleArticle, libelleQuantite, arrondirCourses, arrondirStock, idArticle } from '../lib/courses.js';
+import { analyserSaisie, articlesDepuisPlan, deduireStock, ajouterAuStock, planifierMiseAJour, versBase, cleArticle, libelleQuantite, arrondirCourses, arrondirStock } from '../lib/courses.js';
 import { rayonDe } from '../data/rayons.js';
 import { aConsommerBientot } from '../lib/frigo.js';
 import { budgetListe } from '../lib/budget.js';

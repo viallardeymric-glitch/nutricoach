@@ -22,7 +22,6 @@ const MET = { course: 9, trail: 9.5, velo: 7, triathlon: 8, muscu: 5, autre: 6 }
 export const RAPPEL_JOUR_J = 'Ne testez rien de nouveau le jour J : ni aliment, ni boisson, ni gel, ni chaussures. Tout doit avoir été essayé à l\'entraînement.';
 export const MENTION_SPORT = 'Repères généraux de nutrition du sport. Ils ne remplacent pas l\'avis d\'un médecin ou d\'un diététicien du sport.';
 
-const arrondir = (v, pas) => Math.round(v / pas) * pas;
 const jours = (a, b) => Math.round((dateDepuisCle(b) - dateDepuisCle(a)) / 86400000);
 
 /** Phase de préparation d'un jour par rapport à la date de l'épreuve. */

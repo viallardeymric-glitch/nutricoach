@@ -6,10 +6,10 @@ const axeSrc = readFileSync((process.argv[2] || '.') + '/node_modules/axe-core/a
 const { chromium } = chargerPlaywright();
 const srv = await servir();
 const b = await chromium.launch();
-const ROUTES = ['#/', '#/recettes', '#/recette/REC-000010', '#/semaine', '#/courses', '#/suivi', '#/scan', '#/coach', '#/grossesse', '#/plus', '#/profil', '#/profil/infos', '#/profil/situation', '#/profil/regimes', '#/profil/enfants', '#/profil/photos', '#/profil/coach', '#/sport', '#/batch', '#/frigo', '#/favoris', '#/scans', '#/sources'];
+const ROUTES = ['#/', '#/recettes', '#/recette/REC-000010', '#/semaine', '#/courses', '#/suivi', '#/scan', '#/coach', '#/grossesse', '#/plus', '#/profil', '#/profil/infos', '#/profil/situation', '#/profil/regimes', '#/profil/enfants', '#/profil/photos', '#/profil/coach', '#/sport', '#/batch', '#/frigo', '#/favoris', '#/scans', '#/sources', '#/mes-recettes', '#/recette-nouvelle', '#/cuisine/REC-000010?p=3', '#/produit/3017620422003', '#/profil/objectifs', '#/profil/securite', '#/nous'];
 const rapport = { debordements: [], erreurs: [], petitesCibles: {}, axe: {}, lents: [] };
 for (const [nom, opts] of [['clair-390', { viewport: { width: 390, height: 844 }, colorScheme: 'light' }], ['sombre-360', { viewport: { width: 360, height: 740 }, colorScheme: 'dark' }]]) {
-  const ctx = await b.newContext({ ...opts, deviceScaleFactor: 1 });
+  const ctx = await b.newContext({ ...opts, deviceScaleFactor: 1, bypassCSP: true });   // la CSP de l'appli bloquerait l'injection d'axe-core
   await modeLocal(ctx);
   await ctx.route('https://**', (r) => (r.request().url().startsWith(srv.url) ? r.continue() : r.abort()));
   const p = await ctx.newPage();

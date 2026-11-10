@@ -1,7 +1,7 @@
 // Vérification avant commit : node scripts/verifier.mjs
 // Contrôle les 1 610 recettes, l'index, le service worker et les règles de sécurité.
 // Sans dépendance : Node 20+ uniquement.
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { lireRecettes, indexSerialise } from './build-index.mjs';

@@ -10,7 +10,7 @@ const TAGS_ALLERGENES = {
   nuts: 'fruits_a_coque', soybeans: 'soja', celery: 'celeri', mustard: 'moutarde', 'sesame-seeds': 'sesame',
   'sulphur-dioxide-and-sulphites': 'sulfites', lupin: 'lupin',
 };
-const versAllergenes = (tags) => [...new Set((tags || []).map((t) => TAGS_ALLERGENES[String(t).replace(/^[a-z]{2}:/, '')]).filter(Boolean))];
+const versAllergenes = (tags) => [...new Set((Array.isArray(tags) ? tags : []).map((t) => TAGS_ALLERGENES[String(t).replace(/^[a-z]{2}:/, '')]).filter(Boolean))];
 
 /** Contrôle d'un code-barres EAN/UPC (8, 12, 13 ou 14 chiffres, clé de contrôle GS1). */
 export function codeBarresValide(code) {
@@ -21,6 +21,7 @@ export function codeBarresValide(code) {
   return (10 - (somme % 10)) % 10 === cle;
 }
 
+const liste = (v) => (Array.isArray(v) ? v : []);
 const nombre = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : (v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null));
 
 /** Réponse Open Food Facts → produit compact (petit : il est mis en cache et synchronisé). Null si le produit n'existe pas. */
@@ -30,25 +31,25 @@ export function lireProduitOFF(code, json) {
   const n = p.nutriments || {};
   const kcal = nombre(n['energy-kcal_100g']) ?? (nombre(n['energy_100g']) != null ? Math.round(nombre(n['energy_100g']) / 4.184) : null);
   const sel = nombre(n.salt_100g) ?? (nombre(n.sodium_100g) != null ? nombre(n.sodium_100g) * 2.5 : null);
-  const labels = (p.labels_tags || []).map((l) => String(l).replace(/^[a-z]{2}:/, ''));
+  const labels = liste(p.labels_tags).map((l) => String(l).replace(/^[a-z]{2}:/, ''));
   return {
     code,
-    nom: p.product_name_fr || p.product_name || 'Produit sans nom',
-    marque: (p.brands || '').split(',')[0].trim(),
-    quantite: p.quantity || '',
-    image: p.image_front_small_url || p.image_front_url || p.image_url || '',
+    nom: String(p.product_name_fr || p.product_name || 'Produit sans nom').slice(0, 120),
+    marque: String(p.brands || '').split(',')[0].trim().slice(0, 60),
+    quantite: String(p.quantity || '').slice(0, 40),
+    image: [p.image_front_small_url, p.image_front_url, p.image_url].find((u) => typeof u === 'string' && /^https:\/\//.test(u)) || '',
     ingredients: String(p.ingredients_text_fr || p.ingredients_text || '').slice(0, 1500),
     allergenes: versAllergenes(p.allergens_tags),
     traces: versAllergenes(p.traces_tags),
-    additifs: [...new Set((p.additives_tags || []).map(codeAdditif).filter(Boolean))],
+    additifs: [...new Set(liste(p.additives_tags).map(codeAdditif).filter(Boolean))],
     nutriscore: /^[a-e]$/.test(p.nutriscore_grade || '') ? p.nutriscore_grade : null,
     nova: [1, 2, 3, 4].includes(Number(p.nova_group)) ? Number(p.nova_group) : null,
     ecoscore: /^[a-e]$/.test(p.ecoscore_grade || '') ? p.ecoscore_grade : null,
     bio: labels.some((l) => /^(organic|eu-organic|bio|ab-agriculture-biologique)/.test(l)),
     labels: labels.filter((l) => /label-rouge|aop|igp|fairtrade|max-havelaar|msc|rainforest|bio|organic|bleu-blanc-coeur/.test(l)).slice(0, 6),
-    categories: (p.categories_tags || []).map((c) => String(c).replace(/^[a-z]{2}:/, '')).slice(-6),
-    vegan: (p.ingredients_analysis_tags || []).includes('en:vegan') ? true : (p.ingredients_analysis_tags || []).includes('en:non-vegan') ? false : null,
-    vegetarien: (p.ingredients_analysis_tags || []).includes('en:vegetarian') ? true : (p.ingredients_analysis_tags || []).includes('en:non-vegetarian') ? false : null,
+    categories: liste(p.categories_tags).map((c) => String(c).replace(/^[a-z]{2}:/, '')).slice(-6),
+    vegan: liste(p.ingredients_analysis_tags).includes('en:vegan') ? true : liste(p.ingredients_analysis_tags).includes('en:non-vegan') ? false : null,
+    vegetarien: liste(p.ingredients_analysis_tags).includes('en:vegetarian') ? true : liste(p.ingredients_analysis_tags).includes('en:non-vegetarian') ? false : null,
     nutrition: {
       kcal, graisses: nombre(n.fat_100g), satures: nombre(n['saturated-fat_100g']), glucides: nombre(n.carbohydrates_100g),
       sucres: nombre(n.sugars_100g), fibres: nombre(n.fiber_100g), proteines: nombre(n.proteins_100g), sel,

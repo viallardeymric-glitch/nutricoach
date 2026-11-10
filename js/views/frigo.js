@@ -1,6 +1,6 @@
 // Frigo magique : que cuisiner avec ce qu'on a ? Anti-gaspi : d'abord ce qui périme bientôt.
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
-import { articlesDuFrigo, frigoMagique, aConsommerBientot, estBasique } from '../lib/frigo.js';
+import { articlesDuFrigo, frigoMagique, aConsommerBientot } from '../lib/frigo.js';
 import { convient } from '../lib/planning.js';
 import { cleArticle, analyserSaisie, ajouterAuStock } from '../lib/courses.js';
 import { rayonDe } from '../data/rayons.js';

@@ -4,7 +4,7 @@ import { PERSONNES } from '../core/config.js';
 import { REGIMES, ALLERGENES } from '../data/libelles.js';
 import { REGIMES_AVANCES, FAMILLES_REGIMES, RAPPEL_MEDICAL, nomRegime } from '../data/regimes.js';
 import { ACTIVITES, OBJECTIFS, SECONDAIRES, calculerBesoins } from '../lib/besoins.js';
-import { validerProfil, profilComplet, ageDe, LIMITES, AGE_MIN, groupeAge, GROUPES_AGE, ageEnMois, enfantVide, risquesEnfant } from '../lib/profils.js';
+import { validerProfil, profilComplet, ageDe, LIMITES, AGE_MIN, groupeAge, GROUPES_AGE, ageEnMois, enfantVide } from '../lib/profils.js';
 import { basculer } from '../lib/recettes.js';
 import { pinValide } from '../core/pin.js';
 import { biometrieDisponible, biometrieActive, activerBiometrie, desactiverBiometrie } from '../core/biometrie.js';

@@ -3,7 +3,7 @@ import { html, useState, useMemo } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { PROFILS, ALLERGENES, lib } from '../data/libelles.js';
 import { nomRegime } from '../data/regimes.js';
-import { REPAS_COMPLETS, repasActifs, ajouterJours, cleDate, dateDepuisCle, lundiDe, nomJour, nomMois, saisonDe, semaineDe, proposer, genererSemaine, autreRepasPour, graine } from '../lib/planning.js';
+import { repasActifs, ajouterJours, cleDate, dateDepuisCle, lundiDe, nomJour, nomMois, saisonDe, semaineDe, genererSemaine, autreRepasPour, graine } from '../lib/planning.js';
 import { risquesPour } from '../lib/profils.js';
 import { budgetMenu } from '../lib/budget.js';
 import { noterMenu, MENTION_SCORE_SANTE } from '../lib/sante.js';

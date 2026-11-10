@@ -1,17 +1,15 @@
 // Batch cooking : choisir les recettes du menu, courses de la session, planning chronométré, boîtes et étiquettes, stock de plats.
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
 import { chargerFiche } from '../core/catalogue.js';
-import { cleDate, semaineDe, ajouterJours, dateDepuisCle, nomJour } from '../lib/planning.js';
+import { cleDate, ajouterJours } from '../lib/planning.js';
 import { recettesDuMenu, comptesDuMenu, portionsPourRepas, articlesBatch, planningSession, heureDe, conditionnement, texteEtiquette, platsEnStock, platsDeSession } from '../lib/batch.js';
 import { deduireStock } from '../lib/courses.js';
 import { filtrerRecettes, FILTRES_VIDES } from '../lib/recettes.js';
 import { libelleQuantite } from '../lib/courses.js';
-import { RAYONS } from '../data/rayons.js';
-import { Entete, Section, Bandeau, Puce, Pastille } from '../ui/composants.js';
+import { Entete, Section, Bandeau, Puce } from '../ui/composants.js';
 
 const nf = (x) => String(x).replace('.', ',');
 const fr = (d) => d.split('-').reverse().join('/');
-const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
 export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, personnes = 2, noms = '', appareils }) {
   const [horizon, setHorizon] = useState(7);               // nombre de jours à couvrir (1 à 14)

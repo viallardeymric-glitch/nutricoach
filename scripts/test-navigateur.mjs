@@ -582,6 +582,13 @@ verif((await p.locator('.reglage-batch').nth(0).textContent()).includes('8 jours
 await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click(); await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click();
 await p.locator('.ligne-batch').nth(1).locator('button').nth(1).click(); await p.locator('.ligne-batch').nth(1).locator('button').nth(1).click();
 await p.locator('.ligne-batch').nth(2).locator('button').nth(1).click();
+// Pour que le test ne dépende pas du hasard du menu : on ajoute deux plats connus, un au four et un mijoté (étapes passives)
+for (const re of [/enfourn/i, /mijot/i]) {
+  const r = toutes.find((x) => x.categorie === 'Plats' && x.etapes.some((e) => re.test(e.texte) && /\d+\s*(min|h)/.test(e.texte)) && x.etapes.length >= 5);
+  await p.fill('input[aria-label="Ajouter une recette"]', r.titre.slice(0, 40));
+  await p.waitForSelector('.ligne-choix');
+  await p.locator('.ligne-choix').first().click();
+}
 verif((await p.textContent('.ligne-batch >> nth=0')).includes('6 portions'), 'batch : 2 repas × 3 personnes = 6 portions');
 await p.click('role=button[name="✨ Préparer la session"]');
 await p.waitForSelector('.chrono');
@@ -665,7 +672,8 @@ verif(await p.locator('.jour .badge-sante').count() >= 5, 'semaine : score sant�
 {
   const avantGlisse = await idsSemaine();
   const poignees = p.locator('.poignee');
-  await poignees.nth(0).scrollIntoViewIfNeeded();
+  await p.evaluate(() => { const r = document.querySelector('.poignee').closest('.repas-jour').getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 160, behavior: 'instant' }); });   // source en haut de l'écran, la cible juste en dessous
+  await p.waitForTimeout(250);
   const cibleEl = p.locator('.repas-jour:has(.poignee)').nth(1);
   const s1 = await poignees.nth(0).boundingBox(); const c1 = await cibleEl.boundingBox();
   await p.mouse.move(s1.x + s1.width / 2, s1.y + s1.height / 2);
@@ -851,6 +859,31 @@ await p.click('.puce:text-is("Lagon")');
 await p.goto(serveur.url + '/#/sources'); await p.waitForSelector('text=Santé publique France');
 verif((await p.textContent('.contenu')).includes('lait cru') && (await p.textContent('.contenu')).includes('ne remplacent pas'), 'sources : règles d\'alerte et mention affichées');
 
+// Audit automatique : aucun débordement horizontal ni texte anormal (NaN, undefined…) sur les écrans principaux, en 360 px de large
+{
+  const vp0 = p.viewportSize(); await p.setViewportSize({ width: 360, height: 740 });
+  const anomalies = [];
+  for (const route of ['#/', '#/recettes', '#/recette/REC-000010', '#/semaine', '#/courses', '#/suivi', '#/scan', '#/coach', '#/grossesse', '#/plus', '#/profil', '#/profil/infos', '#/profil/situation', '#/profil/enfants', '#/sport', '#/batch', '#/frigo', '#/mes-recettes', '#/recette-nouvelle', '#/cuisine/REC-000010?p=3', '#/sources']) {
+    await p.goto(serveur.url + '/' + route); await p.waitForTimeout(350);
+    const r = await p.evaluate(() => ({ deborde: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1, texte: (document.body.innerText.match(/.{0,25}(NaN|undefined|\[object|Infinity).{0,25}/) || [''])[0] }));
+    if (r.deborde) anomalies.push(`${route} : déborde en largeur`);
+    if (r.texte) anomalies.push(`${route} : texte anormal « ${r.texte.replace(/\s+/g, ' ')} »`);
+  }
+  verif(anomalies.length === 0, 'audit automatique 360 px : aucun débordement, aucun texte NaN/undefined ' + anomalies.join(' ; '));
+  await p.setViewportSize(vp0);
+}
+// Sécurité : politique de contenu (CSP) active, et un titre piégé reste du simple texte
+verif(await p.evaluate(() => new Promise((res) => { document.addEventListener('securitypolicyviolation', () => res(true), { once: true }); const sc = document.createElement('script'); sc.textContent = 'window.__csp = 1'; document.head.appendChild(sc); setTimeout(() => res(false), 600); })) && await p.evaluate(() => window.__csp === undefined), 'sécurité : la politique de contenu (CSP) bloque un script injecté');
+await p.goto(serveur.url + '/#/recette-nouvelle'); await p.waitForSelector('text=Nouvelle recette');
+await p.getByLabel('Titre *').fill('<img src=x onerror="window.__xss=1"> Piège');
+await p.getByLabel('Ingrédients').fill('1 oeuf'); await p.getByLabel('Étapes').fill('<script>window.__xss=2</script> Cuire.');
+await p.click('role=button[name="Enregistrer la recette"]'); await p.waitForSelector('.fiche h1');
+await p.waitForTimeout(300);
+verif(await p.evaluate(() => window.__xss === undefined) && (await p.textContent('.fiche h1')).includes('<img src=x'), 'sécurité : un titre ou une étape piégés (HTML, script) restent du texte inoffensif');
+await p.goto(serveur.url + '/#/mes-recettes'); p.once('dialog', (d) => d.accept());
+await p.click('[aria-label^="Supprimer <img"]');
+await p.waitForFunction(() => document.querySelectorAll('.page-mes-recettes .article').length === 0);
+
 // Mes recettes : ajout à la main, import d'un fichier, modèle téléchargeable, export, modification, suppression
 await p.goto(serveur.url + '/#/mes-recettes'); await p.waitForSelector('text=Aucune recette pour l\'instant');
 await p.click('text=＋ Ajouter une recette');
@@ -914,7 +947,8 @@ await p.waitForSelector('.fiche h1', { timeout: 8000 }).then(() => verif(true, '
 await p.goto(serveur.url + '/#/recettes');
 await p.waitForSelector('.carte', { timeout: 8000 }).then(() => verif(true, 'liste affichée hors ligne'), () => verif(false, 'liste affichée hors ligne'));
 
-verif(erreurs.length === 0, 'aucune erreur console ' + erreurs.join(' | '));
+const vraiesErreurs = erreurs.filter((e) => !/Content Security Policy/.test(e));       // la seule violation CSP attendue est celle du test de sécurité
+verif(vraiesErreurs.length === 0, 'aucune erreur console ' + vraiesErreurs.join(' | '));
 await navigateur.close();
 serveur.fermer();
 process.exit(echecs ? 1 : 0);
