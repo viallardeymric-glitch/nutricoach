@@ -1,6 +1,6 @@
 // Service worker NutriCoach : l'appli, l'index et les recettes consultées fonctionnent hors ligne.
 // Pour publier une mise à jour : changer VERSION ici ET les ?v=N de index.html (scripts/verifier.mjs le contrôle).
-const VERSION = '24';
+const VERSION = '26';
 const CACHE = `nutricoach-${VERSION}`;
 const DONNEES = 'nutricoach-donnees'; // recettes : conservées d'une version à l'autre
 const FICHIERS = [
@@ -10,7 +10,7 @@ const FICHIERS = [
   'js/core/camera.js', 'js/core/catalogue.js', 'js/core/coach.js', 'js/core/collection.js', 'js/core/config.js', 'js/core/favoris.js', 'js/core/glisser.js', 'js/core/image.js', 'js/core/firebase-config.js', 'js/core/nuage.js', 'js/core/off.js', 'js/core/pin.js',
   'js/core/profil.js', 'js/core/session.js', 'js/core/stockage.js', 'js/core/synchro.js',
   'js/data/additifs.js', 'js/data/deconseilles.js', 'js/data/grossesse.js', 'js/data/libelles.js', 'js/data/pictogrammes.js', 'js/data/rayons.js', 'js/data/sources.js',
-  'js/lib/adaptation.js', 'js/lib/alertes.js', 'js/lib/besoins.js', 'js/lib/courses.js', 'js/lib/cuisine.js', 'js/lib/planning.js', 'js/lib/profils.js', 'js/lib/recettes.js', 'js/lib/sante.js', 'js/lib/sauvegarde.js', 'js/lib/scan.js',
+  'js/lib/adaptation.js', 'js/lib/alertes.js', 'js/lib/besoins.js', 'js/lib/courses.js', 'js/lib/cuisine.js', 'js/lib/planning.js', 'js/lib/profils.js', 'js/lib/recettes.js', 'js/lib/recette-perso.js', 'js/lib/sante.js', 'js/lib/sauvegarde.js', 'js/lib/scan.js',
   'js/lib/texte-riche.js', 'js/lib/texte.js',
   'js/ui/composants.js',
   'js/views/accueil.js', 'js/views/coach.js', 'js/views/connexion.js', 'js/views/courses.js', 'js/views/cuisine.js', 'js/views/fiche.js', 'js/views/liste.js',
@@ -27,7 +27,7 @@ const FICHIERS = [
   'js/core/appareils.js',
   'js/lib/frigo.js',
   'js/lib/budget.js',
-  'js/views/frigo.js', 'js/views/grossesse.js',
+  'js/views/frigo.js', 'js/views/grossesse.js', 'js/views/mes-recettes.js',
   'js/core/reecriture.js',
   'js/data/substitutions.js',
   'js/lib/methodes.js',

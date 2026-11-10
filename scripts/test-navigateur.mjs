@@ -759,6 +759,54 @@ await p.click('.puce:text-is("Lagon")');
 await p.goto(serveur.url + '/#/sources'); await p.waitForSelector('text=Santé publique France');
 verif((await p.textContent('.contenu')).includes('lait cru') && (await p.textContent('.contenu')).includes('ne remplacent pas'), 'sources : règles d\'alerte et mention affichées');
 
+// Mes recettes : ajout à la main, import d'un fichier, modèle téléchargeable, export, modification, suppression
+await p.goto(serveur.url + '/#/mes-recettes'); await p.waitForSelector('text=Aucune recette pour l\'instant');
+await p.click('text=＋ Ajouter une recette');
+await p.getByLabel('Titre *').fill('Gratin du dimanche');
+await p.getByLabel('Ingrédients').fill('800 g de pommes de terre\n20 cl de crème\n1 gousse d\'ail, hachée');
+await p.getByLabel('Étapes').fill('Préchauffer le four à 180 °C.\nCouper et cuire 45 minutes.');
+await p.click('role=button[name="Enregistrer la recette"]');
+await p.waitForSelector('.fiche h1');
+verif((await p.textContent('.fiche h1')) === 'Gratin du dimanche' && (await p.textContent('.fiche')).includes('Recette de la famille'), 'mes recettes : recette ajoutée à la main, fiche affichée');
+verif((await p.textContent('.fiche')).includes('Nutrition non renseignée') && (await p.textContent('.fiche')).includes('crème'), 'mes recettes : ingrédients et nutrition absente gérés');
+verif((await p.textContent('.fiche')).toLowerCase().includes('lait'), 'mes recettes : allergène « lait » détecté d\'après la crème');
+await p.goto(serveur.url + '/#/recettes'); await p.waitForSelector('.carte');
+await p.fill('input[type=search]', 'Gratin du dimanche');
+await p.waitForTimeout(500);
+verif(await p.locator('.carte:has-text("Gratin du dimanche")').count() === 0, 'mes recettes : le profil « sans lait » de Marie exclut ma recette à la crème (filtre d\'allergène sûr)');
+await p.click('.profil-applique >> text=Ne pas appliquer');
+await p.waitForSelector('.carte:has-text("Gratin du dimanche")');
+verif(true, 'mes recettes : la recette est trouvée dans la recherche du catalogue (profil non appliqué)');
+await p.click('.profil-applique >> text=Appliquer');
+await p.fill('input[type=search]', '');
+await p.goto(serveur.url + '/#/mes-recettes');
+const dl = p.waitForEvent('download');
+await p.click('text=Télécharger le modèle de fichier');
+const modele = JSON.parse(await (await import('node:fs/promises')).readFile(await (await dl).path(), 'utf8'));
+verif(Array.isArray(modele.recettes) && modele.recettes[0].titre && modele._valeurs_autorisees.unites.includes('g'), 'mes recettes : modèle de fichier téléchargeable (recette d\'exemple et valeurs autorisées)');
+await p.setInputFiles('input[aria-label="Importer un fichier de recettes"]', { name: 'modele.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ recettes: [...modele.recettes, { titre: 'Sans étapes', ingredients: ['1 oeuf'] }] })) });
+await p.waitForSelector('text=prête à importer');
+verif((await p.textContent('.apercu-import')).includes('Gratin de courgettes') && (await p.textContent('.apercu-import')).includes('Sans étapes'), 'mes recettes : aperçu avant import, recette invalide signalée');
+await p.click('role=button[name="Importer 1 recette"]');
+await p.waitForSelector('text=1 recette importée');
+verif(await p.locator('.page-mes-recettes .article').count() === 2, 'mes recettes : fichier importé (2 recettes au total)');
+const dl2 = p.waitForEvent('download');
+await p.click('text=Exporter mes recettes');
+const exp = JSON.parse(await (await import('node:fs/promises')).readFile(await (await dl2).path(), 'utf8'));
+verif(exp.recettes.length === 2 && !('id' in exp.recettes[0]), 'mes recettes : export de mes recettes (sans identifiant interne)');
+await p.click('[aria-label="Modifier Gratin du dimanche"]');
+await p.getByLabel('Titre *').fill('Gratin dauphinois');
+await p.click('role=button[name="Enregistrer les modifications"]');
+await p.waitForSelector('.fiche h1:has-text("Gratin dauphinois")');
+verif(true, 'mes recettes : modification enregistrée');
+await p.goto(serveur.url + '/#/mes-recettes');
+p.once('dialog', (d) => d.accept());
+await p.click('[aria-label="Supprimer Gratin dauphinois"]');
+await p.waitForFunction(() => document.querySelectorAll('.page-mes-recettes .article').length === 1);
+verif(true, 'mes recettes : suppression');
+await p.click('[aria-label="Supprimer Gratin de courgettes (exemple)"]').catch(() => {});
+
+
 // Installation et hors ligne
 await p.goto(serveur.url + '/#/recettes');
 await p.waitForSelector('.carte');

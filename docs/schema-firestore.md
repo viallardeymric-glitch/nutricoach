@@ -17,7 +17,7 @@ Tout est sous `households/foyer/…` (un seul foyer). Les recettes ne sont **pas
 | `weights` | `AAAA-MM-JJ_E` | Poids et mensurations |
 | `workouts` | identifiant | Séance : date, type, durée, distance, dénivelé, source |
 | `batchSessions` | identifiant | Plats préparés : titre, portions, restant, dates limites, `congele` |
-| `notes` | `photo-REC-xxxxxx` | Adresse et crédit de la photo d’une recette (partagés entre les téléphones) ; jamais de clé |
+| `notes` | `photo-REC-xxxxxx`, `recette-REC-9xxxxx` | Adresse et crédit d’une photo ; recettes de la famille (ajoutées à la main ou importées) ; jamais de clé |
 
 Tout est partagé entre les deux comptes (pas de mode privé).
 

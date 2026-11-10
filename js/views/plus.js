@@ -101,6 +101,7 @@ export function Plus({ enceinte = false, nuage, section, moi, profil = null }) {
         <${Rang} icone="🍽️" titre="Recettes" sous="1 610 recettes à chercher" href="#/recettes" />
         ${enceinte && html`<${Rang} icone="📅" titre="Ma semaine" sous="Menus et planning" href="#/semaine" />`}
         <${Rang} icone="🛒" titre="Courses" sous="Liste commune et stock" href="#/courses" />
+        <${Rang} icone="📝" titre="Mes recettes" sous="Ajouter, importer ou exporter des recettes" href="#/mes-recettes" />
         <${Rang} icone="🧊" titre="Frigo magique" sous="Recettes avec ce que j'ai, anti-gaspi" href="#/frigo" />
         <${Rang} icone="🍱" titre="Batch cooking" sous="Une session, toute la semaine" href="#/batch" />
         <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />

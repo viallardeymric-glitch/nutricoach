@@ -57,3 +57,6 @@ Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Th
 
 ## Coach complet
 - ✅ Le coach reçoit tout le contexte de l'appli (conjoint(e), enfants, sport, menu, courses, frigo, poids, journal) et des consignes médicales prudentes ; rappel « je ne suis pas médecin » systématique en grossesse/allaitement et sur les questions de santé. 🟡 Consignes et rappels à faire relire par un professionnel de santé.
+
+## Mes recettes
+- ✅ Ajout manuel, import de fichier JSON (modèle téléchargeable, aperçu avant import), export, modification, suppression ; identifiants REC-900001 et suivants ; partagées via la base (collection `notes`) ; allergènes et avertissements détectés d'après les ingrédients. Le catalogue `data/recettes.json` n'est jamais modifié.

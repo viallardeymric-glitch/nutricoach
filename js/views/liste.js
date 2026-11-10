@@ -83,7 +83,8 @@ export function Liste({ index, erreur, f, setF, favoris, onFavori, favorisSeulem
   return html`
     <header class="entete">
       <div class="entete-ligne"><h1>${favorisSeulement ? 'Mes favoris' : 'Recettes'}</h1>
-        <a class="entete-lien" href=${favorisSeulement ? '#/recettes' : '#/favoris'}>${favorisSeulement ? 'Toutes' : '♥ Favoris'}</a></div>
+        <span class="entete-liens"><a class="entete-lien" href="#/recette-nouvelle" aria-label="Ajouter une recette">＋ Recette</a>
+          <a class="entete-lien" href=${favorisSeulement ? '#/recettes' : '#/favoris'}>${favorisSeulement ? 'Toutes' : '♥ Favoris'}</a></span></div>
       <div class="recherche">
         <input type="search" placeholder="Titre, ingrédient, mot-clé…" value=${f.q}
           aria-label="Rechercher une recette" autocomplete="off" enterkeyhint="search"

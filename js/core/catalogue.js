@@ -3,6 +3,9 @@
 import { preparerRecettes } from '../lib/recettes.js';
 
 let promesseIndex = null;
+let recettesPerso = new Map();          // recettes ajoutées par la famille (fiches complètes, gardées à part)
+/** Déclare les recettes perso (liste de fiches complètes avec `id`). */
+export const definirRecettesPerso = (liste) => { recettesPerso = new Map(liste.map((r) => [r.id, r])); };
 const promessesFichiers = new Map();
 
 /** Charge l'index léger et prépare le texte de recherche de chaque recette. */
@@ -31,6 +34,7 @@ function chargerFichier(nom) {
 
 /** Fiche complète d'une recette de l'index (null si introuvable). */
 export async function chargerFiche(index, id) {
+  if (recettesPerso.has(id)) return recettesPerso.get(id);
   const entree = index.recettes.find((r) => r.id === id);
   if (!entree) return null;
   const fichier = await chargerFichier(index.fichiers[entree.f]);

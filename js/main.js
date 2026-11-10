@@ -1,13 +1,15 @@
 // Point d'entrée : routage par ancre, connexion, verrou PIN, et état partagé (profil, favoris, menus) avec synchro.
 import { html, render, useState, useEffect, useMemo, useRef } from '../vendor/preact-htm.js';
 import { TAILLE_PAGE, PERSONNES } from './core/config.js';
-import { chargerIndex } from './core/catalogue.js';
+import { chargerIndex, definirRecettesPerso } from './core/catalogue.js';
+import { preparerRecettes } from './lib/recettes.js';
+import { entreeIndex } from './lib/index-entree.js';
 import { chargerFavoris, basculerFavori } from './core/favoris.js';
 import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, idDocPhoto, photoVersDoc, docsVersPhotos, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idDocRecette, recetteVersDoc, docsVersRecettes, idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, idDocPhoto, photoVersDoc, docsVersPhotos, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { biometrieActive, desactiverBiometrie } from './core/biometrie.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
@@ -25,6 +27,7 @@ import { Liste } from './views/liste.js';
 import { Semaine } from './views/semaine.js';
 import { Coach } from './views/coach.js';
 import { Grossesse } from './views/grossesse.js';
+import { MesRecettes, FormulaireRecette } from './views/mes-recettes.js';
 import { Fiche } from './views/fiche.js';
 import { Cuisine } from './views/cuisine.js';
 import { Profil, ChoixPersonne } from './views/profil.js';
@@ -54,15 +57,17 @@ export function lireRoute(hash) {
   if (m) return { ecran: 'fiche', id: m[1] };
   m = chemin.match(/^#\/cuisine\/(REC-\d+)$/);
   if (m) { const q = new URLSearchParams(requete); return { ecran: 'cuisine', id: m[1], portions: Math.min(20, Math.max(1, Number(q.get('p')) || 2)), methode: q.get('m') || null, modele: q.get('t') || 'TM6' }; }
+  m = chemin.match(/^#\/recette-modifier\/(REC-\d+)$/);
+  if (m) return { ecran: 'recette-modifier', id: m[1] };
   m = chemin.match(/^#\/produit\/(\d{8,14})$/);
   if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
   if (m) return { ecran: 'profil', section: m[1] || null };
-  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/batch': 'batch', '#/frigo': 'frigo', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/grossesse': 'grossesse', '#/nous': 'nous' };
+  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/batch': 'batch', '#/frigo': 'frigo', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/grossesse': 'grossesse', '#/mes-recettes': 'mes-recettes', '#/recette-nouvelle': 'recette-nouvelle', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
 const ONGLET_DE = { accueil: 'accueil', recettes: 'accueil', favoris: 'accueil', fiche: 'accueil', cuisine: 'accueil', semaine: 'semaine', courses: 'plus', suivi: 'plus', sport: 'plus', batch: 'plus', frigo: 'plus',
-  scan: 'scan', produit: 'scan', scans: 'scan', plus: 'plus', sources: 'plus', coach: 'coach', grossesse: 'grossesse', nous: 'plus', profil: 'plus' };
+  scan: 'scan', produit: 'scan', scans: 'scan', plus: 'plus', sources: 'plus', coach: 'coach', grossesse: 'grossesse', nous: 'plus', profil: 'plus', 'mes-recettes': 'plus', 'recette-nouvelle': 'plus', 'recette-modifier': 'plus' };
 
 function useRoute() {
   const [hash, setHash] = useState(location.hash);
@@ -94,7 +99,7 @@ function App() {
   const session = useSession();
   const connecte = session.statut === 'connecte';
 
-  const [index, setIndex] = useState(null);
+  const [indexBase, setIndex] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [f, setF] = useState({ ...FILTRES_VIDES, ouvert: false, nb: TAILLE_PAGE });
   const [moi, setMoi] = useState(chargerMoi);
@@ -246,6 +251,13 @@ function App() {
   const besoins = profil && profilComplet(profil) ? calculerBesoins(profil) : null;
   const besoinsAutre = profilAutre && profilComplet(profilAutre) ? calculerBesoins(profilAutre) : null;
   const cibleKcal = besoins && besoinsAutre ? Math.round((besoins.cible + besoinsAutre.cible) / 2) : (besoins || besoinsAutre || { cible: 2000 }).cible;
+  // Recettes de la famille (ajoutées à la main ou importées) : ajoutées au catalogue sans toucher data/recettes.json.
+  const recettesPerso = useMemo(() => docsVersRecettes(colNotes.items), [colNotes.items]);
+  const index = useMemo(() => {
+    definirRecettesPerso(recettesPerso);
+    return indexBase ? { ...indexBase, recettes: [...indexBase.recettes, ...preparerRecettes(recettesPerso.map(entreeIndex))] } : null;
+  }, [indexBase, recettesPerso]);
+  const opsRecettes = { ecrire: (r) => colNotes.ecrire(idDocRecette(r.id), recetteVersDoc(r)), supprimer: (id) => colNotes.supprimer(idDocRecette(id)) };
   const recettes = index ? index.recettes : null;
   const parIdIndex = useMemo(() => new Map((recettes || []).map((r) => [r.id, r])), [recettes]);
   const articlesStock = useMemo(() => articlesDuFrigo(stock), [stock]);
@@ -373,6 +385,8 @@ function App() {
     ${route.ecran === 'coach' && html`<${Coach} extra=${contexteCoach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'grossesse' && html`<${Grossesse} profil=${profil} />`}
+    ${route.ecran === 'mes-recettes' && html`<${MesRecettes} recettes=${recettesPerso} ops=${opsRecettes} />`}
+    ${(route.ecran === 'recette-nouvelle' || route.ecran === 'recette-modifier') && html`<${FormulaireRecette} key=${route.id || 'nouvelle'} id=${route.id} recettes=${recettesPerso} ops=${opsRecettes} />`}
     ${route.ecran === 'nous' && html`<${NousDeux} moi=${moi} profils=${session.profils} favorisNuage=${session.favorisNuage}
       erreurSynchro=${session.erreurSynchro} journal=${journal} poids=${poids} />`}
     ${route.ecran === 'profil' && html`<${Profil} moi=${moi} profil=${profil} onMoi=${changerMoi} onChange=${changerProfil} section=${route.section} enfants=${enfantsOps}

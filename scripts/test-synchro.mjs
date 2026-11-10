@@ -253,6 +253,17 @@ await marie.waitForSelector('text=Compté dans les menus et les courses', { time
 // Marie : fond rose par défaut (thème choisi pour elle) ; Eymric garde le thème lagon
 verif(await marie.evaluate(() => document.documentElement.dataset.theme) === 'rose', 'thème : Marie a le thème rose par défaut');
 verif(await eymric.evaluate(() => document.documentElement.dataset.theme) === 'lagon', 'thème : Eymric garde le thème lagon');
+// Recette ajoutée par Eymric : visible chez Marie, stockée dans notes/recette-REC-9xxxxx
+await eymric.goto(serveur.url + '/#/recette-nouvelle'); await eymric.waitForSelector('text=Nouvelle recette');
+await eymric.getByLabel('Titre *').fill('Soupe de Léa');
+await eymric.getByLabel('Ingrédients').fill('4 carottes\n1 l d\'eau');
+await eymric.getByLabel('Étapes').fill('Cuire 20 minutes, mixer.');
+await eymric.click('role=button[name="Enregistrer la recette"]');
+await eymric.waitForSelector('.fiche h1');
+verif([...base.keys()].some((c) => c === 'households/foyer/notes/recette-REC-900001'), 'recette perso : écrite dans households/foyer/notes/recette-REC-900001');
+await marie.goto(serveur.url + '/#/mes-recettes');
+await marie.waitForSelector('.page-mes-recettes .article:has-text("Soupe de Léa")', { timeout: 4000 }).then(
+  () => verif(true, 'recette perso : la recette d\'Eymric apparaît chez Marie'), () => verif(false, 'recette perso partagée'));
 // 4 sexies. Fil d'activité : « Eymric a ajouté… » depuis la dernière visite de Marie
 await marie.addInitScript(() => { const v = sessionStorage.getItem('test_dv'); if (v) localStorage.setItem('nutricoach.derniere_visite', v); });
 await marie.evaluate((t) => sessionStorage.setItem('test_dv', String(t)), Date.now() - 3600000);

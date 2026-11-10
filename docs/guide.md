@@ -70,3 +70,11 @@ Choisissez le nombre de jours à couvrir (1 à 14) et les portions par repas : p
 
 ## « Plus » : mieux rangé
 En haut, votre profil. Puis : Au quotidien (recettes, courses, frigo, batch, favoris), Santé et sport (suivi, grossesse, sport, scans), À deux (Nous deux, enfants), Réglages (coach, photos, code PIN, sources), thème, appareils, rayons, et vos données (sauvegarder et **restaurer**). La sauvegarde ne contient jamais de code PIN ni de clé.
+
+## Mes recettes : ajouter, importer, exporter
+Plus → Mes recettes (ou « ＋ Recette » dans l'onglet Recettes).
+- **À la main** : titre, ingrédients (un par ligne : « 200 g de farine, tamisée »), étapes (une par ligne), et le reste en option (temps, régimes, allergènes, nutrition…).
+- **Par fichier** : « Télécharger le modèle de fichier » donne un fichier JSON d'exemple avec les valeurs autorisées. Remplissez-le (vous pouvez demander au coach de le faire), puis « Importer un fichier de recettes » : un aperçu montre ce qui sera importé et ce qu'il faut corriger. Plusieurs recettes d'un coup sont possibles.
+- **Exporter** : « Exporter mes recettes » donne un fichier que vous pouvez réimporter ou partager.
+- Vos recettes sont **partagées entre vos deux téléphones**, apparaissent dans la recherche, les menus, les courses et le batch, et se modifient ou se suppriment depuis « Mes recettes ». Elles ne touchent jamais au catalogue de 1 610 recettes.
+- **Sécurité** : les allergènes sont complétés automatiquement d'après les ingrédients, et les avertissements (femme enceinte, enfants…) aussi, pour que vos filtres restent sûrs. Sans nutrition renseignée, pas de calories ni de score santé.

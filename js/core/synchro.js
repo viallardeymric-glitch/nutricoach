@@ -1,5 +1,6 @@
 // Conversions entre l'état de l'appli et les documents Firestore. Fonctions pures, testées.
 import { profilVide } from '../lib/profils.js';
+import { normaliserRecette, estRecettePerso } from '../lib/recette-perso.js';
 
 export const PERSONNES_IDS = ['E', 'M'];
 
@@ -189,4 +190,20 @@ export function docsVersPhotos(docs) {
     m.set(d.recette, { url: d.url, mini: /^https:\/\//.test(d.mini || '') ? d.mini : d.url, credit: d.credit || 'Photographe', lien: /^https:\/\//.test(d.lien || '') ? d.lien : 'https://www.pexels.com', fournisseur: d.fournisseur || '' });
   }
   return m;
+}
+
+// ---------- Recettes perso : documents notes/recette-REC-9xxxxx ----------
+export const idDocRecette = (id) => `recette-${id}`;
+export function recetteVersDoc(r) { return { kind: 'recette', ...r, modifie: Date.now() }; }
+/** Documents « notes » → recettes perso valides (chaque recette est re-validée : rien de ce qui vient du nuage n'est cru sur parole). */
+export function docsVersRecettes(docs) {
+  const res = [];
+  for (const d of docs) {
+    if (d.kind !== 'recette') continue;
+    const id = String(d.id || '').replace(/^recette-/, '');
+    if (!estRecettePerso(id)) continue;
+    const r = normaliserRecette(d);
+    if (r.recette) res.push({ ...r.recette, id, perso: true, modifie: d.modifie || 0 });
+  }
+  return res.sort((a, b) => a.id.localeCompare(b.id));
 }

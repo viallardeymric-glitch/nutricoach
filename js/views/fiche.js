@@ -139,6 +139,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
     ${erreurPhoto && html`<p class="note centre-texte">${erreurPhoto}</p>`}
     <div class="fiche-corps">
       <div class="fiche-titre"><h1>${r.titre}</h1><${Coeur} actif=${favori} onClick=${onFavori} /></div>
+      ${r.perso && html`<p class="sous">📝 Recette de la famille · <a href=${'#/recette-modifier/' + r.id}>Modifier</a></p>`}
       <div class="meta">
         <span>${r.categorie} · ${libSousCategorie(r.sous_categorie)}</span>
         <span>⏱ ${t.total_min} min</span>
@@ -202,11 +203,11 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
         <p class="score-sante-tete"><strong>Score santé : ${sante.note}/100</strong> · ${LIBELLE_COULEUR[sante.couleur]}</p>
         <ul class="score-sante-details">${sante.details.map((d) => html`<li key=${d.rubrique}><span>${d.rubrique}</span><span class="sous">${d.texte}</span><strong>${d.points}/${d.max}</strong></li>`)}</ul>
         <p class="note">${MENTION_SCORE_SANTE}</p></div>`}
-      <h2 class="petit-titre">Nutrition par portion <small>(valeurs estimées)</small></h2>
+      ${nutri.calories_kcal > 0 ? html`<div><h2 class="petit-titre">Nutrition par portion <small>(valeurs estimées)</small></h2>
       <table class="nutrition"><tbody>
         ${NUTRITION.map(([k, nom, u]) => nutri[k] != null && html`<tr key=${k}>
           <th scope="row">${nom}</th><td>${String(nutri[k]).replace('.', ',')} ${u}</td></tr>`)}
-      </tbody></table>
+      </tbody></table></div>` : html`<p class="note">Nutrition non renseignée pour cette recette.</p>`}
       <p class="note">${nutAdaptee ? `Estimation recalculée d'après ${nutAdaptee.nb} ingrédient${nutAdaptee.nb > 1 ? 's' : ''} remplacé${nutAdaptee.nb > 1 ? 's' : ''}.` : 'Estimations pour une portion de la recette de base ; elles ne changent pas avec le nombre de personnes.'}</p>
     </div></article>`;
 }

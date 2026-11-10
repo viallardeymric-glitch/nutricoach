@@ -529,3 +529,7 @@ input, select, textarea { font-size: 16px; }
 @media (prefers-color-scheme: dark) {
   .bouton:not(.secondaire), .puce[aria-pressed="true"], .bulle.moi, .carte-profil, .carte-profil .sous, .carte-profil .chevron, .badge, .retour { color: #04201a; }
 }
+
+.entete-liens { display: inline-flex; gap: .4rem; }
+.apercu-import { margin-top: .6rem; }
+.page-form-recette textarea { width: 100%; padding: .7rem .85rem; border: 1px solid var(--bord); border-radius: var(--rayon-bouton); background: var(--carte); color: var(--texte); font: inherit; font-size: 16px; resize: vertical; }
