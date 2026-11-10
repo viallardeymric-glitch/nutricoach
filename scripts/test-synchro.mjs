@@ -227,6 +227,18 @@ await eymric.check('.case input'); await eymric.click('role=button[name="Enregis
 await marie.waitForFunction(() => !document.body.textContent.includes('80,5 kg'), null, { timeout: 2000 }).then(
   () => verif(true, 'option « privé » : le poids n\'apparaît plus chez Marie'), () => verif(false, 'poids privé masqué'));
 
+// 4 sexies. Fil d'activité : « Eymric a ajouté… » depuis la dernière visite de Marie
+await marie.addInitScript(() => { const v = sessionStorage.getItem('test_dv'); if (v) localStorage.setItem('nutricoach.derniere_visite', v); });
+await marie.evaluate((t) => sessionStorage.setItem('test_dv', String(t)), Date.now() - 3600000);
+await marie.goto(serveur.url + '/#/'); await marie.reload();
+await marie.waitForSelector('.bandeau:has-text("Depuis votre dernière visite")', { timeout: 5000 }).then(
+  () => verif(true, 'fil d\'activité : carte « Depuis votre dernière visite » chez Marie'), () => verif(false, 'fil d\'activité'));
+const fil = await marie.textContent('.bandeau:has-text("Depuis votre dernière visite")');
+verif(fil.includes('Eymric') && /a ajouté \d+ articles? aux courses/.test(fil) && fil.includes('a scanné 1 produit') && /a noté 1 repas au journal/.test(fil), 'fil d\'activité : articles ajoutés, produit scanné, repas noté par Eymric');
+verif(!fil.includes('Marie'), 'fil d\'activité : jamais mes propres actions');
+await marie.click('text=Marquer comme vu');
+verif(await marie.locator('.bandeau:has-text("Depuis votre dernière visite")').count() === 0, 'fil d\'activité : marqué comme vu');
+
 // 5. Favoris déjà gardés en local avant la connexion : ils rejoignent le nuage
 const tardif = await telephone('Tardif');
 await tardif.goto(serveur.url + '/');
@@ -254,6 +266,23 @@ await marie.fill('input.pin', '4821'); await marie.click('button[type=submit]');
 await marie.waitForSelector('h1:has-text("Code PIN")');
 verif(true, 'bon code : appli déverrouillée');
 if (captures) await marie.screenshot({ path: `${captures}/profil-pin.png` });
+
+// 6 bis. Face ID / Touch ID (authentificateur WebAuthn virtuel)
+const cdp = await marie.context().newCDPSession(marie);
+await cdp.send('WebAuthn.enable');
+await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: false, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+await marie.goto(serveur.url + '/#/profil/securite'); await marie.reload();
+await marie.waitForSelector('form.verrou'); await marie.fill('input.pin', '4821'); await marie.click('button[type=submit]');
+await marie.waitForSelector('text=Face ID / Touch ID');
+await marie.click('role=button[name="Activer Face ID / Touch ID"]');
+await marie.waitForSelector('text=Face ID / Touch ID activé');
+verif(await marie.evaluate(() => Boolean(localStorage.getItem('nutricoach.biometrie'))), 'Face ID / Touch ID : clé enregistrée (WebAuthn, authentificateur de la plateforme)');
+await marie.reload();
+await marie.waitForSelector('h1:has-text("Code PIN")', { timeout: 6000 }).then(
+  () => verif(true, 'Face ID / Touch ID : l\'appli se déverrouille sans saisir le code'), () => verif(false, 'déverrouillage biométrique'));
+await marie.click('role=button[name="✓ Face ID / Touch ID activé"]');
+await marie.waitForSelector('text=Activer Face ID / Touch ID');
+verif(await marie.evaluate(() => !localStorage.getItem('nutricoach.biometrie')), 'Face ID / Touch ID : désactivable');
 
 // 7. Déconnexion
 await marie.goto(serveur.url + '/#/profil/compte');

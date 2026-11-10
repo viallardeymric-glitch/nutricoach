@@ -61,7 +61,7 @@ test('planning ↔ documents', () => {
   ]);
   assert.deepEqual(plan, { '2026-11-09': { dejeuner: 'REC-000010', diner: 'REC-000020' }, '2026-11-10': { diner: 'REC-000030' } });
   const d = jourVersDoc('2026-11-09', { diner: 'REC-000020' });
-  assert.deepEqual(Object.keys(d).sort(), ['date', 'diner', 'modifie']);
+  assert.deepEqual(Object.keys(d).sort(), ['date', 'diner', 'modifie', 'par']);
   assert.ok(!('dejeuner' in d));
 });
 
@@ -136,7 +136,7 @@ import { idDocRecurrent, recurrentVersDoc } from '../js/core/synchro.js';
 test('menus à 4 repas, péremption du stock, articles récurrents', () => {
   const plan = docsVersPlan([{ id: '2026-11-10', petit_dejeuner: 'REC-000100', dejeuner: 'REC-000010', collation: 'REC-000200', diner: 'bof' }]);
   assert.deepEqual(plan['2026-11-10'], { petit_dejeuner: 'REC-000100', dejeuner: 'REC-000010', collation: 'REC-000200' });
-  assert.deepEqual(Object.keys(jourVersDoc('2026-11-10', { collation: 'REC-000200', diner: 'REC-000020' })).sort(), ['collation', 'date', 'diner', 'modifie']);
+  assert.deepEqual(Object.keys(jourVersDoc('2026-11-10', { collation: 'REC-000200', diner: 'REC-000020' }, 'E')).sort(), ['collation', 'date', 'diner', 'modifie', 'par']);
   const s = stockVersDoc({ cle: 'lait|ml', nom: 'Lait', quantite: 1000, unite: 'ml', peremption: '2026-11-12' });
   assert.equal(docsVersStock([s])[0].peremption, '2026-11-12');
   assert.equal(docsVersStock([{ ...s, peremption: 'demain' }])[0].peremption, null);

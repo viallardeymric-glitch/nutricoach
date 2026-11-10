@@ -14,7 +14,7 @@ export function docsVersFavoris(docs) {
   for (const d of docs) {
     if (!/^REC-\d+$/.test(d.recette) || !PERSONNES_IDS.includes(d.par)) continue;
     const cle = idFavori(d.recette, d.par);
-    if (!vus.has(cle)) { vus.add(cle); liste.push({ recette: d.recette, par: d.par }); }
+    if (!vus.has(cle)) { vus.add(cle); liste.push({ recette: d.recette, par: d.par, t: d.t || 0 }); }
   }
   return liste;
 }
@@ -63,8 +63,8 @@ export function docsVersPlan(docs) {
 }
 
 /** Repas d'un jour → document Firestore (champs présents seulement). */
-export function jourVersDoc(date, repas) {
-  const doc = { date, modifie: Date.now() };
+export function jourVersDoc(date, repas, par = '') {
+  const doc = { date, modifie: Date.now(), par };
   for (const r of REPAS_IDS) if (repas[r]) doc[r] = repas[r];
   return doc;
 }
@@ -172,5 +172,8 @@ export function sessionBatchVersDoc(s) {
 }
 export function docsVersSessionsBatch(docs) {
   return docs.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') && Array.isArray(d.plats))
-    .map((d) => ({ id: d.id, date: d.date, par: d.par, plats: d.plats.filter((p) => /^REC-\d+$/.test(p.recette || '') && /^\d{4}-\d{2}-\d{2}$/.test(p.limiteFrigo || '')).map((p) => ({ ...p, limiteCongelation: p.limiteCongelation || null })) }));
+    .map((d) => ({ id: d.id, date: d.date, par: d.par, t: d.t || 0, plats: d.plats.filter((p) => /^REC-\d+$/.test(p.recette || '') && /^\d{4}-\d{2}-\d{2}$/.test(p.limiteFrigo || '')).map((p) => ({ ...p, limiteCongelation: p.limiteCongelation || null })) }));
 }
+
+/** Métadonnées des jours de menu (qui l'a modifié, quand) pour le fil d'activité. */
+export const metaPlanning = (docs) => docs.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.id || '') && d.par).map((d) => ({ par: d.par, modifie: d.modifie || 0 }));

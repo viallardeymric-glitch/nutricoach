@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Seuls vos deux comptes ont accès : remplacez EMAIL_1 et EMAIL_2.
+    function couple() {
+      return request.auth != null
+        && request.auth.token.email in ['EMAIL_1', 'EMAIL_2'];
+    }
+    // Garde-fou : documents petits.
+    function petit() {
+      return request.resource.data.keys().size() <= 60;
+    }
+    function collectionPermise(col) {
+      return col in ['profiles', 'planning', 'shoppingLists', 'pantry', 'journal', 'weights',
+                     'workouts', 'scans', 'favorites', 'batchSessions', 'notes'];
+    }
+
+    match /households/{hid} {
+      allow read: if couple();
+      allow create, update: if couple() && petit();
+      allow delete: if false;
+
+      match /{col}/{docId} {
+        allow read: if couple() && collectionPermise(col);
+        allow create, update: if couple() && collectionPermise(col) && petit();
+        allow delete: if couple() && collectionPermise(col);
+      }
+    }
+    // Tout le reste est refusé.
+  }
+}

@@ -16,6 +16,7 @@ export function useSession() {
   const [docsProfils, setDocsProfils] = useState(null);
   const [docsSeances, setDocsSeances] = useState(null);
   const [docsBatch, setDocsBatch] = useState(null);
+  const [docsPlanning, setDocsPlanning] = useState(null);
   const [docsJournal, setDocsJournal] = useState(null);
   const [docsPoids, setDocsPoids] = useState(null);
   const [erreurSynchro, setErreurSynchro] = useState(false);
@@ -31,7 +32,7 @@ export function useSession() {
   }, []);
 
   useEffect(() => {
-    if (statut !== 'connecte') { setProfils(null); setFavorisNuage(null); setPlanningNuage(null); setDocsCourses(null); setDocsStock(null); setDocsScans(null); setDocsJournal(null); setDocsPoids(null); setDocsProfils(null); setDocsSeances(null); setDocsBatch(null); return undefined; }
+    if (statut !== 'connecte') { setProfils(null); setFavorisNuage(null); setPlanningNuage(null); setDocsCourses(null); setDocsStock(null); setDocsScans(null); setDocsJournal(null); setDocsPoids(null); setDocsProfils(null); setDocsSeances(null); setDocsBatch(null); setDocsPlanning(null); return undefined; }
     const erreur = () => setErreurSynchro(true);
     const a1 = nuage.ecouterCollection('profiles', (docs) => {
       setErreurSynchro(false);
@@ -41,7 +42,7 @@ export function useSession() {
       setProfils(m);
     }, erreur);
     const a2 = nuage.ecouterCollection('favorites', (docs) => setFavorisNuage(docsVersFavoris(docs)), erreur);
-    const a3 = nuage.ecouterCollection('planning', (docs) => setPlanningNuage(docsVersPlan(docs)), erreur);
+    const a3 = nuage.ecouterCollection('planning', (docs) => { setDocsPlanning(docs); setPlanningNuage(docsVersPlan(docs)); }, erreur);
     const a4 = nuage.ecouterCollection('shoppingLists', setDocsCourses, erreur);
     const a5 = nuage.ecouterCollection('pantry', setDocsStock, erreur);
     const a6 = nuage.ecouterCollection('scans', setDocsScans, erreur);
@@ -52,5 +53,5 @@ export function useSession() {
     return () => { a1(); a2(); a3(); a4(); a5(); a6(); a7(); a8(); a9(); a10(); };
   }, [statut]);
 
-  return { actif, statut, email, profils, favorisNuage, planningNuage, docsCourses, docsStock, docsScans, docsJournal, docsPoids, docsProfils, docsSeances, docsBatch, erreurSynchro };
+  return { actif, statut, email, profils, favorisNuage, planningNuage, docsCourses, docsStock, docsScans, docsJournal, docsPoids, docsProfils, docsSeances, docsBatch, docsPlanning, erreurSynchro };
 }

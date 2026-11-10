@@ -1,6 +1,6 @@
 // Service worker NutriCoach : l'appli, l'index et les recettes consultées fonctionnent hors ligne.
 // Pour publier une mise à jour : changer VERSION ici ET les ?v=N de index.html (scripts/verifier.mjs le contrôle).
-const VERSION = '7';
+const VERSION = '8';
 const CACHE = `nutricoach-${VERSION}`;
 const DONNEES = 'nutricoach-donnees'; // recettes : conservées d'une version à l'autre
 const FICHIERS = [
@@ -33,6 +33,8 @@ const FICHIERS = [
   'js/lib/methodes.js',
   'js/lib/substitutions.js',
   'js/lib/thermomix.js',
+  'js/lib/activite.js',
+  'js/core/biometrie.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

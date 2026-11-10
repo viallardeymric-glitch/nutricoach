@@ -1,5 +1,5 @@
 // Profil : un accueil avec un résumé et des rubriques, chacune sur sa page courte.
-import { html, useState } from '../../vendor/preact-htm.js';
+import { html, useState, useEffect } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { REGIMES, ALLERGENES } from '../data/libelles.js';
 import { REGIMES_AVANCES, FAMILLES_REGIMES, RAPPEL_MEDICAL, nomRegime } from '../data/regimes.js';
@@ -7,6 +7,7 @@ import { ACTIVITES, OBJECTIFS, SECONDAIRES, calculerBesoins } from '../lib/besoi
 import { validerProfil, profilComplet, ageDe, LIMITES, AGE_MIN, groupeAge, GROUPES_AGE, ageEnMois, enfantVide, risquesEnfant } from '../lib/profils.js';
 import { basculer } from '../lib/recettes.js';
 import { pinValide } from '../core/pin.js';
+import { biometrieDisponible, biometrieActive, activerBiometrie, desactiverBiometrie } from '../core/biometrie.js';
 import { chargerReglagesCoach } from '../core/coach.js';
 import { Puce, Pastille, Bandeau, Entete, Rang } from '../ui/composants.js';
 import { ReglagesCoach } from './coach.js';
@@ -58,6 +59,23 @@ function Besoins({ b, complet }) {
   </div>`;
 }
 
+function Biometrie({ pin }) {
+  const [dispo, setDispo] = useState(false);
+  const [active, setActive] = useState(biometrieActive);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { biometrieDisponible().then(setDispo); }, []);
+  if (!pin.defini) return html`<p class="note">Définissez d'abord un code : Face ID / Touch ID s'y ajoute et le code reste le secours.</p>`;
+  if (!dispo) return html`<p class="note">Face ID / Touch ID n'est pas disponible sur cet appareil ou ce navigateur.</p>`;
+  const basculer = async () => {
+    setMsg('');
+    if (active) { desactiverBiometrie(); setActive(false); return; }
+    try { await activerBiometrie(); setActive(true); } catch (e) { setMsg(e.message); }
+  };
+  return html`<div><div class="puces libres"><${Puce} actif=${active} onClick=${basculer}>${active ? '✓ Face ID / Touch ID activé' : 'Activer Face ID / Touch ID'}<//></div>
+    ${msg && html`<p class="erreur-champ" role="alert">${msg}</p>`}
+    <p class="note">Le code PIN reste disponible en secours. Face ID / Touch ID ouvre l'appli ; il ne chiffre pas les données.</p></div>`;
+}
+
 function SectionPin({ pin }) {
   const [ouvert, setOuvert] = useState(false);
   const [code, setCode] = useState('');
@@ -84,6 +102,7 @@ function SectionPin({ pin }) {
         <${Puce} actif=${false} onClick=${() => { setOuvert(false); setMessage(''); }}>Annuler<//></div>
     </div>`}
     <p class="note">Le code verrouille l'écran de l'appli. Il ne remplace pas le verrouillage de votre téléphone.</p>
+    <h3 class="petit-titre">Face ID / Touch ID</h3><${Biometrie} pin=${pin} />
   </div>`;
 }
 

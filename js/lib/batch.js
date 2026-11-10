@@ -30,7 +30,8 @@ export function articlesBatch(selection) {
 // ---------- Étapes -> tâches ----------
 function classer(etape, appareils) {
   const t = `${etape.texte} ${Object.values(etape.reglages || {}).join(' ')}`.toLowerCase();
-  const d = dureeEtape(etape);
+  const secondes = dureeEtape(etape);                       // dureeEtape rend des secondes
+  const d = secondes === null ? null : Math.max(1, Math.round(secondes / 60));   // minutes
   const prechauffage = /préchauff/.test(t);
   let ressource = null;
   if (/\bfour\b|enfourn|gratiner|papillote/.test(t)) ressource = 'four';

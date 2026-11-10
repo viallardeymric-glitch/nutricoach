@@ -7,8 +7,9 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
+import { biometrieActive, desactiverBiometrie } from './core/biometrie.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
 import { calculerBesoins } from './lib/besoins.js';
@@ -34,6 +35,7 @@ import { Suivi } from './views/suivi.js';
 import { Sport } from './views/sport.js';
 import { Batch } from './views/batch.js';
 import { Frigo } from './views/frigo.js';
+import { evenements } from './lib/activite.js';
 import { articlesDuFrigo, bonusStock, aConsommerBientot } from './lib/frigo.js';
 import { chargerAppareils } from './core/appareils.js';
 import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
@@ -159,7 +161,7 @@ function App() {
   const ecrireJours = (changes) => {
     if (connecte) {
       for (const [date, repas] of Object.entries(changes)) {
-        (Object.keys(repas).length ? ecrireDoc('planning', date, jourVersDoc(date, repas)) : supprimerDoc('planning', date)).catch(() => {});
+        (Object.keys(repas).length ? ecrireDoc('planning', date, jourVersDoc(date, repas, moi)) : supprimerDoc('planning', date)).catch(() => {});
       }
     } else {
       setPlanLocal((p) => {
@@ -265,6 +267,19 @@ function App() {
       .map((rp) => `${nomJour(new Date(j + 'T12:00:00'))} ${rp.nom.toLowerCase()} : ${parId.get(plan[j][rp.id]) || '?'}`));
   }, [recettes, plan]);
 
+  // Fil d'activité : ce que l'autre a fait depuis la dernière visite (la date de visite est gardée sur ce téléphone).
+  const [derniereVisite] = useState(() => lire('derniere_visite', 0));
+  useEffect(() => {
+    const fin = () => ecrire('derniere_visite', Date.now());
+    const t = setTimeout(fin, 8000);                                  // marqué « vu » après quelques secondes d'utilisation
+    document.addEventListener('visibilitychange', fin);
+    return () => { clearTimeout(t); document.removeEventListener('visibilitychange', fin); };
+  }, []);
+  const [activiteVue, setActiviteVue] = useState(false);
+  const activite = useMemo(() => (connecte && derniereVisite ? evenements({
+    articles: donneesCourses.articles, favoris: session.favorisNuage || [], scans, journal, poids, sessions: sessionsBatch,
+    planning: metaPlanning(session.docsPlanning || []),
+  }, autre, derniereVisite) : []), [connecte, derniereVisite, donneesCourses, session.favorisNuage, scans, journal, poids, sessionsBatch, session.docsPlanning, autre]);
   const lignesSuivi = useMemo(() => {
     const aujourdhui = cleDate(new Date());
     const b = bilanJour(journal, aujourdhui, moi);
@@ -276,7 +291,7 @@ function App() {
     return l;
   }, [journal, poids, besoins, moi, profil]);
   // --- Écrans qui remplacent l'appli : verrou, chargement, connexion, choix de la personne.
-  if (verrouille && pin) return html`<${Verrou} enreg=${pin} onDeverrouiller=${() => setVerrouille(false)} />`;
+  if (verrouille && pin) return html`<${Verrou} enreg=${pin} biometrie=${biometrieActive()} onDeverrouiller=${() => setVerrouille(false)} />`;
   if (session.statut === 'chargement') return html`<p class="etat">Chargement…</p>`;
   if (session.statut === 'deconnecte' || session.statut === 'erreur') {
     return html`<${Connexion} statut=${session.statut} onReessayer=${() => location.reload()} />`;
@@ -292,7 +307,7 @@ function App() {
         moi=${moi} profil=${profil} onAppliquerProfil=${() => changerProfil({ ...profil, appliquer: profil.appliquer === false })} />
     </div>
     ${route.ecran === 'accueil' && html`<${Accueil} moi=${moi} profil=${profil} besoins=${besoinsDuJour} index=${recettes} plan=${plan}
-      contraintes=${contraintes} cibleKcal=${cibleKcal} sportJour=${jourSport} bonus=${bonusDuStock} urgents=${urgentsStock} budgetSerre=${budgetSerre} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
+      contraintes=${contraintes} cibleKcal=${cibleKcal} sportJour=${jourSport} activite=${activiteVue ? [] : activite} onActiviteVue=${() => setActiviteVue(true)} bonus=${bonusDuStock} urgents=${urgentsStock} budgetSerre=${budgetSerre} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
       ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} parJour=${parJourSport} bonus=${bonusDuStock} budgetSerre=${budgetSerre} convives=${convives} />`}
     ${route.ecran === 'courses' && html`<${Courses} donnees=${donneesCourses} stock=${stock} ops=${opsCourses} moi=${moi}
@@ -315,7 +330,7 @@ function App() {
     ${route.ecran === 'profil' && html`<${Profil} moi=${moi} profil=${profil} onMoi=${changerMoi} onChange=${changerProfil} section=${route.section} enfants=${enfantsOps}
       compte=${{ actif: session.actif, email: session.email, onDeconnecter: () => deconnecter() }}
       pin=${{ defini: Boolean(pin), onDefinir: async (code) => { const e = await creerPin(code); enregistrerPin(e); setPin(e); },
-        onRetirer: () => { retirerPin(); setPin(null); setVerrouille(false); } }} />`}
+        onRetirer: () => { retirerPin(); desactiverBiometrie(); setPin(null); setVerrouille(false); } }} />`}
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
       onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}

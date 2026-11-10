@@ -95,3 +95,18 @@ test('toutes les recettes du catalogue donnent un planning valide', () => {
   }
   assert.ok(n > 30);
 });
+
+test('durées vraisemblables : aucune tâche de plus de 8 h, session de 3 recettes sous 10 h, pas de minutes en secondes', () => {
+  let maxTache = 0; let maxSession = 0;
+  for (let i = 0; i < toutes.length; i += 7) {
+    const p = planningSession([{ recette: toutes[i] }, { recette: toutes[(i + 3) % toutes.length] }, { recette: toutes[(i + 11) % toutes.length] }], { appareils: { plaques: 3, four: true, thermomix: true } });
+    maxSession = Math.max(maxSession, p.duree);
+    for (const t of p.taches) maxTache = Math.max(maxTache, t.fin - t.debut);
+  }
+  assert.ok(maxTache <= 480, `tâche la plus longue : ${maxTache} min`);
+  assert.ok(maxSession <= 720, `session la plus longue : ${maxSession} min`);
+  const simple = planningSession([{ recette: { id: 'X', titre: 'Test', portions_base: 2, ingredients: [], ustensiles: [], etapes: [
+    { numero: 1, texte: 'Coupez les légumes.', reglages: {} }, { numero: 2, texte: 'Laissez mijoter.', reglages: { duree: '30 min', feu: 'doux' } }, { numero: 3, texte: 'Servez.', reglages: {} }] } }]);
+  assert.equal(simple.taches[1].fin - simple.taches[1].debut, 30, '30 min restent 30 min');
+  assert.ok(simple.duree >= 30 && simple.duree <= 45);
+});

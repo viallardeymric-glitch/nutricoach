@@ -5,7 +5,7 @@ import { PROFILS, lib } from '../data/libelles.js';
 import { repasActifs, cleDate, lundiDe, nomJour, nomMois, saisonDe, proposer, graine } from '../lib/planning.js';
 import { lire } from '../core/stockage.js';
 import { profilsARisque } from '../lib/profils.js';
-import { Entete, Section, MiniRecette, Pictogramme } from '../ui/composants.js';
+import { Entete, Section, MiniRecette, Pictogramme, Bandeau } from '../ui/composants.js';
 import { PHASES } from '../lib/sport.js';
 
 const risquesDe = (r, profil) => {
@@ -13,7 +13,7 @@ const risquesDe = (r, profil) => {
   return r.risques.filter((x) => miens.includes(x)).map((x) => lib(PROFILS, x).toLowerCase());
 };
 
-export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange, sportJour, bonus = null, urgents = [], budgetSerre = false }) {
+export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange, sportJour, bonus = null, urgents = [], budgetSerre = false, activite = [], onActiviteVue }) {
   const [nonce, setNonce] = useState(0);
   const [rapide, setRapide] = useState(false);
   const maintenant = new Date();
@@ -39,6 +39,9 @@ export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleK
       ${besoins && html`<p class="pastille-info">🎯 Objectif du jour : <strong>${besoins.cible} kcal</strong></p>`}
     <//>
     <div class="contenu">
+      ${activite.length > 0 && html`<${Bandeau} type="info" titre=${html`🔔 Depuis votre dernière visite`}>
+        <ul>${activite.map((e) => html`<li key=${e.type}>${e.icone} <strong>${PERSONNES[moi === 'E' ? 'M' : 'E'].prenom}</strong> ${e.texte}</li>`)}</ul>
+        <button type="button" class="lien" onClick=${onActiviteVue}>Marquer comme vu</button><//>`}
       ${sportJour && html`<a class="carte-sport" href="#/sport"><span>🏃</span><span><strong>${sportJour.reste > 0 ? `J-${sportJour.reste}` : sportJour.reste === 0 ? 'Jour J' : `J+${-sportJour.reste}`} · ${PHASES[sportJour.phase]}</strong><span class="sous">${sportJour.besoins.kcal} kcal · ${sportJour.besoins.glucides_g} g de glucides aujourd'hui</span></span></a>`}
       <${Section} titre="Aujourd'hui" lien=${{ href: '#/semaine', nom: 'Voir la semaine' }}>
         ${repasActifs(lire('planning.petitdej', false)).map((rp) => {

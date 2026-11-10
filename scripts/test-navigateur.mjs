@@ -401,6 +401,7 @@ await p.click('role=button[name="Générer mon plan nutritionnel"]');
 await p.waitForSelector('.pastille-info');
 verif(/J-60/.test(await p.textContent('.pastille-info')) && (await p.textContent('.pastille-info')).includes('Développement'), 'sport : J-60, phase « Développement »');
 verif((await p.textContent('.contenu')).includes('Ne testez rien de nouveau'), 'sport : rappel « rien de nouveau le jour J »');
+if (captures) await p.screenshot({ path: `${captures}/sport.png`, fullPage: true });
 verif(await p.locator('.jour-sport').count() === 14, 'sport : plan des 14 prochains jours');
 verif((await p.textContent('.contenu')).includes('g par heure'), 'sport : stratégie de ravitaillement (glucides par heure)');
 const kcalAvant = parseInt((await p.locator('.bilan-jour .stats strong').first().textContent()), 10);
@@ -447,6 +448,7 @@ await p.click('role=button[name="✨ Préparer la session"]');
 await p.waitForSelector('.chrono');
 const gain = parseInt(await p.locator('.stats >> nth=0').locator('div').nth(1).locator('strong').textContent(), 10);
 verif(gain > 0, `batch : planning chronométré, ${gain} min gagnées en travaillant en parallèle`);
+if (captures) await p.screenshot({ path: `${captures}/batch.png`, fullPage: true });
 verif(await p.locator('.chrono li.passif').count() > 0 && await p.locator('.chrono li.actif').count() > 0, 'batch : tâches à faire soi-même et tâches passives (four, mijotage)');
 verif(/^\d{2}:\d{2}$/.test((await p.locator('.chrono .heure').first().textContent()).trim()), 'batch : heures de la session');
 const nbBoites = (await p.locator('.etiquette-carte').allTextContents()).map((t) => parseInt(/(\d+) boîte/.exec(t)[1], 10)).reduce((a, b) => a + b, 0);
@@ -515,6 +517,7 @@ verif(/carotte/i.test(await p.textContent('.carte-sport.gaspi')), 'accueil : car
 await p.goto(serveur.url + '/#/frigo'); await p.waitForSelector('text=Anti-gaspi');
 await p.waitForSelector('.resultat-frigo');
 const nbFrigo = await p.locator('.resultat-frigo').count();
+if (captures) await p.screenshot({ path: `${captures}/frigo.png`, fullPage: true });
 verif(nbFrigo > 0, `frigo magique : ${nbFrigo} recettes possibles avec le stock`);
 const titresFrigo = await p.$$eval('.resultat-frigo .mini-lien', (els) => els.map((e) => e.getAttribute('href').split('/').pop()));
 verif(titresFrigo.every((id) => !parId.get(id).allergenes.includes('lait') && !parId.get(id).allergenes.includes('arachides')), 'SÉCURITÉ : le frigo magique respecte les allergies de la famille');
@@ -532,6 +535,7 @@ verif((await p.textContent('.ingredients')).includes('remplace :'), 'fiche : la 
 
 const th = toutes.find((r) => r.appareil_principal === 'thermomix' && r.etapes.some((e) => e.reglages && e.reglages.temperature === '120°C'));
 await p.goto(serveur.url + '/#/recette/' + th.id); await p.waitForSelector('text=Capacité du bol');
+if (captures) await p.screenshot({ path: `${captures}/thermo.png`, fullPage: false });
 verif(await p.locator('.reglages.thermo span').count() > 3, 'Thermomix : pastilles durée / température / vitesse / sens / accessoire');
 verif((await p.textContent('.fiche')).includes('Pesée guidée'), 'Thermomix : pesée guidée');
 verif((await p.textContent('.fiche')).includes('120 °C'), 'Thermomix TM6 : 120 °C');
