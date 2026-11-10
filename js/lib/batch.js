@@ -14,8 +14,15 @@ export function recettesDuMenu(plan, jours, max = 5) {
   return [...n.entries()].sort((a, b) => b[1] - a[1]).slice(0, max).map(([id]) => id);
 }
 
-/** Portions à cuisiner pour `repas` repas de `convives` convives (portions adultes), arrondies au-dessus. */
-export const portionsPourRepas = (repas, convives) => Math.max(1, Math.ceil(repas * convives));
+/** Nombre de fois que chaque recette revient dans le menu des jours donnés : { id: repas }. */
+export function comptesDuMenu(plan, jours) {
+  const n = {};
+  for (const j of jours) for (const id of Object.values(plan[j] || {})) n[id] = (n[id] || 0) + 1;
+  return n;
+}
+
+/** Portions à cuisiner pour `repas` repas de `portionsParRepas` portions (une par personne de la famille), arrondies au-dessus. */
+export const portionsPourRepas = (repas, portionsParRepas) => Math.max(1, Math.ceil(repas * portionsParRepas));
 
 /** Courses de la session : quantités des recettes multipliées (portions / portions de base), fusionnées. selection : [{ recette (fiche), portions }]. */
 export function articlesBatch(selection) {

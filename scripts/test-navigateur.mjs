@@ -516,9 +516,15 @@ verif(true, 'sport : objectif supprimé');
 // Batch cooking : sélection depuis le menu, planning chronométré, boîtes et étiquettes, courses dédiées, stock de plats
 await p.goto(serveur.url + '/#/batch'); await p.waitForSelector('.page-batch');
 verif(await p.locator('.ligne-batch').count() >= 3, 'batch : recettes du menu proposées');
+verif((await p.locator('.reglage-batch').nth(0).textContent()).includes('7 jours'), 'batch : nombre de jours réglable (7 par défaut)');
+await p.click('[aria-label="Un jour de plus"]'); await p.click('[aria-label="Un jour de plus"]'); await p.click('[aria-label="Un jour de moins"]');
+verif((await p.locator('.reglage-batch').nth(0).textContent()).includes('8 jours') && (await p.textContent('[data-bilan-repas]')).includes('16 à couvrir'), 'batch : on peut choisir le nombre de jours (8 jours = 16 repas à couvrir)');
+{ const t = await p.locator('.reglage-batch').nth(1).textContent(); verif(t.includes('3 portions') && t.includes('Eymric, Marie et Léa'), 'batch : portions par repas = la famille (Eymric, Marie et Léa = 3)'); }
+
 await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click(); await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click();
 await p.locator('.ligne-batch').nth(1).locator('button').nth(1).click(); await p.locator('.ligne-batch').nth(1).locator('button').nth(1).click();
 await p.locator('.ligne-batch').nth(2).locator('button').nth(1).click();
+verif((await p.textContent('.ligne-batch >> nth=0')).includes('6 portions'), 'batch : 2 repas × 3 personnes = 6 portions');
 await p.click('role=button[name="✨ Préparer la session"]');
 await p.waitForSelector('.chrono');
 const gain = parseInt(await p.locator('.stats >> nth=0').locator('div').nth(1).locator('strong').textContent(), 10);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { recettesDuMenu, portionsPourRepas, articlesBatch, planningSession, heureDe, conditionnement, texteEtiquette, platsEnStock, platsDeSession } from '../js/lib/batch.js';
+import { recettesDuMenu, comptesDuMenu, portionsPourRepas, articlesBatch, planningSession, heureDe, conditionnement, texteEtiquette, platsEnStock, platsDeSession } from '../js/lib/batch.js';
 
 const toutes = JSON.parse(readFileSync(new URL('../data/recettes.json', import.meta.url), 'utf8'));
 const par = new Map(toutes.map((r) => [r.id, r]));
@@ -14,6 +14,8 @@ test('recettes du menu : les plus fréquentes d\'abord', () => {
   assert.deepEqual(recettesDuMenu(plan, ['j1', 'j2', 'j3'], 2), ['A', 'B']);
   assert.equal(portionsPourRepas(2, 2), 4);
   assert.equal(portionsPourRepas(3, 2.6), 8);
+  assert.equal(portionsPourRepas(3, 3), 9, 'une portion par personne de la famille (3 personnes)');
+  assert.deepEqual(comptesDuMenu(plan, ['j1', 'j2']), { A: 2, B: 1, C: 1 });
 });
 
 test('courses de la session : quantités multipliées et fusionnées entre recettes', () => {

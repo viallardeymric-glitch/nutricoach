@@ -2,7 +2,7 @@
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { cleDate, semaineDe, ajouterJours, dateDepuisCle, nomJour } from '../lib/planning.js';
-import { recettesDuMenu, portionsPourRepas, articlesBatch, planningSession, heureDe, conditionnement, texteEtiquette, platsEnStock, platsDeSession } from '../lib/batch.js';
+import { recettesDuMenu, comptesDuMenu, portionsPourRepas, articlesBatch, planningSession, heureDe, conditionnement, texteEtiquette, platsEnStock, platsDeSession } from '../lib/batch.js';
 import { deduireStock } from '../lib/courses.js';
 import { filtrerRecettes, FILTRES_VIDES } from '../lib/recettes.js';
 import { libelleQuantite } from '../lib/courses.js';
@@ -13,8 +13,9 @@ const nf = (x) => String(x).replace('.', ',');
 const fr = (d) => d.split('-').reverse().join('/');
 const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
-export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, convives, appareils }) {
-  const [horizon, setHorizon] = useState(7);
+export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, personnes = 2, noms = '', appareils }) {
+  const [horizon, setHorizon] = useState(7);               // nombre de jours à couvrir (1 à 14)
+  const [portionsRepas, setPortionsRepas] = useState(personnes);   // portions par repas : une par personne de la famille
   const jours = useMemo(() => { const j = []; for (let i = 0; i < horizon; i++) j.push(cleDate(ajouterJours(new Date(), i))); return j; }, [horizon]);
   const [repas, setRepas] = useState({});          // id -> nombre de repas à préparer ; absent = non choisi
   const [dureeDispo, setDureeDispo] = useState(180);
@@ -29,6 +30,9 @@ export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, convi
   const proposes = useMemo(() => [...new Set([...menu, ...Object.keys(repas)])], [menu, repas]);
   const trouves = useMemo(() => (q.trim().length >= 2 && index ? filtrerRecettes(index, { ...FILTRES_VIDES, q }).slice(0, 6) : []), [q, index]);
   const choisies = proposes.filter((id) => repas[id] > 0);
+  const totalRepas = choisies.reduce((n, id) => n + repas[id], 0);
+  const repasCouverts = horizon * 2;                       // déjeuner + dîner
+  const remplirDepuisMenu = () => setRepas(comptesDuMenu(plan, jours));
   const aujourdhui = cleDate(new Date());
   const enStock = useMemo(() => platsEnStock(sessions), [sessions]);
 
@@ -38,7 +42,7 @@ export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, convi
       const selection = [];
       for (const id of choisies) {
         const recette = await chargerFiche(catalogue, id);
-        if (recette) selection.push({ recette, portions: portionsPourRepas(repas[id], convives) });
+        if (recette) selection.push({ recette, portions: portionsPourRepas(repas[id], portionsRepas) });
       }
       const planning = planningSession(selection, { dureeDispo, appareils });
       const cond = conditionnement(selection, aujourdhui, parBoite);
@@ -76,11 +80,18 @@ export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, convi
         <p class="note">Les plats sont classés par date limite. Décongelez toujours au réfrigérateur et réchauffez à cœur.</p><//>`}
       ${!resultat ? html`
         <${Section} titre="1. Que prépare-t-on ?">
-          <div class="puces sans-marge">${[7, 14].map((n) => html`<${Puce} key=${n} actif=${horizon === n} onClick=${() => setHorizon(n)}>Menu des ${n} jours<//>`)}</div>
+          <div class="reglage-batch"><span>Nombre de jours à couvrir</span>
+            <span class="stepper"><button type="button" aria-label="Un jour de moins" disabled=${horizon <= 1} onClick=${() => setHorizon(horizon - 1)}>−</button>
+              <output>${horizon} jour${horizon > 1 ? 's' : ''}</output><button type="button" aria-label="Un jour de plus" disabled=${horizon >= 14} onClick=${() => setHorizon(horizon + 1)}>+</button></span></div>
+          <div class="reglage-batch"><span>Portions par repas<span class="sous">${noms ? `une par personne : ${noms}` : 'une par personne'}</span></span>
+            <span class="stepper"><button type="button" aria-label="Une portion de moins" disabled=${portionsRepas <= 1} onClick=${() => setPortionsRepas(portionsRepas - 1)}>−</button>
+              <output>${portionsRepas} portion${portionsRepas > 1 ? 's' : ''}</output><button type="button" aria-label="Une portion de plus" disabled=${portionsRepas >= 12} onClick=${() => setPortionsRepas(portionsRepas + 1)}>+</button></span></div>
+          <p class="note" data-bilan-repas>${totalRepas} repas choisi${totalRepas > 1 ? 's' : ''} pour ${repasCouverts} à couvrir (${horizon} jour${horizon > 1 ? 's' : ''} × 2 repas) : ${totalRepas * portionsRepas} portions au total.
+            ${menu.length > 0 && html` <button type="button" class="lien" onClick=${remplirDepuisMenu}>Remplir d'après mon menu</button>`}</p>
           ${proposes.length === 0 ? html`<p class="note">Le menu est vide : générez-le dans l'onglet Planning, ou cherchez une recette ci-dessous.</p>` : proposes.map((id) => { const r = parId.get(id); if (!r) return null; return html`<div class="ligne-batch" key=${id}>
             <span><strong>${r.titre}</strong><span class="sous">⏱ ${r.temps} min</span></span>
             <span class="stepper"><button type="button" aria-label=${`Moins de repas : ${r.titre}`} onClick=${() => setRepas({ ...repas, [id]: Math.max(0, (repas[id] || 0) - 1) })}>−</button>
-              <output>${repas[id] || 0} repas</output><button type="button" aria-label=${`Plus de repas : ${r.titre}`} onClick=${() => setRepas({ ...repas, [id]: (repas[id] || 0) + 1 })}>+</button></span></div>`; })}
+              <output>${repas[id] || 0} repas · ${(repas[id] || 0) * portionsRepas} portions</output><button type="button" aria-label=${`Plus de repas : ${r.titre}`} onClick=${() => setRepas({ ...repas, [id]: (repas[id] || 0) + 1 })}>+</button></span></div>`; })}
           <input type="search" class="champ-recherche" placeholder="Ajouter une autre recette…" value=${q} onInput=${(e) => setQ(e.target.value)} aria-label="Ajouter une recette" />
           ${trouves.map((r) => html`<button type="button" class="ligne-choix" key=${r.id} onClick=${() => { setRepas({ ...repas, [r.id]: 2 }); setQ(''); }}><strong>${r.titre}</strong><span class="sous">⏱ ${r.temps} min</span></button>`)}
         <//>

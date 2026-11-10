@@ -509,3 +509,6 @@ input, select, textarea { font-size: 16px; }
 .coach-saisie .joindre { width: 50px; min-height: 50px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
 .avertissement-sante { margin-top: .5rem; padding: .5rem .7rem; border-radius: 12px; background: var(--info-fond); border: 1px solid var(--info-bord); font-size: .85rem; }
+
+.reglage-batch { display: flex; justify-content: space-between; align-items: center; gap: .8rem; margin: .6rem 0; }
+.reglage-batch .sous { display: block; }

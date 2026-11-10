@@ -362,7 +362,7 @@ function App() {
       index=${recettes || []} plan=${plan} scans=${scans} />`}
     ${route.ecran === 'sport' && html`<${Sport} profil=${profil} besoins=${besoins} seances=${seances} ops=${opsSport} index=${recettes} moi=${moi} contraintes=${contraintes} onChangeProfil=${changerProfil} />`}
     ${route.ecran === 'batch' && html`<${Batch} plan=${plan} catalogue=${index} index=${recettes} sessions=${sessionsBatch} ops=${opsBatch} stock=${stock} moi=${moi}
-      convives=${convives} appareils=${chargerAppareils()} />`}
+      personnes=${2 + enfantsMenus.length} noms=${[PERSONNES.E.prenom, PERSONNES.M.prenom, ...enfantsMenus.map((e) => e.prenom)].join(', ').replace(/, ([^,]*)$/, ' et $1')} appareils=${chargerAppareils()} />`}
     ${route.ecran === 'frigo' && html`<${Frigo} index=${recettes} stock=${stock} contraintes=${contraintes} ops=${opsCourses} moi=${moi} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
