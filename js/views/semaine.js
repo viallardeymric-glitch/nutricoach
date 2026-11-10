@@ -3,7 +3,7 @@ import { html, useState, useMemo } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { PROFILS, ALLERGENES, lib } from '../data/libelles.js';
 import { nomRegime } from '../data/regimes.js';
-import { REPAS_COMPLETS, repasActifs, ajouterJours, cleDate, dateDepuisCle, lundiDe, nomJour, nomMois, saisonDe, semaineDe, proposer, genererSemaine, graine } from '../lib/planning.js';
+import { REPAS_COMPLETS, repasActifs, ajouterJours, cleDate, dateDepuisCle, lundiDe, nomJour, nomMois, saisonDe, semaineDe, proposer, genererSemaine, autreRepasPour, graine } from '../lib/planning.js';
 import { risquesPour } from '../lib/profils.js';
 import { budgetMenu } from '../lib/budget.js';
 import { noterMenu, MENTION_SCORE_SANTE } from '../lib/sante.js';
@@ -49,8 +49,7 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
     completer({});
   };
   const autreRepas = (j, repas) => {
-    const utilises = new Set(jours.flatMap((x) => Object.values(plan[x] || {})));
-    const [r] = proposer(index, contraintes, { jour: dateDepuisCle(j), repas, saison, cibleKcal: (parJour[j] && parJour[j].cibleKcal) || cibleKcal, utilises, graine: graine(`${j}|${repas}|${Date.now()}`), n: 1, bonus, budgetSerre, filtre: (parJour[j] && parJour[j].filtre) || undefined });
+    const r = autreRepasPour(index, contraintes, { plan, jours, jour: j, repas, saison, cibleKcal: (parJour[j] && parJour[j].cibleKcal) || cibleKcal, filtre: (parJour[j] && parJour[j].filtre) || undefined, bonus, budgetSerre, graine: graine(`${j}|${repas}|${Date.now()}`) });
     if (r) ecrireJours({ [j]: { ...(plan[j] || {}), [repas]: r.id } });
   };
   const retirer = (j, repas) => { const { [repas]: _, ...reste } = plan[j] || {}; ecrireJours({ [j]: reste }); };

@@ -238,3 +238,37 @@ export function avertissementSante({ profil, question = '', partenaire = null })
   if (sante) return 'ℹ️ Je ne suis pas médecin : ces informations sont générales. Pour un symptôme, un traitement ou un doute, demandez l\'avis d\'un professionnel de santé (urgence : 15).';
   return null;
 }
+
+/** Réponse JSON de Groq (mode « json_object »), avec la même détection de modèle retiré que le coach. */
+export async function demanderJSONGroq({ cle, modele = MODELE_GROQ_PAR_DEFAUT, systeme, message }, appeler = fetch) {
+  if (!cle) throw new Error('Ajoutez votre clé Groq dans les réglages du coach.');
+  const poster = (m) => appeler(`${URL_GROQ}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cle}` },
+    body: JSON.stringify({ model: m, messages: [{ role: 'system', content: systeme }, { role: 'user', content: message }], temperature: 0.3, max_tokens: 2000, response_format: { type: 'json_object' } }) });
+  let rep;
+  try { rep = await poster(modele); } catch { throw new Error(messageErreurGroq(0)); }
+  if (rep.status === 404) {
+    try {
+      const l = await appeler(`${URL_GROQ}/models`, { headers: { Authorization: `Bearer ${cle}` } });
+      const autre = l.ok ? choisirModeleGroq((await l.json()).data) : null;
+      if (autre && autre !== modele) { rep = await poster(autre); if (rep.ok) enregistrerReglagesCoach({ ...chargerReglagesCoach(), modeleGroq: autre }); }
+    } catch { /* erreur d'origine conservée */ }
+  }
+  if (!rep.ok) throw new Error(messageErreurGroq(rep.status));
+  const json = await rep.json();
+  const texte = String((json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '').trim();
+  if (!texte) throw new Error('Groq n\'a pas pu répondre. Réessayez.');
+  return texte;
+}
+
+/** Réponse JSON : Gemini et Groq interrogés en même temps, la première réponse réussie l'emporte (pour les réécritures de recettes, etc.). */
+export async function demanderJSONRapide({ reg, systeme, message }, appelerBrut = fetch) {
+  const appeler = (url, o = {}) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), 45000); return Promise.resolve(appelerBrut(url, { ...o, signal: c.signal })).finally(() => clearTimeout(t)); };
+  const courses = [];
+  if (reg.cle) courses.push(demanderJSON({ cle: reg.cle, modele: reg.modele, systeme, message }, appeler));
+  if (reg.cleGroq) courses.push(demanderJSONGroq({ cle: reg.cleGroq, modele: reg.modeleGroq, systeme, message }, appeler));
+  if (!courses.length) throw new Error('Ajoutez une clé Gemini ou Groq dans les réglages du coach.');
+  return new Promise((resolve, reject) => {
+    const erreurs = []; let restants = courses.length;
+    for (const c of courses) c.then(resolve, (e) => { erreurs.push(e); if (--restants === 0) reject(erreurs[0]); });
+  });
+}

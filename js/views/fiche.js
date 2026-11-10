@@ -90,7 +90,7 @@ function Methodes({ r, methode, setMethode, modele, setModele, reecriture, erreu
     <div class="puces libres">${Object.entries(METHODES).map(([k, n]) => html`<${Puce} key=${k} actif=${methode === k} onClick=${() => setMethode(k)}>${n}${k === origine ? ' ✓' : ''}<//>`)}</div>
     ${methode === 'thermomix' && html`<div class="puces libres">${Object.keys(MODELES).map((m) => html`<${Puce} key=${m} actif=${modele === m} onClick=${() => setModele(m)}>${m}<//>`)}</div>`}
     ${!reel && html`<${Bandeau} type="avertissement" titre="Version proposée par l'IA">
-      <p>Les étapes d'origine sont écrites pour : <strong>${METHODES[origine] || origine}</strong>. ${reecriture ? 'Voici une réécriture proposée par l\'IA : vérifiez les durées et les températures avant de cuisiner.' : `Pour ${METHODES[methode].toLowerCase()}, l'IA peut réécrire les étapes (clé Gemini nécessaire dans Profil › Coach IA).`}</p>
+      <p>Les étapes d'origine sont écrites pour : <strong>${METHODES[origine] || origine}</strong>. ${reecriture ? 'Voici une réécriture proposée par l\'IA : vérifiez les durées et les températures avant de cuisiner.' : `Pour ${METHODES[methode].toLowerCase()}, l'IA peut réécrire les étapes (clé Gemini ou Groq nécessaire dans Profil › Coach IA ; avec les deux, la réponse est plus rapide).`}</p>
       ${erreur && html`<p class="erreur-champ" role="alert">${erreur}</p>`}
       ${!reecriture && html`<button type="button" class="bouton secondaire" disabled=${enCours} onClick=${onReecrire}>${enCours ? 'Réécriture…' : `✨ Réécrire pour ${METHODES[methode].toLowerCase()}`}</button>`}
       ${reecriture && html`<button type="button" class="lien" onClick=${() => onReecrire(true)}>Refaire la réécriture</button>`}<//>`}

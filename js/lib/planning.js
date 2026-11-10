@@ -2,6 +2,8 @@
 import { filtresDuProfil, risquesPour } from './profils.js';
 import { contientAllergene } from './recettes.js';
 import { respecteRegime } from '../data/regimes.js';
+import { normaliser } from './texte.js';
+import { noterRecette } from './sante.js';
 
 export const REPAS = [
   { id: 'dejeuner', nom: 'Déjeuner', icone: '☀️' },
@@ -23,6 +25,75 @@ function convientAuRepas(r, repas) {
   return r.categorie === 'Plats';
 }
 const SCORE_COUT = { economique: 1.2, moyen: 0, eleve: -2.5 };
+
+// ---------- Équilibre « façon diététicien » ----------
+/** Source de protéines principale d'un plat (d'après le titre et les mots-clés, sinon les premiers ingrédients). */
+const CLASSES_PROTEINE = [
+  ['poisson_gras', /\b(saumon|sardines?|maquereau|hareng|truite|thon)\b/],
+  ['poisson', /\b(poisson|cabillaud|colin|merlu|dorade|bar|lotte|sole|haddock|morue|lieu|crevettes?|moules?|gambas|calamars?|saint-jacques|coquilles?)\b/],
+  ['viande_rouge', /\b(boeuf|veau|agneau|steak|entrecote|bavette|gigot|bourguignon|blanquette|hache|rumsteck|onglet|mouton)\b/],
+  ['porc', /\b(porc|jambon|lardons?|saucisse|saucisson|chorizo|bacon|filet mignon|rillettes|andouille|boudin|poitrine)\b/],
+  ['volaille', /\b(poulet|dinde|canard|pintade|volaille|cuisse|magret|supreme|escalope)\b/],
+  ['legumineuses', /\b(lentilles?|pois chiches?|haricots? (?:rouges?|blancs?|secs?)|feves?|pois casses|flageolets?|houmous|dal|chili)\b/],
+  ['oeuf', /\b(oeufs?|omelette|quiche|frittata)\b/],
+];
+export function classeProteine(r) {
+  if (r._classe) return r._classe;
+  const principal = ` ${normaliser(`${r.titre} ${(r.tags || []).join(' ')}`)} `;
+  const ingr = ` ${normaliser((r.ingredients || []).slice(0, 4).join(' | '))} `;
+  for (const texte of [principal, ingr]) for (const [c, re] of CLASSES_PROTEINE) if (re.test(texte)) return c;
+  return (r.regimes || []).includes('vegetarien') ? 'vegetal' : 'autre';
+}
+/** Plafonds et planchers hebdomadaires (repères PNNS / pratique diététique) : au plus 2 viandes rouges, 1 porc ou charcuterie, 3 volailles, 3 œufs ; au moins 2 légumineuses. */
+const PLAFOND = { viande_rouge: 2, porc: 1, volaille: 3, oeuf: 3 };
+const PLANCHER_LEGUMINEUSES = 2;
+
+/**
+ * Compteurs de la semaine (par classe de protéine) et recettes du jour, pour choisir un repas équilibré.
+ * recettes : Map id → entrée d'index ; plan : { date: { repas: id } } ; jours : dates ; exclure : { jour, repas } (le repas qu'on remplace).
+ */
+export function contexteEquilibre(parId, plan, jours, exclure = null) {
+  const compteurs = {}; const types = new Map(); const memeJour = {};
+  for (const j of jours) {
+    for (const [rp, id] of Object.entries(plan[j] || {})) {
+      if (exclure && exclure.jour === j && exclure.repas === rp) continue;
+      const r = parId.get(id);
+      if (!r) continue;
+      (memeJour[j] = memeJour[j] || []).push(r);
+      if (rp !== 'dejeuner' && rp !== 'diner') continue;
+      const c = classeProteine(r);
+      compteurs[c] = (compteurs[c] || 0) + 1;
+      types.set(r.sous_categorie, (types.get(r.sous_categorie) || 0) + 1);
+    }
+  }
+  return { compteurs, types, memeJour };
+}
+
+/** Bonus / malus d'un plat selon l'équilibre de la semaine, du jour et le profil de santé. */
+function noteEquilibre(r, { compteurs = {}, memeJour = [], risques = [] }) {
+  let s = 0;
+  const c = classeProteine(r);
+  // Variété dans la journée : pas le même type de plat ni la même source de protéines que l'autre repas
+  for (const autre of memeJour) {
+    if (autre.sous_categorie === r.sous_categorie) s -= 10;
+    if (c !== 'vegetal' && c !== 'autre' && classeProteine(autre) === c) s -= 6;
+    const communs = (r.ingredients || []).filter((i) => (autre.ingredients || []).includes(i)).length;
+    if (communs >= 3) s -= 3;
+  }
+  // Équilibre de la semaine
+  if (PLAFOND[c] != null && (compteurs[c] || 0) >= PLAFOND[c]) s -= 8;
+  if (c === 'legumineuses' && (compteurs.legumineuses || 0) < PLANCHER_LEGUMINEUSES) s += 3;
+  if ((c === 'poisson' || c === 'poisson_gras') && (compteurs.poisson || 0) + (compteurs.poisson_gras || 0) < 2) s += 2;
+  if (c === 'poisson_gras' && !(compteurs.poisson_gras || 0)) s += 1.5;
+  // Qualité nutritionnelle (score santé de l'appli) et profil
+  const sante = noterRecette(r);
+  if (sante) s += (sante.note - 55) / 8;
+  const n = r.nut || {};
+  if (risques.includes('diabetique') && n.s > 12) s -= (n.s - 12) / 3;
+  if (risques.includes('hypertendu') && n.sel > 1.8) s -= (n.sel - 1.8) * 3;
+  if (n.f != null && n.f < 2) s -= 1;
+  return s;
+}
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
@@ -92,9 +163,12 @@ const SOUS_CATEGORIES_ECARTEES = new Set(['enfants', 'fete', 'batch']);
  */
 export function proposer(recettes, c, options) {
   const { jour, repas = 'diner', saison, cibleKcal = 2000, utilises = new Set(), types = new Map(),
-    graine: g = 1, n = 3, rapideMax = null, filtre = () => true, bonus = null, budgetSerre = false } = options;
+    graine: g = 1, n = 3, rapideMax = null, filtre = () => true, bonus = null, budgetSerre = false, equilibre = null, kcalDeja = 0 } = options;
   const hasard = aleatoire(g);
-  const cibleRepas = cibleKcal * (RATIO_KCAL[repas] || 0.35);
+  const ratio = RATIO_KCAL[repas] || 0.35;
+  let cibleRepas = cibleKcal * ratio;
+  // Journée équilibrée : si un autre repas est déjà prévu, celui-ci complète la journée (entre 60 % et 140 % de la part normale)
+  if (kcalDeja > 0 && (repas === 'dejeuner' || repas === 'diner')) cibleRepas = Math.min(cibleRepas * 1.4, Math.max(cibleRepas * 0.6, cibleKcal * 0.7 - kcalDeja));
   const semaine = !estWeekEnd(jour);
   const notes = [];
   for (const r of recettes) {
@@ -108,6 +182,7 @@ export function proposer(recettes, c, options) {
     if (r.kcal) s -= (Math.abs(r.kcal - cibleRepas) / cibleRepas) * 2;
     s -= (types.get(r.sous_categorie) || 0) * 3;
     if (bonus) s += bonus(r);
+    if (equilibre) s += noteEquilibre(r, equilibre);
     if (budgetSerre) s += SCORE_COUT[r.cout] || 0;
     notes.push([s, r]);
   }
@@ -147,10 +222,13 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
   for (let k = poissons; k < 2 && i < ordre.length; k++) exigences.set(ordre[i++].join('|'), EST_POISSON);
   for (let k = vegetariens; k < 2 && i < ordre.length; k++) exigences.set(ordre[i++].join('|'), EST_VEGE);
 
+  const ctx = contexteEquilibre(parId, suivant, jours);
   const manquants = [];
   for (const [j, repas] of vides) {
     const pj = parJour[j] || {};                                    // sport : cible et filtre propres à la journée
-    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1, bonus, budgetSerre };
+    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1, bonus, budgetSerre,
+      equilibre: { compteurs: ctx.compteurs, memeJour: ctx.memeJour[j] || [], risques: contraintes.risques || [] },
+      kcalDeja: (ctx.memeJour[j] || []).filter((x) => x.categorie === 'Plats').reduce((t, x) => t + (x.kcal || 0), 0) };
     const exigence = exigences.get(`${j}|${repas}`) || (() => true);
     const filtreJour = pj.filtre || (() => true);
     let choix = proposer(recettes, contraintes, { ...options, filtre: (r) => exigence(r) && filtreJour(r) });
@@ -159,7 +237,30 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
     if (!choix.length) { manquants.push([j, repas]); continue; }
     suivant[j][repas] = choix[0].id;
     utilises.add(choix[0].id);
+    if (repas === 'dejeuner' || repas === 'diner') { const c = classeProteine(choix[0]); ctx.compteurs[c] = (ctx.compteurs[c] || 0) + 1; }
+    (ctx.memeJour[j] = ctx.memeJour[j] || []).push(choix[0]);
     types.set(choix[0].sous_categorie, (types.get(choix[0].sous_categorie) || 0) + 1);
   }
   return { plan: suivant, manquants };
+}
+
+/**
+ * Remplace UN repas par un autre : jamais le même plat, jamais un plat déjà au menu de la semaine, et pas le même type de plat
+ * ni la même source de protéines que l'autre repas du jour (déjeuner ≠ dîner). Retourne la recette choisie ou null.
+ */
+export function autreRepasPour(recettes, c, { plan, jours, jour, repas, saison, cibleKcal, filtre, bonus = null, budgetSerre = false, graine: g = 1 }) {
+  const parId = new Map(recettes.map((r) => [r.id, r]));
+  const actuel = parId.get((plan[jour] || {})[repas]);
+  const ctx = contexteEquilibre(parId, plan, jours, { jour, repas });
+  const utilises = new Set(jours.flatMap((x) => Object.values(plan[x] || {})));
+  const autresDuJour = ctx.memeJour[jour] || [];
+  const options = { jour: dateDepuisCle(jour), repas, saison, cibleKcal, utilises, types: ctx.types, graine: g, n: 1, bonus, budgetSerre,
+    equilibre: { compteurs: ctx.compteurs, memeJour: autresDuJour, risques: c.risques || [] },
+    kcalDeja: autresDuJour.filter((x) => x.categorie === 'Plats').reduce((t, x) => t + (x.kcal || 0), 0) };
+  const filtreJour = filtre || (() => true);
+  const different = (r) => !(actuel && (r.sous_categorie === actuel.sous_categorie)) && !autresDuJour.some((x) => x.sous_categorie === r.sous_categorie && (repas === 'dejeuner' || repas === 'diner'));
+  let [choix] = proposer(recettes, c, { ...options, filtre: (r) => filtreJour(r) && different(r) });
+  if (!choix) [choix] = proposer(recettes, c, { ...options, filtre: filtreJour });
+  if (!choix) [choix] = proposer(recettes, c, options);
+  return choix || null;
 }

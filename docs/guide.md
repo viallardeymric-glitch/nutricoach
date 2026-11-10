@@ -81,3 +81,9 @@ Plus → Mes recettes (ou « ＋ Recette » dans l'onglet Recettes).
 
 ## Portions d'une recette = votre foyer
 Une fiche s'ouvre par défaut pour **le nombre de personnes de votre foyer** (vous deux et les enfants comptés dans les menus : 3 chez vous). Ajustez avec − et + au moment de la préparation : cela ne change pas le défaut. Le mode « Cuisiner pas à pas » reprend le nombre choisi.
+
+## Menus « façon diététicien »
+La semaine générée suit des repères de diététique : au moins 2 poissons (dont 1 gras), au plus 2 viandes rouges, 1 porc ou charcuterie, 3 volailles et 3 œufs ; au moins 2 repas de légumineuses quand c'est possible ; au moins 2 repas végétariens. Elle vise un bon score santé (sel, sucres, fibres, protéines), tient compte de votre profil (diabète et tension : moins de sucres et de sel), complète la journée quand un repas est déjà prévu, et ne met jamais deux plats du même type ni la même source de protéines le même jour. Le bouton 🔄 d'un repas propose un autre plat qui respecte les mêmes règles : jamais le même plat, jamais celui de l'autre repas du jour.
+
+## Thermomix : toutes les recettes ?
+Non. 90 recettes du catalogue ont des étapes Thermomix écrites d'origine (vitesses, températures, sens), surtout des plats ; 247 sont notées comme possibles. Pour les autres, le bouton « Réécrire pour Thermomix » demande à l'IA (Gemini et/ou Groq) une adaptation, à vérifier, gardée sur le téléphone. Certaines recettes ne s'y prêtent pas (rôtis, grillades, fritures) : l'IA le dit.

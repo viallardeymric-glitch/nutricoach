@@ -60,3 +60,7 @@ Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Th
 
 ## Mes recettes
 - ✅ Ajout manuel, import de fichier JSON (modèle téléchargeable, aperçu avant import), export, modification, suppression ; identifiants REC-900001 et suivants ; partagées via la base (collection `notes`) ; allergènes et avertissements détectés d'après les ingrédients. Le catalogue `data/recettes.json` n'est jamais modifié.
+
+## Menus équilibrés et autre repas
+- ✅ Menus de la semaine avec règles de diététique (plafonds viande rouge/porc/volaille/œuf, plancher poisson et légumineuses, score santé, diabète et tension, journée complétée) ; « autre repas » : jamais le même plat ni le même type / la même protéine que l'autre repas du jour. Testé sur le catalogue (20 semaines × plusieurs profils).
+- ✅ Réécriture Thermomix et autres méthodes : Gemini et Groq en parallèle. 🟡 Seules 90 recettes ont des étapes Thermomix d'origine.

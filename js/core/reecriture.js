@@ -1,6 +1,6 @@
 // Réécriture d'une recette pour une autre méthode de cuisson par l'IA : proposition à vérifier, gardée sur le téléphone.
 import { lire, ecrire } from './stockage.js';
-import { chargerReglagesCoach, demanderJSON } from './coach.js';
+import { chargerReglagesCoach, demanderJSONRapide } from './coach.js';
 import { CONSIGNE_REECRITURE, promptReecriture, lireReecriture } from '../lib/methodes.js';
 
 const cle = (id, methode, modele) => `${id}|${methode}${methode === 'thermomix' ? '|' + modele : ''}`;
@@ -18,7 +18,7 @@ export async function reecrire(recette, methode, modele = 'TM6', appeler = fetch
   const dejaFaite = chargerReecriture(recette.id, methode, modele);
   if (dejaFaite) return dejaFaite;
   const reg = chargerReglagesCoach();
-  const texte = await demanderJSON({ cle: reg.cle, modele: reg.modele, systeme: CONSIGNE_REECRITURE, message: promptReecriture(recette, methode, modele) }, appeler);
+  const texte = await demanderJSONRapide({ reg, systeme: CONSIGNE_REECRITURE, message: promptReecriture(recette, methode, modele) }, appeler);
   const res = lireReecriture(texte);
   if (!res) throw new Error('La réponse de l\'IA n\'est pas exploitable. Réessayez.');
   if (!res.etapes.length) throw new Error(res.remarques[0] || 'Cette recette ne s\'adapte pas à cette méthode.');

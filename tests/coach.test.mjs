@@ -150,3 +150,17 @@ test('avertissement « je ne suis pas médecin » : toujours en grossesse/allait
   assert.match(avertissementSante({ profil: {}, question: 'J\'ai de la fièvre, que manger ?' }), /pas médecin/);
   assert.equal(avertissementSante({ profil: {}, question: 'Une idée de dessert ?' }), null);
 });
+
+import { demanderJSONRapide } from '../js/core/coach.js';
+test('réécriture de recette : Gemini et Groq en même temps, JSON demandé aux deux', async () => {
+  const vus = [];
+  const f = async (url, o) => {
+    vus.push(url);
+    if (url.includes('groq')) { const c = JSON.parse(o.body); assert.equal(c.response_format.type, 'json_object'); return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"etapes":[]}' } }] }) }; }
+    return new Promise((r) => setTimeout(() => r({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: '{"etapes":[1]}' }] } }] }) }), 30));
+  };
+  assert.equal(await demanderJSONRapide({ reg: { cle: 'a', cleGroq: 'b' }, systeme: 's JSON', message: 'm' }, f), '{"etapes":[]}');
+  assert.equal(vus.length, 2);
+  assert.equal(await demanderJSONRapide({ reg: { cle: 'a' }, systeme: 's', message: 'm' }, f), '{"etapes":[1]}');
+  await assert.rejects(demanderJSONRapide({ reg: {}, systeme: 's', message: 'm' }, f), /clé Gemini ou Groq/);
+});
