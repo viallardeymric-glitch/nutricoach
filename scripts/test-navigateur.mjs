@@ -69,7 +69,7 @@ verif((await p.textContent('.nutrition')).includes('kcal') && (await p.textConte
 
 // Nombre de personnes : 1 à 12
 const base = cible.portions_base;
-verif((await p.textContent('output')).startsWith('2 personnes'), 'une fiche s\'ouvre pour 2 personnes (le couple)');
+verif((await p.textContent('output')).startsWith('2 personnes') && (await p.textContent('.fiche')).includes('Par défaut : 2 personnes (Eymric et Marie)'), 'une fiche s\'ouvre pour le foyer : 2 personnes (Eymric et Marie)');
 await p.click('text=Revenir à ' + base);
 const avant = (await p.textContent('.ingredients')).trim();
 await p.click('[aria-label="Une personne de plus"]');
@@ -513,6 +513,18 @@ p.once('dialog', (d) => d.accept());
 await p.click('text=Supprimer l\'objectif');
 await p.waitForSelector('text=Objectif sportif');
 verif(true, 'sport : objectif supprimé');
+
+// Portions par défaut d'une fiche = le foyer (Eymric, Marie et Léa = 3), ajustable sans changer le défaut
+await p.goto(serveur.url + '/#/recette/REC-000002'); await p.waitForSelector('.fiche h1');
+verif((await p.textContent('output')).startsWith('3 personnes') && (await p.textContent('.fiche')).includes('Eymric, Marie et Léa'), 'fiche : portions par défaut = notre foyer (3 personnes : Eymric, Marie et Léa)');
+await p.click('[aria-label="Une personne de plus"]');
+verif((await p.textContent('output')).startsWith('4 personnes'), 'fiche : ajustable au moment de la préparation');
+const titreAvant = await p.textContent('.fiche h1');
+await p.goto(serveur.url + '/#/recette/REC-000003'); await p.waitForFunction((t) => document.querySelector('.fiche h1') && document.querySelector('.fiche h1').textContent !== t, titreAvant);
+verif((await p.textContent('output')).startsWith('3 personnes'), 'fiche : l\'ajustement ne change pas le défaut du foyer');
+await p.click('.bouton.cuisiner');
+await p.waitForSelector('text=pour 3 personnes');
+verif(true, 'mode cuisine : ouvert pour 3 personnes');
 
 // Batch cooking : sélection depuis le menu, planning chronométré, boîtes et étiquettes, courses dédiées, stock de plats
 await p.goto(serveur.url + '/#/batch'); await p.waitForSelector('.page-batch');

@@ -78,3 +78,6 @@ Plus → Mes recettes (ou « ＋ Recette » dans l'onglet Recettes).
 - **Exporter** : « Exporter mes recettes » donne un fichier que vous pouvez réimporter ou partager.
 - Vos recettes sont **partagées entre vos deux téléphones**, apparaissent dans la recherche, les menus, les courses et le batch, et se modifient ou se suppriment depuis « Mes recettes ». Elles ne touchent jamais au catalogue de 1 610 recettes.
 - **Sécurité** : les allergènes sont complétés automatiquement d'après les ingrédients, et les avertissements (femme enceinte, enfants…) aussi, pour que vos filtres restent sûrs. Sans nutrition renseignée, pas de calories ni de score santé.
+
+## Portions d'une recette = votre foyer
+Une fiche s'ouvre par défaut pour **le nombre de personnes de votre foyer** (vous deux et les enfants comptés dans les menus : 3 chez vous). Ajustez avec − et + au moment de la préparation : cela ne change pas le défaut. Le mode « Cuisiner pas à pas » reprend le nombre choisi.

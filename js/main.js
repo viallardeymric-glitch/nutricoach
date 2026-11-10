@@ -355,6 +355,8 @@ function App() {
   const plein = route.ecran === 'fiche' || route.ecran === 'cuisine';
   const personnes = profilAutre ? ['E', 'M'] : [moi];
   void versionPhotos;                                                  // change quand une photo arrive : redessine les miniatures
+  const foyerNb = 2 + enfantsMenus.length;                    // personnes du foyer : le couple et les enfants comptés dans les menus
+  const nomsFoyer = [PERSONNES.E.prenom, PERSONNES.M.prenom, ...enfantsMenus.map((e) => e.prenom)].join(', ').replace(/, ([^,]*)$/, ' et $1');
   const enceinte = Boolean(profil && (profil.grossesse > 0 || profil.allaitement));
   const onglets = enceinte ? ONGLETS_GROSSESSE : ONGLETS;
   const ongletActif = onglets.some((o) => o.id === ONGLET_DE[route.ecran]) ? ONGLET_DE[route.ecran] : 'plus';
@@ -375,7 +377,7 @@ function App() {
       index=${recettes || []} plan=${plan} scans=${scans} />`}
     ${route.ecran === 'sport' && html`<${Sport} profil=${profil} besoins=${besoins} seances=${seances} ops=${opsSport} index=${recettes} moi=${moi} contraintes=${contraintes} onChangeProfil=${changerProfil} />`}
     ${route.ecran === 'batch' && html`<${Batch} plan=${plan} catalogue=${index} index=${recettes} sessions=${sessionsBatch} ops=${opsBatch} stock=${stock} moi=${moi}
-      personnes=${2 + enfantsMenus.length} noms=${[PERSONNES.E.prenom, PERSONNES.M.prenom, ...enfantsMenus.map((e) => e.prenom)].join(', ').replace(/, ([^,]*)$/, ' et $1')} appareils=${chargerAppareils()} />`}
+      personnes=${foyerNb} noms=${nomsFoyer} appareils=${chargerAppareils()} />`}
     ${route.ecran === 'frigo' && html`<${Frigo} index=${recettes} stock=${stock} contraintes=${contraintes} ops=${opsCourses} moi=${moi} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
@@ -393,7 +395,7 @@ function App() {
       compte=${{ actif: session.actif, email: session.email, onDeconnecter: () => deconnecter() }}
       pin=${{ defini: Boolean(pin), onDefinir: async (code) => { const e = await creerPin(code); enregistrerPin(e); setPin(e); },
         onRetirer: () => { retirerPin(); desactiverBiometrie(); setPin(null); setVerrouille(false); } }} />`}
-    ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
+    ${route.ecran === 'fiche' && html`<${Fiche} key=${route.id} foyer=${foyerNb} nomsFoyer=${nomsFoyer} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
       onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
     </main>

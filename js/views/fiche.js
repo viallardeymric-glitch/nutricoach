@@ -97,7 +97,7 @@ function Methodes({ r, methode, setMethode, modele, setModele, reecriture, erreu
   </div>`;
 }
 
-export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
+export function FicheRecette({ foyer = 2, nomsFoyer = '', r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
   const origine = methodeOriginale(r);
   const appareils = chargerAppareils();
   const [methode, setMethode] = useState(origine);
@@ -169,9 +169,10 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
         <output aria-live="polite">${portions} personne${portions > 1 ? 's' : ''}</output>
         <button type="button" aria-label="Une personne de plus" disabled=${portions >= maxPortions}
           onClick=${() => setPortions((p) => Math.min(maxPortions, p + 1))}>+</button>
-        ${portions !== r.portions_base && html`<button type="button" class="lien"
-          onClick=${() => setPortions(r.portions_base)}>Revenir à ${r.portions_base}</button>`}
+        ${portions !== foyer && html`<button type="button" class="lien" onClick=${() => setPortions(foyer)}>Revenir à ${foyer} (notre foyer)</button>`}
+        ${portions !== r.portions_base && r.portions_base !== foyer && html`<button type="button" class="lien" onClick=${() => setPortions(r.portions_base)}>Revenir à ${r.portions_base} (recette d'origine)</button>`}
       </div>
+      <p class="note">Par défaut : ${foyer} personne${foyer > 1 ? 's' : ''}${nomsFoyer ? ` (${nomsFoyer})` : ''}, d'après votre foyer. Ajustez au moment de la préparation.</p>
       ${conseils.length > 0 && html`<${Bandeau} type="info" titre="Pour ${portions} personne${portions > 1 ? 's' : ''}">
         <ul>${conseils.map((x) => html`<li>${x}</li>`)}</ul><//>`}
       ${bol && html`<${Bandeau} type=${bol.depasse ? 'avertissement' : 'info'} titre="Capacité du bol"><p>Volume estimé : ${bol.volume_ml} ml pour ${bol.max_ml} ml au maximum (${Math.round(bol.rempli * 100)} %).${bol.conseil ? ' ' + bol.conseil : ''}${bol.conseilPetrin ? ' ' + bol.conseilPetrin : ''}</p><//>`}
@@ -213,7 +214,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
 }
 
 /** Charge la fiche complète puis l'affiche. */
-export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
+export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes, foyer = 2, nomsFoyer = '' }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [portions, setPortions] = useState(1);
@@ -228,7 +229,7 @@ export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, porti
       .then((x) => {
         if (!actif) return;
         if (!x) { setErreur(true); return; }
-        setR(x); setPortions(Math.min(Math.max(PORTIONS_MAX, x.portions_base), Math.max(1, lire('portionsDefaut', 2))));
+        setR(x); setPortions(Math.min(Math.max(PORTIONS_MAX, x.portions_base), Math.max(1, foyer)));
         document.title = `${x.titre} – NutriCoach`;
       })
       .catch(() => actif && setErreur(true));
@@ -245,7 +246,7 @@ export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, porti
         : html`<p class="etat">Chargement de la recette…</p>`}
     </div></div>`;
   }
-  const choisir = (f) => setPortions((p) => { const v = typeof f === 'function' ? f(p) : f; ecrire('portionsDefaut', v); return v; });
-  return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${choisir}
+  const choisir = (f) => setPortions((p) => (typeof f === 'function' ? f(p) : f));       // l'ajustement ne vaut que pour cette préparation
+  return html`<div>${barre}<${FicheRecette} foyer=${foyer} nomsFoyer=${nomsFoyer} r=${r} portions=${portions} setPortions=${choisir}
     favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} /></div>`;
 }
