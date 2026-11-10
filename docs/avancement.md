@@ -46,3 +46,7 @@ Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Th
 - Une photo trouvée sur un téléphone est partagée avec l'autre (collection `notes`, `photo-REC-xxxxxx`), même sans clé.
 - Préchargement lent des favoris et du menu de la semaine.
 - Les 1610 photos se remplissent progressivement (plusieurs heures à quelques jours selon les quotas).
+
+## Coach en onglet et guide grossesse
+- ✅ Onglet Coach dans la barre du bas ; pièces jointes (photo, PDF, texte), coller image/texte, copier les réponses, suggestions adaptées à la grossesse.
+- ✅ Guide « Grossesse : puis-je manger ? » (≈ 36 fiches aliments, recherche, filtres), visible quand la grossesse est déclarée. 🟡 Contenu à faire relire par un professionnel de santé.

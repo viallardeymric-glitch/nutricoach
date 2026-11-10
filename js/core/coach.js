@@ -19,7 +19,8 @@ Règles de sécurité :
 - Grossesse, allaitement, enfants, personnes âgées : prudence (pas de cru à risque, pas d'alcool, pas de régime restrictif).
 - Ne propose jamais de régime extrême ni de perte de poids rapide ; pas de jeûne prolongé.
 - Si tu n'es pas sûr, dis-le.
-Tu peux proposer des idées de repas, équilibrer la semaine, expliquer une recette ou conseiller des substitutions.`;
+Tu peux proposer des idées de repas, équilibrer la semaine, expliquer une recette ou conseiller des substitutions.
+Si une photo ou un document est joint (étiquette, menu, ordonnance, bilan, recette), explique-le simplement ; ne pose jamais de diagnostic et renvoie vers un professionnel pour toute interprétation médicale.`;
 
 /** Texte de contexte (profil et menu) envoyé au coach, uniquement si la personne l'a accepté. */
 export function construireContexte({ profil, besoins, prenom, repasSemaine = [], saison, lignesSuivi = [] }) {
@@ -46,12 +47,16 @@ export function construireContexte({ profil, besoins, prenom, repasSemaine = [],
 }
 
 /** Corps de la requête Gemini : consignes + contexte + historique (rôles « user » / « model »). */
-export function construireRequete({ historique, contexte }) {
+export function construireRequete({ historique, contexte, pieces = [] }) {
   const systeme = contexte ? `${CONSIGNES}\n\nContexte de l'utilisateur :\n${contexte}` : CONSIGNES;
   return {
     systemInstruction: { parts: [{ text: systeme }] },
-    contents: historique.map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.texte }] })),
-    generationConfig: { temperature: 0.7, maxOutputTokens: 900 },
+    contents: historique.map((m, i) => {
+      const parts = [{ text: m.texte }];
+      if (i === historique.length - 1 && m.role === 'user') for (const p of pieces) if (p.data) parts.push({ inlineData: { mimeType: p.mime, data: p.data } });
+      return { role: m.role === 'user' ? 'user' : 'model', parts };
+    }),
+    generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
   };
 }
 
@@ -105,9 +110,9 @@ async function posterGemini({ cle, modele, corps }, appeler) {
 }
 
 /** Appelle Gemini ; retourne le texte ou lève une Error au message lisible. `appeler` est injectable pour les tests. */
-export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, historique, contexte }, appeler = fetch) {
+export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, historique, contexte, pieces = [] }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
-  const texte = extraireTexte(await posterGemini({ cle, modele, corps: construireRequete({ historique, contexte }) }, appeler));
+  const texte = extraireTexte(await posterGemini({ cle, modele, corps: construireRequete({ historique, contexte, pieces }) }, appeler));
   if (!texte) throw new Error('Le coach n\'a pas pu répondre à cette question. Reformulez-la.');
   return texte;
 }

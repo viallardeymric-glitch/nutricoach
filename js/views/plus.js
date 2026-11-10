@@ -46,7 +46,7 @@ function sauvegarder() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-export function Plus({ nuage, section }) {
+export function Plus({ enceinte = false, nuage, section }) {
   const [theme, setTheme] = useState(() => lire('theme', 'lagon'));
   if (section === 'sources') {
     const par = {};
@@ -65,7 +65,7 @@ export function Plus({ nuage, section }) {
   return html`<div><${Entete} grand=${true} titre="Plus" sous="Tout le reste de NutriCoach" />
     <div class="contenu">
       <div class="rangs">
-        <${Rang} icone="💬" titre="Coach IA" sous="Posez vos questions" href="#/coach" />
+        ${enceinte && html`<${Rang} icone="🤰" titre="Grossesse : que puis-je manger ?" sous="Autorisé, déconseillé, interdit" href="#/grossesse" />`}
         <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />
         ${nuage && html`<${Rang} icone="👫" titre="Nous deux" sous="Votre situation à tous les deux" href="#/nous" />`}
         <${Rang} icone="🧊" titre="Frigo magique" sous="Recettes avec ce que j'ai, anti-gaspi" href="#/frigo" />

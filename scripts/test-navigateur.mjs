@@ -211,7 +211,7 @@ verif(true, 'coach : invite à saisir la clé gratuite');
 await p.fill('input[type=password]', 'CLE-DE-TEST-123');
 await p.waitForSelector('.coach-saisie');
 verif(true, 'coach : clé enregistrée, conversation ouverte');
-await p.fill('.coach-saisie input', 'Que cuisiner ce soir ?'); await p.click('.coach-saisie button');
+await p.fill('.coach-saisie textarea', 'Que cuisiner ce soir ?'); await p.click('.coach-saisie button');
 await p.waitForSelector('.bulle.coach strong');
 verif((await p.textContent('.bulle.coach')).includes('carottes'), 'coach : réponse affichée avec mise en forme');
 verif(requetes.length === 1 && requetes[0].cle === 'CLE-DE-TEST-123' && !requetes[0].url.includes('CLE-DE-TEST'), 'coach : clé envoyée en en-tête, jamais dans l\'URL');
@@ -219,7 +219,7 @@ verif(!requetes[0].corps.includes('ALLERGIES'), 'coach : profil NON envoyé par 
 await p.goto(serveur.url + '/#/profil/coach'); await p.waitForSelector('.case input');
 await p.check('.case input');
 await p.goto(serveur.url + '/#/coach'); await p.waitForSelector('.coach-saisie');
-await p.fill('.coach-saisie input', 'Et pour demain ?'); await p.click('.coach-saisie button');
+await p.fill('.coach-saisie textarea', 'Et pour demain ?'); await p.click('.coach-saisie button');
 await p.waitForFunction(() => document.querySelectorAll('.bulle.coach:not(.attente)').length >= 2);
 verif(requetes.length === 2 && requetes[1].corps.includes('ALLERGIES') && requetes[1].corps.includes('lait'), 'coach : profil envoyé seulement après accord (allergie au lait incluse)');
 verif(requetes[1].corps.includes('Que cuisiner ce soir'), 'coach : l\'historique est transmis');
@@ -227,6 +227,45 @@ await p.reload(); await p.waitForSelector('.bulle.coach');
 const nbBulles = await p.locator('.bulle').count(); verif(nbBulles === 4, 'coach : conversation conservée (' + nbBulles + ' bulles)');
 await p.click('text=Effacer la conversation');
 verif(await p.locator('.bulle').count() === 0, 'coach : conversation effacée');
+// Coach : onglet dédié, pièces jointes, copier-coller
+verif(await p.locator('.onglets a:has-text("Coach")').count() === 1 && (await p.getAttribute('.onglets a.actif', 'href')) === '#/coach', 'coach : onglet dédié dans la barre du bas, actif sur la page');
+const PNGC = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+await p.setInputFiles('.coach-saisie input[type=file]', [{ name: 'etiquette.png', mimeType: 'image/png', buffer: PNGC }, { name: 'bilan.txt', mimeType: 'text/plain', buffer: Buffer.from('Fer : 8 µmol/L') }]);
+await p.waitForSelector('.coach-pieces .piece:nth-child(2)');
+verif((await p.textContent('.coach-pieces')).includes('etiquette.png') && (await p.textContent('.coach-pieces')).includes('bilan.txt'), 'coach : pièces jointes affichées avant envoi');
+await p.fill('.coach-saisie textarea', 'Que penses-tu de ça ?\nLigne 2'); await p.click('.coach-saisie button[type=submit]');
+await p.waitForSelector('.bulle.coach');
+const dernier = requetes[requetes.length - 1].corps;
+verif(dernier.includes('inlineData') && dernier.includes('image/jpeg') && dernier.includes('Fer : 8') && dernier.includes('Ligne 2'), 'coach : photo envoyée à l\'IA, fichier texte ajouté à la question, retour à la ligne conservé');
+verif((await p.textContent('.bulle.moi')).includes('etiquette.png'), 'coach : les noms des pièces jointes restent visibles dans la conversation');
+await p.setInputFiles('.coach-saisie input[type=file]', [{ name: 'virus.exe', mimeType: 'application/octet-stream', buffer: Buffer.from('x') }]);
+await p.waitForSelector('text=pas pris en charge');
+verif(true, 'coach : fichier non pris en charge refusé clairement');
+await p.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+await p.click('.bulle.coach .copier');
+await p.waitForSelector('text=Copié');
+verif(true, 'coach : bouton Copier');
+verif(await p.evaluate(() => getComputedStyle(document.querySelector('.bulle')).userSelect) === 'text', 'coach : le texte des bulles est sélectionnable (copier-coller)');
+await p.click('text=Effacer la conversation');
+
+// Guide grossesse
+await p.goto(serveur.url + '/#/grossesse'); await p.waitForSelector('.carte-grossesse');
+verif(!(await p.textContent('.contenu')).includes('Profil → Ma situation'), 'grossesse : grossesse déclarée (profil de test) → pas d\'invitation à la renseigner');
+await p.fill('input[aria-label="Chercher un aliment"]', 'saumon fumé'); 
+verif((await p.textContent('.carte-grossesse')).includes('À éviter') && (await p.textContent('.carte-grossesse')).includes('listériose'), 'grossesse : « saumon fumé » → à éviter, avec la raison');
+await p.fill('input[aria-label="Chercher un aliment"]', 'alcool');
+verif((await p.textContent('.carte-grossesse')).includes('Interdit'), 'grossesse : alcool → interdit');
+await p.fill('input[aria-label="Chercher un aliment"]', 'zzzzzz');
+verif((await p.textContent('.contenu')).includes('ne le mangez pas'), 'grossesse : aliment inconnu → prudence et renvoi vers un professionnel');
+await p.fill('input[aria-label="Chercher un aliment"]', '');
+await p.click('.puce:has-text("Autorisé")');
+verif(await p.locator('.carte-grossesse.ok').count() > 5 && await p.locator('.carte-grossesse.interdit').count() === 0, 'grossesse : filtre « Autorisé »');
+await p.goto(serveur.url + '/#/'); await p.waitForSelector('.carte-grossesse-accueil');
+verif(true, 'grossesse : carte sur l\'accueil quand la grossesse est déclarée');
+await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('text=Grossesse : que puis-je manger ?');
+verif(true, 'grossesse : entrée dans « Plus » quand la grossesse est déclarée');
+await p.goto(serveur.url + '/#/coach');
+verif((await p.textContent('.coach-accueil')).includes('saumon fumé'), 'coach : suggestions adaptées à la grossesse');
 
 // Courses : générées depuis le menu, rayons, cochage, saisie libre, alertes de profil, stock
 await p.goto(serveur.url + '/#/recette/REC-000001'); await p.waitForSelector('.score-sante');

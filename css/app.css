@@ -480,3 +480,28 @@ body.glisse { user-select: none; -webkit-user-select: none; overscroll-behavior:
 .score-sante-details li .sous { flex: 1; text-align: right; }
 .badge-sante { font-size: .8rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; color: #fff; background: var(--gris); }
 .badge-sante.excellent { background: #1a9e5c; } .badge-sante.bon { background: #7bb339; } .badge-sante.mediocre { background: #f0932b; } .badge-sante.mauvais { background: #d63031; }
+
+/* Guide grossesse */
+.carte-grossesse { margin: .6rem 0; padding: .7rem .9rem; border-radius: var(--rayon); background: var(--carte); border-left: 6px solid var(--gris); }
+.carte-grossesse.interdit { border-color: #d63031; } .carte-grossesse.eviter { border-color: #e17055; } .carte-grossesse.limiter { border-color: #f0932b; } .carte-grossesse.ok { border-color: #1a9e5c; }
+.carte-grossesse h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.carte-grossesse p { margin: .2rem 0; }
+.etiquette-statut { display: inline-block; padding: .05rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; background: var(--gris); }
+.etiquette-statut.interdit { background: #d63031; } .etiquette-statut.eviter { background: #e17055; } .etiquette-statut.limiter { background: #f0932b; } .etiquette-statut.ok { background: #1a9e5c; }
+.sr-seul { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.carte-grossesse-accueil { display: flex; gap: .8rem; align-items: center; margin: .8rem 0; padding: .8rem 1rem; border-radius: var(--rayon); background: var(--accent-clair); color: inherit; text-decoration: none; }
+.carte-grossesse-accueil > span:first-child { font-size: 1.8rem; }
+.carte-grossesse-accueil .sous { display: block; }
+
+/* Onglets : 8 entrées sur un téléphone */
+.onglets a { font-size: .64rem; min-width: 0; }
+.onglets a.centre { flex: 0 0 64px; }
+/* Coach : texte copiable, pièces jointes, saisie multi-lignes */
+.bulle, .coach-fil { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
+.bulle .copier { display: block; margin-top: .3rem; font-size: .8rem; }
+.pieces-jointes { font-size: .8rem; opacity: .85; }
+.coach-pieces { display: flex; flex-wrap: wrap; gap: .4rem; padding: .3rem 1rem 0; max-width: 720px; margin: 0 auto; }
+.piece { display: inline-flex; gap: .3rem; align-items: center; padding: .2rem .6rem; border-radius: 999px; background: var(--accent-clair); font-size: .85rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.piece button { border: 0; background: transparent; color: inherit; }
+.coach-saisie textarea { flex: 1; min-width: 0; min-height: 50px; max-height: 140px; padding: .8rem 1rem; border: 1px solid var(--bord); border-radius: 24px; background: var(--carte); color: inherit; font: inherit; resize: none; user-select: text; -webkit-user-select: text; }
+.coach-saisie .joindre { width: 50px; min-height: 50px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }

@@ -13,7 +13,7 @@ const risquesDe = (r, profil) => {
   return r.risques.filter((x) => miens.includes(x)).map((x) => lib(PROFILS, x).toLowerCase());
 };
 
-export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange, sportJour, bonus = null, urgents = [], budgetSerre = false, activite = [], onActiviteVue }) {
+export function Accueil({ enceinte = false, moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange, sportJour, bonus = null, urgents = [], budgetSerre = false, activite = [], onActiviteVue }) {
   const [nonce, setNonce] = useState(0);
   const [rapide, setRapide] = useState(false);
   const maintenant = new Date();
@@ -42,6 +42,7 @@ export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleK
       ${activite.length > 0 && html`<${Bandeau} type="info" titre=${html`🔔 Depuis votre dernière visite`}>
         <ul>${activite.map((e) => html`<li key=${e.type}>${e.icone} <strong>${PERSONNES[moi === 'E' ? 'M' : 'E'].prenom}</strong> ${e.texte}</li>`)}</ul>
         <button type="button" class="lien" onClick=${onActiviteVue}>Marquer comme vu</button><//>`}
+      ${enceinte && html`<a class="carte-grossesse-accueil" href="#/grossesse"><span>🤰</span><span><strong>Grossesse : puis-je manger… ?</strong><span class="sous">Autorisé, déconseillé, interdit : cherchez un aliment</span></span></a>`}
       ${sportJour && html`<a class="carte-sport" href="#/sport"><span>🏃</span><span><strong>${sportJour.reste > 0 ? `J-${sportJour.reste}` : sportJour.reste === 0 ? 'Jour J' : `J+${-sportJour.reste}`} · ${PHASES[sportJour.phase]}</strong><span class="sous">${sportJour.besoins.kcal} kcal · ${sportJour.besoins.glucides_g} g de glucides aujourd'hui</span></span></a>`}
       <${Section} titre="Aujourd'hui" lien=${{ href: '#/semaine', nom: 'Voir la semaine' }}>
         ${repasActifs(lire('planning.petitdej', false)).map((rp) => {

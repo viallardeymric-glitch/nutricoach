@@ -46,3 +46,9 @@ Dans « Ma semaine », posez le doigt sur la poignée ⠿ d'un repas, glissez-le
 
 ## Score santé des recettes et des menus
 Chaque fiche affiche un score santé sur 100 (sel, sucres, fibres, protéines, graisses : 20 points chacun). « Ma semaine » affiche le score du menu et celui de chaque jour. C'est une estimation par portion, pas un avis médical.
+
+## Coach : onglet dédié, documents, copier-coller
+Le coach a son propre onglet 💬 dans la barre du bas. Touchez 📎 pour joindre une photo (étiquette, menu, ordonnance), un PDF (8 Mo max) ou un fichier texte, jusqu'à 4 par message. Vous pouvez aussi coller une image ou du texte dans la zone de saisie. Les réponses se sélectionnent et se copient (bouton « ⧉ Copier »). Les pièces jointes sont envoyées à Google (Gemini) avec votre question puis oubliées par l'appli. Le coach ne pose pas de diagnostic.
+
+## Grossesse : puis-je manger… ?
+Quand vous indiquez une grossesse ou un allaitement (Profil → Infos : Femme, puis Ma situation), une carte apparaît sur l'Accueil et une entrée dans « Plus ». Le guide classe une quarantaine d'aliments en Interdit / À éviter / À limiter / Autorisé, avec la raison et un conseil, et une recherche (« saumon fumé », « camembert », « sushi »…). Repères généraux issus des recommandations françaises, à faire relire par un professionnel de santé.
