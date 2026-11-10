@@ -3,7 +3,9 @@ import { html, useState, useEffect, useRef, useMemo } from '../../vendor/preact-
 import { PERSONNES } from '../core/config.js';
 import { demarrerScan, cameraDisponible } from '../core/camera.js';
 import { chargerProduitOFF, chercherAlternatives } from '../core/off.js';
-import { codeBarresValide, noterProduit, alertesProduit, LIBELLE_COULEUR } from '../lib/scan.js';
+import { codeBarresValide, noterProduit, alertesProduit, LIBELLE_COULEUR, CONSIGNE_TABLEAU, lireTableauIA } from '../lib/scan.js';
+import { chargerReglagesCoach, demanderSurImage } from '../core/coach.js';
+import { reduireImage } from '../core/image.js';
 import { risqueAdditif, NIVEAUX_ADDITIFS } from '../data/additifs.js';
 import { MENTION_SCAN } from '../data/sources.js';
 import { ALLERGENES, lib } from '../data/libelles.js';
@@ -64,18 +66,38 @@ function Jauge({ note, couleur }) {
 const LETTRE = { a: '#038141', b: '#85bb2f', c: '#fecb02', d: '#ee8100', e: '#e63e11' };
 
 function Formulaire({ code, onCreer }) {
-  const [v, setV] = useState({ nom: '', marque: '', kcal: '', sucres: '', satures: '', sel: '', fibres: '', proteines: '', ingredients: '' });
+  const [v, setV] = useState({ nom: '', marque: '', kcal: '', graisses: '', glucides: '', sucres: '', satures: '', sel: '', fibres: '', proteines: '', ingredients: '' });
+  const [lecture, setLecture] = useState(null);   // { etat: 'attente' | 'ok' | 'erreur', texte }
+  const lirePhoto = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const reg = chargerReglagesCoach();
+    if (!reg.cle) { setLecture({ etat: 'erreur', texte: 'Pour lire la photo, ajoutez d\'abord votre clé Gemini (gratuite) dans Profil → Coach IA.' }); return; }
+    setLecture({ etat: 'attente', texte: 'Lecture du tableau en cours…' });
+    try {
+      const image = await reduireImage(f);
+      const brut = await demanderSurImage({ cle: reg.cle, modele: reg.modele, systeme: CONSIGNE_TABLEAU, imageBase64: image });
+      const r = lireTableauIA(brut);
+      if (!r) { setLecture({ etat: 'erreur', texte: 'Aucun chiffre lisible sur cette photo. Reprenez-la de plus près, bien nette, ou saisissez à la main.' }); return; }
+      setV((avant) => ({ ...avant, ...Object.fromEntries(Object.entries(r).filter(([, x]) => x !== '')) }));
+      setLecture({ etat: 'ok', texte: 'Tableau lu. Vérifiez chaque chiffre avant d\'enregistrer : l\'IA peut se tromper.' });
+    } catch (err) { setLecture({ etat: 'erreur', texte: err.message }); }
+  };
   const maj = (k) => (e) => setV({ ...v, [k]: e.target.value });
   const num = (k) => (v[k] === '' ? null : Number(String(v[k]).replace(',', '.')));
   const champ = (k, titre, unite) => html`<label class="champ"><span>${titre}${unite ? ` (${unite})` : ''}</span>
     <input type="text" inputmode="decimal" value=${v[k]} onInput=${maj(k)} /></label>`;
   return html`<form onSubmit=${(e) => { e.preventDefault(); if (v.nom.trim()) onCreer({ code, nom: v.nom.trim(), marque: v.marque.trim(), quantite: '', image: '', ingredients: v.ingredients.trim(),
       allergenes: [], traces: [], additifs: [], nutriscore: null, nova: null, ecoscore: null, bio: false, labels: [], categories: [], vegan: null, vegetarien: null,
-      nutrition: { kcal: num('kcal'), graisses: null, satures: num('satures'), glucides: null, sucres: num('sucres'), fibres: num('fibres'), proteines: num('proteines'), sel: num('sel') } }); }}>
+      nutrition: { kcal: num('kcal'), graisses: num('graisses'), satures: num('satures'), glucides: num('glucides'), sucres: num('sucres'), fibres: num('fibres'), proteines: num('proteines'), sel: num('sel') } }); }}>
+    <label class="bouton secondaire large fichier">📷 Photographier le tableau nutritionnel<input type="file" accept="image/*" capture="environment" onChange=${lirePhoto} aria-label="Photo du tableau nutritionnel" /></label>
+    ${lecture && html`<${Bandeau} type=${lecture.etat === 'erreur' ? 'alerte' : 'info'}><p>${lecture.texte}</p><//>`}
+    <p class="note">La photo est envoyée à Google (Gemini) avec votre clé personnelle, uniquement quand vous la prenez. Elle n'est pas gardée dans l'appli.</p>
     <label class="champ"><span>Nom du produit</span><input type="text" value=${v.nom} onInput=${maj('nom')} required /></label>
     ${champ('marque', 'Marque')}
     <h3 class="petit-titre">Pour 100 g</h3>
-    <div class="grille deux">${champ('kcal', 'Énergie', 'kcal')}${champ('sucres', 'Sucres', 'g')}${champ('satures', 'Graisses saturées', 'g')}${champ('sel', 'Sel', 'g')}${champ('fibres', 'Fibres', 'g')}${champ('proteines', 'Protéines', 'g')}</div>
+    <div class="grille deux">${champ('kcal', 'Énergie', 'kcal')}${champ('graisses', 'Graisses', 'g')}${champ('glucides', 'Glucides', 'g')}${champ('sucres', 'Sucres', 'g')}${champ('satures', 'Graisses saturées', 'g')}${champ('sel', 'Sel', 'g')}${champ('fibres', 'Fibres', 'g')}${champ('proteines', 'Protéines', 'g')}</div>
     <label class="champ"><span>Ingrédients (facultatif)</span><input type="text" value=${v.ingredients} onInput=${maj('ingredients')} /></label>
     <button type="submit" class="bouton grand" disabled=${!v.nom.trim()}>Enregistrer et noter ce produit</button>
     <p class="note">Le produit est gardé dans votre historique partagé. L'envoi vers Open Food Facts (qui demande un compte) n'est pas encore possible depuis l'appli.</p>

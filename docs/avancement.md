@@ -33,7 +33,7 @@ Session depuis le menu, quantités fusionnées, planning chronométré avec tâc
 ## 5.9 Courses et stock — ✅
 Génération depuis le menu et le batch, fusion et conversions, déduction du stock, rayons (ordre personnalisable), ajout libre, **récurrents**, **budget estimé**, cochage en direct avec pastilles E/M, listes multiples + archivage, partage / impression, stock mis à jour, péremption, alertes de profil, hors ligne, aucun article perdu en cas d'ajouts simultanés.
 ## 5.10 Scan de produits — ✅
-Caméra (BarcodeDetector, ZXing local pour Safari), saisie du numéro, Open Food Facts, note sur 100 avec le « pourquoi », additifs classés, alertes selon le profil, alternatives, actions (courses, stock, **journal**, favori, à éviter), cocher en rayon, historique partagé hors ligne, produit inconnu saisi à la main. ⬜ Envoi vers Open Food Facts, photo du tableau nutritionnel par IA, score santé des recettes et des menus.
+Caméra (BarcodeDetector, ZXing local pour Safari), saisie du numéro, Open Food Facts, note sur 100 avec le « pourquoi », additifs classés, alertes selon le profil, alternatives, actions (courses, stock, **journal**, favori, à éviter), cocher en rayon, historique partagé hors ligne, produit inconnu saisi à la main. ✅ Photo du tableau nutritionnel lue par l’IA (Gemini, clé perso, à vérifier avant d’enregistrer). ⬜ Envoi vers Open Food Facts, score santé des recettes et des menus.
 ## 5.11 Suivi et coach — ✅
 Journal (menu, recette, produit scanné, libre), hydratation, poids et mensurations en courbes (tendance), bilan hebdomadaire bienveillant, séries, coach IA (Gemini) relié au profil, au menu, au journal du jour. 🟡 Le coach ne connaît pas encore les séances.
 ## 5.12 Réglages — ✅

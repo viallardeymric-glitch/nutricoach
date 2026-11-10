@@ -34,3 +34,6 @@ Plus › « Sauvegarder les données de ce téléphone » (fichier JSON, sans co
 - Les alertes de santé sont générales et à faire relire par un professionnel (`docs/sources.md`).
 - Les séances se saisissent à la main (date, type, durée, distance) ; il n’y a pas d’import de fichiers.
 - Le catalogue compte 1 610 recettes originales. Les photos nécessitent une clé gratuite (Pexels ou Unsplash) et sont limitées par heure.
+
+## Produit inconnu : photo du tableau nutritionnel
+Dans la fiche d'un produit inconnu, touchez « 📷 Photographier le tableau nutritionnel ». L'IA (Gemini, avec votre clé gratuite du coach) remplit le formulaire. **Vérifiez chaque chiffre** avant d'enregistrer. La photo n'est pas gardée.

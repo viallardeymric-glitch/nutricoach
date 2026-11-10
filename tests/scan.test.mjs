@@ -95,3 +95,19 @@ test('alertes du scan selon le profil de la personne qui scanne', () => {
   assert.deepEqual(alertesProduit(fromage, { ...enceinte, appliquer: false }), []);
   assert.ok(alertesProduit(lireProduitOFF('3', jambon), enceinte).some((x) => x.id === 'additifs-eleves'));
 });
+
+import { lireTableauIA } from '../js/lib/scan.js';
+test('photo du tableau : lecture de la réponse de l\'IA, valeurs invraisemblables écartées', () => {
+  const r = lireTableauIA('```json\n{"nom":"Biscuits","marque":"Test","kcal":480,"graisses":20,"satures":9,"glucides":65,"sucres":30,"fibres":3.5,"proteines":6,"sel":0.8,"ingredients":"farine, sucre"}\n```');
+  assert.equal(r.nom, 'Biscuits');
+  assert.equal(r.kcal, '480');
+  assert.equal(r.fibres, '3,5');
+  assert.equal(r.sel, '0,8');
+  const bad = lireTableauIA('{"kcal":5000,"sucres":80,"glucides":50,"satures":30,"graisses":10,"proteines":6}');
+  assert.equal(bad.kcal, '', 'kcal impossible écarté');
+  assert.equal(bad.sucres, '', 'sucres > glucides écarté');
+  assert.equal(bad.satures, '', 'saturés > graisses écartés');
+  assert.equal(bad.proteines, '6');
+  assert.equal(lireTableauIA('pas du json'), null);
+  assert.equal(lireTableauIA('{"nom":"x","kcal":null}'), null, 'aucun chiffre : null');
+});

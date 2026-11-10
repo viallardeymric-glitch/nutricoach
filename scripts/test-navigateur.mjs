@@ -305,6 +305,22 @@ verif((await p.textContent('.additifs')).includes('E951') && (await p.textConten
 await p.click('text=Voir des alternatives'); await p.waitForSelector('.alt');
 verif((await p.textContent('.alt')).includes('Eau pétillante'), 'scan : alternative mieux notée proposée');
 await p.goto(serveur.url + '/#/produit/4006381333931'); await p.waitForSelector('text=Produit inconnu');
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+await p.evaluate(() => localStorage.removeItem('nutricoach.coach.reglages'));
+await p.setInputFiles('input[aria-label="Photo du tableau nutritionnel"]', { name: 'tableau.png', mimeType: 'image/png', buffer: PNG });
+await p.waitForSelector('text=ajoutez d\'abord votre clé Gemini');
+verif(true, 'scan : photo du tableau sans clé → message clair, aucun appel');
+await p.evaluate(() => localStorage.setItem('nutricoach.coach.reglages', JSON.stringify({ cle: 'CLE-TEST', modele: 'gemini-2.5-flash' })));
+let corpsImage = null;
+await p.route('https://generativelanguage.googleapis.com/**', async (route) => {
+  corpsImage = route.request().postData();
+  await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ nom: 'Pain maison', marque: null, kcal: 250, graisses: 2, satures: 0.5, glucides: 48, sucres: 3, fibres: 3, proteines: 8, sel: 1.2, ingredients: 'farine, eau, sel' }) }] } }] }) });
+});
+await p.setInputFiles('input[aria-label="Photo du tableau nutritionnel"]', { name: 'tableau.png', mimeType: 'image/png', buffer: PNG });
+await p.waitForSelector('text=Tableau lu');
+verif(corpsImage && corpsImage.includes('inlineData') && corpsImage.includes('image/jpeg'), 'scan : la photo réduite est envoyée à l\'IA');
+verif(await p.getByLabel('Énergie (kcal)').inputValue() === '250' && await p.getByLabel('Sel (g)').inputValue() === '1,2' && await p.getByLabel('Nom du produit').inputValue() === 'Pain maison', 'scan : le tableau lu remplit le formulaire (à vérifier par la personne)');
+await p.unroute('https://generativelanguage.googleapis.com/**');
 await p.getByLabel('Nom du produit').fill('Pain maison');
 await p.getByLabel('Énergie (kcal)').fill('250'); await p.getByLabel('Sucres (g)').fill('3'); await p.getByLabel('Graisses saturées (g)').fill('0.5'); await p.getByLabel('Sel (g)').fill('1.2');
 await p.click('text=Enregistrer et noter');

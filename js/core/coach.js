@@ -104,3 +104,22 @@ export async function demanderJSON({ cle, modele = MODELE_PAR_DEFAUT, systeme, m
   if (!texte) throw new Error('L\'IA n\'a pas pu répondre. Réessayez.');
   return texte;
 }
+
+/** Envoie une photo (base64) à Gemini avec une consigne ; retourne le texte (JSON). */
+export async function demanderSurImage({ cle, modele = MODELE_PAR_DEFAUT, systeme, imageBase64, mime = 'image/jpeg' }, appeler = fetch) {
+  if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
+  let rep;
+  try {
+    rep = await appeler(`${URL_BASE}${encodeURIComponent(modele)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: systeme }] },
+        contents: [{ role: 'user', parts: [{ text: 'Lis cette photo.' }, { inlineData: { mimeType: mime, data: imageBase64 } }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 1200, responseMimeType: 'application/json' } }),
+    });
+  } catch { throw new Error(messageErreurCoach(0)); }
+  if (!rep.ok) throw new Error(messageErreurCoach(rep.status));
+  const texte = extraireTexte(await rep.json());
+  if (!texte) throw new Error('L\'IA n\'a rien pu lire sur cette photo. Reprenez-la de plus près, bien nette.');
+  return texte;
+}

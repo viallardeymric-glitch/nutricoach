@@ -176,3 +176,30 @@ export function alertesProduit(p, profil) {
   }
   return res.sort((a, b) => (a.niveau === b.niveau ? 0 : a.niveau === 'rouge' ? -1 : 1));
 }
+
+// ---------- Photo du tableau nutritionnel lue par l'IA ----------
+export const CONSIGNE_TABLEAU = `Tu lis la photo d'un emballage alimentaire. Réponds uniquement avec un objet JSON :
+{"nom": texte ou null, "marque": texte ou null, "kcal": nombre ou null, "graisses": nombre ou null, "satures": nombre ou null, "glucides": nombre ou null, "sucres": nombre ou null, "fibres": nombre ou null, "proteines": nombre ou null, "sel": nombre ou null, "ingredients": texte ou null}
+Toutes les valeurs numériques sont POUR 100 g (ou 100 ml), en grammes sauf kcal. Si le tableau n'indique que la portion, convertis pour 100 g seulement si la portion est lisible, sinon null. Si seul le sodium est indiqué, multiplie par 2,5 pour le sel. N'invente rien : mets null si illisible.`;
+
+const LIMITES_TABLEAU = { kcal: 950, graisses: 100, satures: 100, glucides: 100, sucres: 100, fibres: 100, proteines: 100, sel: 100 };
+
+/** Réponse de l'IA (texte JSON) → valeurs prêtes pour le formulaire (chaînes), chiffres invraisemblables écartés. Null si illisible. */
+export function lireTableauIA(texte) {
+  let o;
+  try { o = JSON.parse(String(texte).replace(/^```(?:json)?\s*|\s*```$/g, '').trim()); } catch { return null; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  const res = { nom: '', marque: '', ingredients: '' };
+  for (const k of ['nom', 'marque']) if (typeof o[k] === 'string') res[k] = o[k].trim().slice(0, 80);
+  if (typeof o.ingredients === 'string') res.ingredients = o.ingredients.trim().slice(0, 1500);
+  let trouves = 0;
+  for (const [k, max] of Object.entries(LIMITES_TABLEAU)) {
+    const n = nombre(o[k]);
+    if (n != null && n >= 0 && n <= max) { res[k] = String(Math.round(n * 10) / 10).replace('.', ','); trouves++; } else res[k] = '';
+  }
+  // Cohérence : sucres ≤ glucides, saturés ≤ graisses
+  const v = (k) => (res[k] === '' ? null : Number(res[k].replace(',', '.')));
+  if (v('sucres') != null && v('glucides') != null && v('sucres') > v('glucides')) res.sucres = '';
+  if (v('satures') != null && v('graisses') != null && v('satures') > v('graisses')) res.satures = '';
+  return trouves ? res : null;
+}
