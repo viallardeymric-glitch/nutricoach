@@ -107,3 +107,21 @@ test('liste d\'une vraie semaine : cohérente, sans NaN, groupée en rayons', ()
   assert.equal(ids.size, articles.length, 'identifiants uniques');
   assert.ok(articles.some((a) => a.recettes.length > 1), 'des ingrédients communs à plusieurs recettes sont fusionnés');
 });
+
+import { retirerDuStock, arrondirStock, cleArticle } from '../js/lib/courses.js';
+test('stock : retirer les ingrédients d\'une recette cuisinée (portions, unités, absents, stock vidé)', () => {
+  const stock = [
+    { cle: cleArticle('beurre doux', 'g'), nom: 'Beurre doux', quantite: 1000, unite: 'g', rayon: 'cremerie' },
+    { cle: cleArticle('oeufs', 'pièce'), nom: 'Oeufs', quantite: 2, unite: 'pièce', rayon: 'cremerie' },
+    { cle: cleArticle('lait', 'ml'), nom: 'Lait', quantite: 500, unite: 'ml', rayon: 'cremerie' },
+  ];
+  const ing = [{ aliment: 'beurre doux', quantite: 30, unite: 'g' }, { aliment: 'oeufs', quantite: 3, unite: 'pièce' }, { aliment: 'lait', quantite: 0.25, unite: 'l' }, { aliment: 'farine', quantite: 100, unite: 'g' }, { aliment: 'eau', quantite: 2, unite: 'l' }];
+  const r = retirerDuStock(stock, ing, 0.75);
+  assert.deepEqual(r.maj.map((x) => [x.cle, x.quantite]), [[cleArticle('beurre doux', 'g'), 977.5], [cleArticle('lait', 'ml'), 312.5]]);
+  assert.deepEqual(r.supprimes.map((x) => x.cle), [cleArticle('oeufs', 'pièce')], 'stock insuffisant : vidé');
+  assert.deepEqual(r.absents, ['farine']);
+  assert.ok(!r.retires.includes('eau'), 'l\'eau du robinet est ignorée');
+  assert.deepEqual(retirerDuStock([], ing, 1).retires, []);
+  assert.deepEqual(arrondirStock({ quantite: 977.5, unite: 'g' }), { quantite: 977.5, unite: 'g' });
+  assert.deepEqual(arrondirStock({ quantite: 1250, unite: 'g' }), { quantite: 1.25, unite: 'kg' });
+});

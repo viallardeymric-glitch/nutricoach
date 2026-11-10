@@ -4,9 +4,9 @@ import { PERSONNES } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { RAYONS } from '../data/rayons.js';
 import { lire } from '../core/stockage.js';
-import { semaineDe } from '../lib/planning.js';
+import { semaineDe, ajouterJours, dateDepuisCle } from '../lib/planning.js';
 import { alertesTexte } from '../lib/alertes.js';
-import { analyserSaisie, articlesDepuisPlan, deduireStock, ajouterAuStock, planifierMiseAJour, versBase, cleArticle, libelleQuantite, arrondirCourses, idArticle } from '../lib/courses.js';
+import { analyserSaisie, articlesDepuisPlan, deduireStock, ajouterAuStock, planifierMiseAJour, versBase, cleArticle, libelleQuantite, arrondirCourses, arrondirStock, idArticle } from '../lib/courses.js';
 import { rayonDe } from '../data/rayons.js';
 import { aConsommerBientot } from '../lib/frigo.js';
 import { budgetListe } from '../lib/budget.js';
@@ -51,6 +51,7 @@ export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, co
   const { listes, articles, recurrents = [] } = donnees;
   const [vue, setVue] = useState('liste');
   const [courant, setCourant] = useState('semaine');
+  const [decalage, setDecalage] = useState(0);      // semaine des courses : 0 = cette semaine, 1 = la prochaine…
   const [saisie, setSaisie] = useState('');
   const [nouvelle, setNouvelle] = useState(null);   // nom en cours de saisie d'une nouvelle liste
   const [message, setMessage] = useState(null);
@@ -94,17 +95,27 @@ export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, co
   };
 
   const generer = async () => {
-    const jours = semaineDe(new Date());
+    const jours = semaineDe(ajouterJours(new Date(), 7 * decalage));
+    const fr2 = (d) => d.split('-').reverse().slice(0, 2).join('/');
     const ids = [...new Set(jours.flatMap((j) => Object.values(plan[j] || {})))];
-    if (!ids.length) { setMessage({ type: 'info', texte: 'Le menu de la semaine est vide. Générez-le dans l\'onglet Semaine, puis revenez ici.' }); return; }
+    if (!ids.length) { setMessage({ type: 'info', texte: decalage === 0 ? 'Le menu de la semaine est vide. Générez-le dans l\'onglet Planning, puis revenez ici.' : `Le menu de la semaine du ${fr2(jours[0])} est vide. Ouvrez le Planning, passez à cette semaine avec la flèche ›, générez le menu, puis revenez ici.` }); return; }
+    // Cette semaine : la liste en cours. Une autre semaine : sa propre liste « Semaine du JJ/MM » (on ne mélange pas les semaines).
+    let cible = liste;
+    if (decalage > 0) {
+      const id = `semaine-${jours[0]}`;
+      cible = actives.find((l) => l.id === id) || { id, nom: `Semaine du ${fr2(jours[0])}`, archivee: false, cree: Date.now(), par: moi };
+      if (!actives.some((l) => l.id === id)) ops.ecrireListe(cible);
+    }
+    const existants = articles.filter((a) => a.liste === cible.id);
     setEnCours(true); setMessage(null);
     try {
       const recettes = new Map();
       for (const id of ids) { const f = await chargerFiche(catalogue, id); if (f) recettes.set(id, f); }
       const { articles: reste, enStock } = deduireStock(articlesDepuisPlan(plan, jours, recettes, convives), stock);
-      const { ecrire, supprimer } = planifierMiseAJour(deLaListe, reste);
-      for (const g of ecrire) ops.ecrireArticle({ ...g, liste: liste.id, par: g.par || moi });
-      for (const id of supprimer) ops.supprimerArticle(deLaListe.find((a) => a.id === id));
+      const { ecrire, supprimer } = planifierMiseAJour(existants, reste);
+      for (const g of ecrire) ops.ecrireArticle({ ...g, liste: cible.id, par: g.par || moi });
+      for (const id of supprimer) ops.supprimerArticle(existants.find((a) => a.id === id));
+      if (cible.id !== liste.id) setCourant(cible.id);
       setMessage({ type: 'info', texte: `${ids.length} recette${ids.length > 1 ? 's' : ''} du menu, ${reste.length} article${reste.length > 1 ? 's' : ''} pour ${String(convives).replace('.', ',')} portions adultes.${enStock.length ? ` Déjà en stock : ${enStock.slice(0, 6).join(', ')}${enStock.length > 6 ? '…' : ''}.` : ''}` });
     } catch { setMessage({ type: 'alerte', texte: 'Impossible de charger les recettes du menu. Réessayez avec du réseau (elles seront ensuite disponibles hors ligne).' }); }
     setEnCours(false);
@@ -152,7 +163,9 @@ export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, co
           <input type="text" placeholder="Ajouter : 2 kg de pommes, lait…" value=${saisie} onInput=${(e) => setSaisie(e.target.value)} aria-label="Ajouter un article" />
           <button type="submit" class="bouton" aria-label="Ajouter" disabled=${!saisie.trim()}>＋</button></form>
         <div class="actions-courses">
-          <button type="button" class="bouton secondaire" disabled=${enCours || !catalogue} onClick=${generer}>${enCours ? 'Calcul…' : '✨ Depuis le menu de la semaine'}</button>
+          <div class="choix-semaine" role="group" aria-label="Semaine des courses"><span class="sous">Courses pour :</span>
+            <div class="puces sans-marge">${[0, 1, 2, 3].map((n) => { const l = semaineDe(ajouterJours(new Date(), 7 * n))[0]; const d = dateDepuisCle(l); return html`<${Puce} key=${n} actif=${decalage === n} onClick=${() => setDecalage(n)}>${n === 0 ? 'Cette semaine' : n === 1 ? 'Semaine prochaine' : `Semaine du ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`}<//>`; })}</div></div>
+          <button type="button" class="bouton secondaire" disabled=${enCours || !catalogue} onClick=${generer}>${enCours ? 'Calcul…' : decalage === 0 ? '✨ Depuis le menu de la semaine' : '✨ Depuis le menu de cette semaine-là'}</button>
           ${recurrents.length > 0 && html`<button type="button" class="bouton secondaire" onClick=${ajouterRecurrents}>↻ Ajouter mes articles récurrents (${recurrents.length})</button>`}
           ${pris.length > 0 && html`<button type="button" class="bouton" onClick=${terminer}>✓ Terminer les courses (${pris.length})</button>`}
         </div>
@@ -196,7 +209,7 @@ function Stock({ stock, ops }) {
     ${stock.length === 0 ? html`<div class="etat"><p>📦 Le stock est vide.</p><p class="sous">Il se remplit tout seul quand vous terminez vos courses, et se déduit des prochaines listes.</p></div>`
       : groupesParRayon(stock.map((s) => ({ ...s, id: s.cle }))).map((g) => html`<section class="rayon" key=${g.rayon.id}><h3 class="petit-titre">${g.rayon.icone} ${g.rayon.nom}</h3>
         <ul class="articles">${g.items.map((s) => html`<li class="article" key=${s.cle}>
-          <span class="article-texte plein"><strong>${s.nom}</strong> <span class="qte">${libelleQuantite(arrondirCourses(s))}</span></span>
+          <span class="article-texte plein"><strong>${s.nom}</strong> <span class="qte">${libelleQuantite(arrondirStock(s))}</span></span>
           <label class="stock-date"><span>Péremption</span><input type="date" value=${s.peremption || ''} aria-label=${`Date de péremption de ${s.nom}`} onInput=${(e) => ops.ecrireStock({ ...s, peremption: e.target.value })} /></label>
           <button type="button" class="mini-action" aria-label=${`Moins de ${s.nom}`} onClick=${() => changer(s, -1)}>−</button>
           <button type="button" class="mini-action" aria-label=${`Plus de ${s.nom}`} onClick=${() => changer(s, 1)}>＋</button>

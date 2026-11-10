@@ -87,3 +87,14 @@ La semaine générée suit des repères de diététique : au moins 2 poissons (d
 
 ## Thermomix : toutes les recettes ?
 Non. 90 recettes du catalogue ont des étapes Thermomix écrites d'origine (vitesses, températures, sens), surtout des plats ; 247 sont notées comme possibles. Pour les autres, le bouton « Réécrire pour Thermomix » demande à l'IA (Gemini et/ou Groq) une adaptation, à vérifier, gardée sur le téléphone. Certaines recettes ne s'y prêtent pas (rôtis, grillades, fritures) : l'IA le dit.
+
+## Régénérer un repas : de la nouveauté
+Le bouton 🔄 tire au sort parmi les 15 meilleures propositions (au lieu de toujours prendre la première) et se souvient des 150 dernières recettes proposées ou remplacées, ainsi que des menus des autres semaines : on ne vous reproposera pas les mêmes avant d'avoir fait le tour. « Tout refaire » et « Compléter » font de même.
+
+## Courses de la semaine d'après
+Sur l'écran Courses, choisissez « Courses pour : Cette semaine / Semaine prochaine / Semaine du JJ/MM » puis « Depuis le menu… ». Cette semaine, la liste en cours est mise à jour ; pour une autre semaine, l'appli crée une liste à part « Semaine du JJ/MM » (les semaines ne se mélangent pas). Le menu de cette semaine-là doit exister (Planning, flèche ›).
+
+## Le stock se déduit-il des recettes ?
+- **À l'achat** : oui, ce que vous avez déjà en stock est retiré de la liste de courses.
+- **En cuisinant** : sur la fiche, « Après la cuisine » → « Retirer ces ingrédients de mon stock » (pour le nombre de personnes choisi). En mode cuisine, l'écran final propose la même chose, et vous pouvez cocher « le faire automatiquement » pour que ce soit fait à chaque fin de recette. Les ingrédients absents du stock sont simplement signalés.
+- Le stock affiche maintenant les quantités exactes (977,5 g après avoir retiré 22,5 g de beurre).

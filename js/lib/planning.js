@@ -163,7 +163,7 @@ const SOUS_CATEGORIES_ECARTEES = new Set(['enfants', 'fete', 'batch']);
  */
 export function proposer(recettes, c, options) {
   const { jour, repas = 'diner', saison, cibleKcal = 2000, utilises = new Set(), types = new Map(),
-    graine: g = 1, n = 3, rapideMax = null, filtre = () => true, bonus = null, budgetSerre = false, equilibre = null, kcalDeja = 0 } = options;
+    graine: g = 1, n = 3, rapideMax = null, filtre = () => true, bonus = null, budgetSerre = false, equilibre = null, kcalDeja = 0, recents = null, diversite = 1 } = options;
   const hasard = aleatoire(g);
   const ratio = RATIO_KCAL[repas] || 0.35;
   let cibleRepas = cibleKcal * ratio;
@@ -172,7 +172,7 @@ export function proposer(recettes, c, options) {
   const semaine = !estWeekEnd(jour);
   const notes = [];
   for (const r of recettes) {
-    if (!convientAuRepas(r, repas) || utilises.has(r.id) || (r.categorie === 'Plats' && SOUS_CATEGORIES_ECARTEES.has(r.sous_categorie))) continue;
+    if (!convientAuRepas(r, repas) || utilises.has(r.id) || (recents && recents.has(r.id)) || (r.categorie === 'Plats' && SOUS_CATEGORIES_ECARTEES.has(r.sous_categorie))) continue;
     if (!convient(r, c) || !filtre(r)) continue;
     if (rapideMax && r.temps > rapideMax) continue;
     let s = hasard() * 2;
@@ -187,6 +187,15 @@ export function proposer(recettes, c, options) {
     notes.push([s, r]);
   }
   notes.sort((a, b) => b[0] - a[0]);
+  // Variété : pour un seul plat, tirage au sort pondéré parmi les `diversite` meilleurs (sinon on retombe toujours sur les mêmes recettes)
+  if (n === 1 && diversite > 1 && notes.length > 1) {
+    const top = notes.slice(0, diversite);
+    const meilleur = top[0][0];
+    const poids = top.map(([sc]) => Math.exp((sc - meilleur) / 3));
+    let t = hasard() * poids.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < top.length; i++) { t -= poids[i]; if (t <= 0) return [top[i][1]]; }
+    return [top[0][1]];
+  }
   return notes.slice(0, n).map((x) => x[1]);
 }
 
@@ -195,7 +204,7 @@ export function proposer(recettes, c, options) {
  * Vise au moins 2 repas de poisson et 2 végétariens par semaine quand les contraintes le permettent.
  * Retourne { plan, manquants } (manquants : repas pour lesquels rien ne convenait).
  */
-export function genererSemaine(recettes, jours, plan, { contraintes, saison, cibleKcal, graine: g = 1, parJour = {}, repas: repasUtilises = REPAS, bonus = null, budgetSerre = false }) {
+export function genererSemaine(recettes, jours, plan, { contraintes, saison, cibleKcal, graine: g = 1, parJour = {}, repas: repasUtilises = REPAS, bonus = null, budgetSerre = false, recents = null }) {
   const hasard = aleatoire(g);
   const suivant = {};
   for (const j of jours) suivant[j] = { ...(plan[j] || {}) };
@@ -226,12 +235,14 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
   const manquants = [];
   for (const [j, repas] of vides) {
     const pj = parJour[j] || {};                                    // sport : cible et filtre propres à la journée
-    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1, bonus, budgetSerre,
+    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1, bonus, budgetSerre, diversite: 8,
       equilibre: { compteurs: ctx.compteurs, memeJour: ctx.memeJour[j] || [], risques: contraintes.risques || [] },
       kcalDeja: (ctx.memeJour[j] || []).filter((x) => x.categorie === 'Plats').reduce((t, x) => t + (x.kcal || 0), 0) };
     const exigence = exigences.get(`${j}|${repas}`) || (() => true);
     const filtreJour = pj.filtre || (() => true);
-    let choix = proposer(recettes, contraintes, { ...options, filtre: (r) => exigence(r) && filtreJour(r) });
+    const avecRecents = recents ? { ...options, recents } : options;
+    let choix = proposer(recettes, contraintes, { ...avecRecents, filtre: (r) => exigence(r) && filtreJour(r) });
+    if (!choix.length && recents) choix = proposer(recettes, contraintes, { ...options, filtre: (r) => exigence(r) && filtreJour(r) });
     if (!choix.length) choix = proposer(recettes, contraintes, { ...options, filtre: filtreJour });
     if (!choix.length) choix = proposer(recettes, contraintes, options); // exigence impossible : on prend le meilleur plat
     if (!choix.length) { manquants.push([j, repas]); continue; }
@@ -248,18 +259,20 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
  * Remplace UN repas par un autre : jamais le même plat, jamais un plat déjà au menu de la semaine, et pas le même type de plat
  * ni la même source de protéines que l'autre repas du jour (déjeuner ≠ dîner). Retourne la recette choisie ou null.
  */
-export function autreRepasPour(recettes, c, { plan, jours, jour, repas, saison, cibleKcal, filtre, bonus = null, budgetSerre = false, graine: g = 1 }) {
+export function autreRepasPour(recettes, c, { plan, jours, jour, repas, saison, cibleKcal, filtre, bonus = null, budgetSerre = false, graine: g = 1, recents = null }) {
   const parId = new Map(recettes.map((r) => [r.id, r]));
   const actuel = parId.get((plan[jour] || {})[repas]);
   const ctx = contexteEquilibre(parId, plan, jours, { jour, repas });
   const utilises = new Set(jours.flatMap((x) => Object.values(plan[x] || {})));
   const autresDuJour = ctx.memeJour[jour] || [];
-  const options = { jour: dateDepuisCle(jour), repas, saison, cibleKcal, utilises, types: ctx.types, graine: g, n: 1, bonus, budgetSerre,
+  const options = { jour: dateDepuisCle(jour), repas, saison, cibleKcal, utilises, types: ctx.types, graine: g, n: 1, bonus, budgetSerre, diversite: 15,
     equilibre: { compteurs: ctx.compteurs, memeJour: autresDuJour, risques: c.risques || [] },
     kcalDeja: autresDuJour.filter((x) => x.categorie === 'Plats').reduce((t, x) => t + (x.kcal || 0), 0) };
   const filtreJour = filtre || (() => true);
   const different = (r) => !(actuel && (r.sous_categorie === actuel.sous_categorie)) && !autresDuJour.some((x) => x.sous_categorie === r.sous_categorie && (repas === 'dejeuner' || repas === 'diner'));
-  let [choix] = proposer(recettes, c, { ...options, filtre: (r) => filtreJour(r) && different(r) });
+  let choix = null;
+  if (recents) [choix] = proposer(recettes, c, { ...options, recents, filtre: (r) => filtreJour(r) && different(r) });     // d'abord du jamais vu récemment
+  if (!choix) [choix] = proposer(recettes, c, { ...options, filtre: (r) => filtreJour(r) && different(r) });
   if (!choix) [choix] = proposer(recettes, c, { ...options, filtre: filtreJour });
   if (!choix) [choix] = proposer(recettes, c, options);
   return choix || null;

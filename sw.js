@@ -1,6 +1,6 @@
 // Service worker NutriCoach : l'appli, l'index et les recettes consultées fonctionnent hors ligne.
 // Pour publier une mise à jour : changer VERSION ici ET les ?v=N de index.html (scripts/verifier.mjs le contrôle).
-const VERSION = '31';
+const VERSION = '33';
 const CACHE = `nutricoach-${VERSION}`;
 const DONNEES = 'nutricoach-donnees'; // recettes : conservées d'une version à l'autre
 const FICHIERS = [
@@ -14,7 +14,7 @@ const FICHIERS = [
   'js/lib/texte-riche.js', 'js/lib/texte.js',
   'js/ui/composants.js',
   'js/views/accueil.js', 'js/views/coach.js', 'js/views/connexion.js', 'js/views/courses.js', 'js/views/cuisine.js', 'js/views/fiche.js', 'js/views/liste.js',
-  'js/views/nous-deux.js', 'js/views/plus.js', 'js/views/profil.js', 'js/views/scanner.js', 'js/views/semaine.js', 'js/views/verrou.js',
+  'js/views/nous-deux.js', 'js/views/plus.js', 'js/views/profil.js', 'js/views/scanner.js', 'js/views/semaine.js', 'js/views/stock-retrait.js', 'js/views/verrou.js',
   'vendor/preact-htm.js', 'vendor/firebase.js', 'vendor/zxing.js', 'vendor/LISEZMOI.txt',
   'js/data/regimes.js',
   'js/lib/index-entree.js',

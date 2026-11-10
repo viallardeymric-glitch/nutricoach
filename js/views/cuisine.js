@@ -1,6 +1,7 @@
 // Mode cuisine pas à pas : plein écran, une étape à la fois, écran allumé, minuteur, balayage.
 import { html, useState, useEffect, useRef } from '../../vendor/preact-htm.js';
 import { chargerFiche } from '../core/catalogue.js';
+import { RetraitStock } from './stock-retrait.js';
 import { REGLAGES, lib } from '../data/libelles.js';
 import { ligneIngredient } from '../lib/adaptation.js';
 import { dureeEtape, formaterMinuteur } from '../lib/cuisine.js';
@@ -56,7 +57,7 @@ function lireAVoixHaute(texte) {
   window.speechSynthesis.speak(u);
 }
 
-export function Cuisine({ id, index, portions, methode = null, modele = 'TM6' }) {
+export function Cuisine({ id, index, portions, methode = null, modele = 'TM6', stock = [], opsStock = null }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [i, setI] = useState(0);           // 0 : ingrédients, 1..n : étapes, n+1 : fin
@@ -117,7 +118,8 @@ export function Cuisine({ id, index, portions, methode = null, modele = 'TM6' })
         ${duree && html`<${Minuteur} secondes=${duree} cle=${`${id}-${i}`} />`}`}
       ${i === n + 1 && html`<h2>Bon appétit ! 🍽️</h2>
         ${r.astuces.length > 0 && html`<ul class="simple">${r.astuces.map((a) => html`<li>${a}</li>`)}</ul>`}
-        ${r.conservation && html`<p class="note">Conservation : ${r.conservation.frigo_jours} jours au frigo. ${r.conservation.reechauffage || ''}</p>`}`}
+        ${r.conservation && html`<p class="note">Conservation : ${r.conservation.frigo_jours} jours au frigo. ${r.conservation.reechauffage || ''}</p>`}
+        ${opsStock && html`<${RetraitStock} recette=${r} portions=${portions} stock=${stock} ops=${opsStock} auto=${true} />`}`}
     </div>
     <div class="cuisine-nav">
       <button type="button" class="bouton secondaire" onClick=${() => aller(i - 1)} disabled=${i === 0}>← Précédent</button>

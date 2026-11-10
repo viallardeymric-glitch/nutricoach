@@ -38,19 +38,29 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
   const cibleBudget = Number(String(budget).replace(',', '.')) || 0;
 
   const completer = (base) => {
-    const { plan: suivant, manquants } = genererSemaine(index, jours, base, { contraintes, saison, cibleKcal, parJour, repas: slots, bonus, budgetSerre, graine: graine(jours[0] + '|' + Date.now()) });
+    const { plan: suivant, manquants } = genererSemaine(index, jours, base, { contraintes, saison, cibleKcal, parJour, repas: slots, bonus, budgetSerre, recents: recentes(), graine: graine(jours[0] + '|' + Date.now()) });
     const changes = {};
     for (const j of jours) if (JSON.stringify(suivant[j]) !== JSON.stringify(base[j] || {})) changes[j] = suivant[j];
     ecrireJours(changes);
+    retenir(...jours.flatMap((j) => Object.values(suivant[j] || {})));
     return manquants;
   };
   const toutRefaire = () => {
     if (nbRepas && !window.confirm('Remplacer tous les repas de cette semaine par un nouveau menu ?')) return;
+    retenir(...jours.flatMap((j) => Object.values(plan[j] || {})));
     completer({});
   };
+  // Mémoire des recettes déjà proposées ou remplacées (150 dernières) + menus des autres semaines : on propose du nouveau d'abord.
+  const recentes = () => {
+    const ids = new Set(lire('planning.recents', []));
+    for (const [d, repas] of Object.entries(plan)) if (!jours.includes(d)) for (const id of Object.values(repas)) ids.add(id);
+    return ids;
+  };
+  const retenir = (...ids) => { const l = [...lire('planning.recents', []).filter((x) => !ids.includes(x)), ...ids.filter(Boolean)]; ecrire('planning.recents', l.slice(-150)); };
   const autreRepas = (j, repas) => {
-    const r = autreRepasPour(index, contraintes, { plan, jours, jour: j, repas, saison, cibleKcal: (parJour[j] && parJour[j].cibleKcal) || cibleKcal, filtre: (parJour[j] && parJour[j].filtre) || undefined, bonus, budgetSerre, graine: graine(`${j}|${repas}|${Date.now()}`) });
-    if (r) ecrireJours({ [j]: { ...(plan[j] || {}), [repas]: r.id } });
+    const avant = (plan[j] || {})[repas];
+    const r = autreRepasPour(index, contraintes, { recents: recentes(), plan, jours, jour: j, repas, saison, cibleKcal: (parJour[j] && parJour[j].cibleKcal) || cibleKcal, filtre: (parJour[j] && parJour[j].filtre) || undefined, bonus, budgetSerre, graine: graine(`${j}|${repas}|${Date.now()}`) });
+    if (r) { retenir(avant, r.id); ecrireJours({ [j]: { ...(plan[j] || {}), [repas]: r.id } }); }
   };
   const retirer = (j, repas) => { const { [repas]: _, ...reste } = plan[j] || {}; ecrireJours({ [j]: reste }); };
   // Déplacer ou échanger deux repas (touche ⇅ puis « ici », ou glisser-déposer sur ordinateur).

@@ -93,3 +93,37 @@ test('contexte d\'équilibre : compte les protéines de la semaine sans le repas
   const total = (c) => Object.values(c.compteurs).reduce((s, x) => s + x, 0);
   assert.equal(total(tous) - total(sans), 1);
 });
+
+test('« autre repas » répété : de vraies nouveautés à chaque fois (pas 3 ou 4 recettes qui reviennent)', () => {
+  const { plan } = semaine(9001);
+  const j = jours[2];
+  const recents = new Set();
+  const vus = [];
+  let courant = plan[j].diner;
+  for (let i = 0; i < 60; i++) {
+    recents.add(courant);
+    const r = autreRepasPour(index, contraintes, { plan, jours, jour: j, repas: 'diner', saison: 'hiver', cibleKcal: 2200, graine: 31 * (i + 1), recents });
+    assert.ok(r);
+    vus.push(r.id);
+    courant = r.id;
+    plan[j] = { ...plan[j], diner: r.id };
+  }
+  assert.equal(new Set(vus).size, 60, `${new Set(vus).size} recettes différentes sur 60 essais`);
+  assert.ok(vus.every((id, i) => i === 0 || id !== vus[i - 1]));
+});
+
+test('sans mémoire des propositions, le tirage reste varié (au moins 20 recettes sur 60 essais)', () => {
+  const { plan } = semaine(9002);
+  const j = jours[4];
+  const vus = new Set();
+  for (let i = 0; i < 60; i++) vus.add(autreRepasPour(index, contraintes, { plan, jours, jour: j, repas: 'dejeuner', saison: 'hiver', cibleKcal: 2200, graine: 7919 * (i + 1) }).id);
+  assert.ok(vus.size >= 20, `${vus.size} recettes différentes`);
+});
+
+test('génération de semaine : deux semaines successives ne se ressemblent pas quand on mémorise les récentes', () => {
+  const a = semaine(1234);
+  const recents = new Set(Object.values(a.plan).flatMap((x) => Object.values(x)));
+  const b = genererSemaine(index, jours, {}, { contraintes, saison: 'hiver', cibleKcal: 2200, graine: 1235, repas: REPAS, recents });
+  const communs = Object.values(b.plan).flatMap((x) => Object.values(x)).filter((id) => recents.has(id)).length;
+  assert.equal(communs, 0);
+});

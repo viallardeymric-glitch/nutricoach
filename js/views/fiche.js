@@ -2,6 +2,7 @@
 import { html, useState, useEffect, useMemo } from '../../vendor/preact-htm.js';
 import { PORTIONS_MIN, PORTIONS_MAX } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
+import { RetraitStock } from './stock-retrait.js';
 import { lire, ecrire } from '../core/stockage.js';
 import { REGIMES, ALLERGENES, PROFILS, NUTRITION, REGLAGES, DIFFICULTES, COUTS, lib, libSousCategorie } from '../data/libelles.js';
 import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
@@ -97,7 +98,7 @@ function Methodes({ r, methode, setMethode, modele, setModele, reecriture, erreu
   </div>`;
 }
 
-export function FicheRecette({ foyer = 2, nomsFoyer = '', r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
+export function FicheRecette({ stock = [], opsStock = null, foyer = 2, nomsFoyer = '', r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
   const origine = methodeOriginale(r);
   const appareils = chargerAppareils();
   const [methode, setMethode] = useState(origine);
@@ -190,6 +191,7 @@ export function FicheRecette({ foyer = 2, nomsFoyer = '', r, portions, setPortio
           ${e.avertissements && e.avertissements.map((a) => html`<p class="note" key=${a}>⚠ ${a}</p>`)}
         </li>`)}
       </ol>
+      ${opsStock && html`<h2 class="petit-titre">Après la cuisine</h2><${RetraitStock} recette=${r} portions=${portions} stock=${stock} ops=${opsStock} />`}
 
       ${r.astuces.length > 0 && html`<h2 class="petit-titre">Astuces</h2>
         <ul class="simple">${r.astuces.map((a) => html`<li>${a}</li>`)}</ul>`}
@@ -214,7 +216,7 @@ export function FicheRecette({ foyer = 2, nomsFoyer = '', r, portions, setPortio
 }
 
 /** Charge la fiche complète puis l'affiche. */
-export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes, foyer = 2, nomsFoyer = '' }) {
+export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes, foyer = 2, nomsFoyer = '', stock = [], opsStock = null }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [portions, setPortions] = useState(1);
@@ -247,6 +249,6 @@ export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, porti
     </div></div>`;
   }
   const choisir = (f) => setPortions((p) => (typeof f === 'function' ? f(p) : f));       // l'ajustement ne vaut que pour cette préparation
-  return html`<div>${barre}<${FicheRecette} foyer=${foyer} nomsFoyer=${nomsFoyer} r=${r} portions=${portions} setPortions=${choisir}
+  return html`<div>${barre}<${FicheRecette} stock=${stock} opsStock=${opsStock} foyer=${foyer} nomsFoyer=${nomsFoyer} r=${r} portions=${portions} setPortions=${choisir}
     favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} /></div>`;
 }

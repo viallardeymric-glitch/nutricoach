@@ -395,9 +395,9 @@ function App() {
       compte=${{ actif: session.actif, email: session.email, onDeconnecter: () => deconnecter() }}
       pin=${{ defini: Boolean(pin), onDefinir: async (code) => { const e = await creerPin(code); enregistrerPin(e); setPin(e); },
         onRetirer: () => { retirerPin(); desactiverBiometrie(); setPin(null); setVerrouille(false); } }} />`}
-    ${route.ecran === 'fiche' && html`<${Fiche} key=${route.id} foyer=${foyerNb} nomsFoyer=${nomsFoyer} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
+    ${route.ecran === 'fiche' && html`<${Fiche} stock=${stock} opsStock=${opsCourses} key=${route.id} foyer=${foyerNb} nomsFoyer=${nomsFoyer} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
       onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
-    ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
+    ${route.ecran === 'cuisine' && html`<${Cuisine} stock=${stock} opsStock=${opsCourses} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
     </main>
     ${!plein && html`<${BarreOnglets} onglets=${onglets} actif=${ongletActif} />`}`;
 }

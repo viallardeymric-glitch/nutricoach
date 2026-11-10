@@ -339,6 +339,43 @@ const memeNomApres = (await p.locator('.article strong').allTextContents()).filt
 verif(memeNomApres === memeNomAvant - 1, `courses : le stock est déduit à la génération suivante (${memeNomAvant} → ${memeNomApres} articles « ${nom0} »)`);
 if (captures) await p.screenshot({ path: `${captures}/courses.png`, fullPage: true });
 
+// Stock : « Retirer ces ingrédients de mon stock » après avoir cuisiné (fiche et fin du mode cuisine)
+{
+  const rec = toutes.find((r) => r.id === 'REC-000001');
+  const ing = rec.ingredients.find((i) => i.unite === 'g' && i.quantite >= 20);
+  await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+  await p.click('role=tab[name="📦 Stock"]');
+  await p.fill('input[aria-label="Ajouter au stock"]', `1 kg de ${ing.aliment}`); await p.press('input[aria-label="Ajouter au stock"]', 'Enter');
+  await p.goto(serveur.url + '/#/recette/REC-000001'); await p.waitForSelector('.retrait-stock');
+  verif((await p.textContent('.retrait-stock')).toLowerCase().includes(ing.aliment.toLowerCase().split(' ')[0]), 'stock : la fiche indique ce qui est en stock pour la recette');
+  await p.click('text=Retirer ces ingrédients de mon stock');
+  await p.waitForSelector('text=Stock mis à jour');
+  await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses'); await p.click('role=tab[name="📦 Stock"]');
+  const ligne = await p.locator('.page-courses li', { hasText: ing.aliment.split(' ')[0] }).first().textContent();
+  verif(!/(^|\D)1 kg/.test(ligne) && /g/.test(ligne), `stock : après la recette, la quantité en stock a diminué (« ${ligne.trim().slice(0, 50)} »)`);
+}
+// Stock automatique à la fin du mode cuisine
+{
+  await p.evaluate(() => localStorage.setItem('nutricoach.stock.auto', 'true'));
+  const avant = await p.locator('.page-courses li', { hasText: 'Beurre' }).first().textContent();
+  await p.goto(serveur.url + '/#/cuisine/REC-000001?p=2'); await p.waitForSelector('.cuisine-nav');
+  for (let i = 0; i < 12; i++) { if (await p.locator('text=Bon appétit').count()) break; await p.click('.cuisine-nav .bouton:not(.secondaire)'); await p.waitForTimeout(100); }
+  await p.waitForSelector('text=Stock mis à jour', { timeout: 5000 });
+  verif(true, 'stock : à la fin du mode cuisine, les ingrédients sont retirés automatiquement (option cochée)');
+  await p.evaluate(() => localStorage.removeItem('nutricoach.stock.auto'));
+  void avant;
+}
+// Courses de la semaine d'après : liste à part « Semaine du JJ/MM »
+await p.goto(serveur.url + '/#/semaine'); await p.waitForSelector('[aria-label="Semaine suivante"]');
+await p.click('[aria-label="Semaine suivante"]');
+await p.click('role=button[name=/Générer ma semaine|Compléter la semaine/]'); await p.waitForTimeout(800);
+await p.click('[aria-label="Semaine précédente"]');
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+await p.click('.choix-semaine >> text=Semaine prochaine');
+await p.click('text=Depuis le menu de cette semaine-là'); await p.waitForTimeout(1200);
+verif(await p.locator('.puce', { hasText: 'Semaine du' }).count() >= 1 && await p.locator('.article').count() > 5, 'courses : la liste de la semaine suivante est créée à part (« Semaine du JJ/MM ») avec ses articles');
+await p.click('.choix-semaine >> text=Cette semaine');
+
 // Scan de produits (fausse API Open Food Facts)
 const PRODUITS = {
   '3017620422003': { status: 1, product: { product_name: 'Camembert de Normandie au lait cru', brands: 'Fromagerie Test', allergens_tags: ['en:milk'], categories_tags: ['en:dairies', 'en:cheeses', 'en:camemberts'],
@@ -614,6 +651,16 @@ verif(JSON.stringify(idsApres) !== JSON.stringify(idsAvant) && [...idsApres].sor
 // Score santé du menu
 verif(/Score santé du menu : \d+\/100/.test(await p.textContent('[data-score-semaine]')), 'semaine : score santé du menu affiché');
 verif(await p.locator('.jour .badge-sante').count() >= 5, 'semaine : score santé de chaque jour');
+// « Autre repas » : de vraies nouveautés à chaque appui
+{
+  const lib = p.locator('.jour').nth(2).locator('.repas-jour').nth(1);
+  const vus = new Set();
+  for (let i = 0; i < 8; i++) {
+    await lib.locator('[aria-label^="Changer le"]').click(); await p.waitForTimeout(120);
+    vus.add(await lib.locator('.mini-lien, .mini strong, a').first().textContent());
+  }
+  verif(vus.size >= 6, `semaine : « autre repas » ×8 donne ${vus.size} recettes différentes`);
+}
 // Glisser-déposer avec la poignée (pointer events : doigt ou souris)
 {
   const avantGlisse = await idsSemaine();

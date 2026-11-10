@@ -54,6 +54,15 @@ export function arrondirCourses({ quantite, unite }) {
   return { quantite: Math.max(1, Math.ceil(quantite - 1e-9)), unite };
 }
 
+/** Quantité de STOCK à l'affichage : exacte (jamais arrondie vers le haut comme pour les courses), pour voir ce qu'une recette a consommé. */
+export function arrondirStock({ quantite, unite }) {
+  if (unite === 'g' || unite === 'ml') {
+    if (quantite >= 1000) return { quantite: Math.round(quantite / 10) / 100, unite: unite === 'g' ? 'kg' : 'l' };
+    return { quantite: Math.round(quantite * 10) / 10, unite };
+  }
+  return { quantite: Math.round(quantite * 10) / 10, unite };
+}
+
 /** « 450 g », « 1,25 kg », « 3 » (pièces), « 2 gousses », « 1 ½ c. à soupe ». */
 export function libelleQuantite({ quantite, unite }) {
   const fractions = unite === 'c. à soupe' || unite === 'c. à café';
@@ -113,6 +122,24 @@ export function deduireStock(articles, stock) {
     else restants.push({ ...a, ...arrondirCourses({ quantite: reste, unite: versBase(1, a.unite).unite }) });
   }
   return { articles: restants, enStock };
+}
+
+/**
+ * Retire du stock les ingrédients d'une recette cuisinée (× facteur de portions). Un ingrédient absent du stock est simplement signalé.
+ * Retourne { maj: [stock à enregistrer], supprimes: [stock vidé], retires: [noms], absents: [noms] }.
+ */
+export function retirerDuStock(stock, ingredients, facteur = 1) {
+  const lignes = fusionner(ingredients.map((i) => ({ aliment: i.aliment, quantite: i.quantite * facteur, unite: i.unite })));
+  const parCle = new Map(stock.map((s) => [s.cle, s]));
+  const res = { maj: [], supprimes: [], retires: [], absents: [] };
+  for (const l of lignes) {
+    const s = parCle.get(l.cle);
+    if (!s || !(s.quantite > 0)) { res.absents.push(l.nom); continue; }
+    const reste = s.quantite - l.quantite;
+    res.retires.push(l.nom);
+    if (reste <= 0.0001) res.supprimes.push(s); else res.maj.push({ ...s, quantite: Math.round(reste * 100) / 100 });
+  }
+  return res;
 }
 
 /** Ajoute des articles achetés au stock (même clé = quantités additionnées). */
