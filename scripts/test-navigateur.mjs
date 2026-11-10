@@ -260,6 +260,10 @@ verif((await p.textContent('.contenu')).includes('ne le mangez pas'), 'grossesse
 await p.fill('input[aria-label="Chercher un aliment"]', '');
 await p.click('.puce:has-text("Autorisé")');
 verif(await p.locator('.carte-grossesse.ok').count() > 5 && await p.locator('.carte-grossesse.interdit').count() === 0, 'grossesse : filtre « Autorisé »');
+verif((await p.getAttribute('.onglets a.actif', 'href')) === '#/grossesse' && await p.locator('.onglets a:has-text("Grossesse")').count() === 1, 'grossesse : onglet dédié dans la barre du bas, actif sur la page');
+verif(/user-scalable=no/.test(await p.getAttribute('meta[name=viewport]', 'content')) && /maximum-scale=1/.test(await p.getAttribute('meta[name=viewport]', 'content')), 'zoom : bloqué (viewport)');
+verif(await p.evaluate(() => getComputedStyle(document.body).touchAction) === 'pan-x pan-y', 'zoom : pincement et double toucher bloqués (touch-action)');
+verif(await p.evaluate(() => { const e = new Event('gesturestart', { cancelable: true }); document.dispatchEvent(e); return e.defaultPrevented; }), 'zoom : gestes de pincement Safari bloqués');
 await p.goto(serveur.url + '/#/'); await p.waitForSelector('.carte-grossesse-accueil');
 verif(true, 'grossesse : carte sur l\'accueil quand la grossesse est déclarée');
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('text=Grossesse : que puis-je manger ?');

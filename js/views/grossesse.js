@@ -28,7 +28,7 @@ export function Grossesse({ profil }) {
   }, [q, resultats]);
 
   return html`<div>
-    <${Entete} titre="Grossesse : puis-je manger ?" sous="Autorisé, à limiter, déconseillé, interdit" retour=${{ href: '#/plus', nom: 'Plus' }} />
+    <${Entete} titre="Grossesse : puis-je manger ?" sous="Autorisé, à limiter, déconseillé, interdit" />
     <div class="contenu">
       ${!enceinte && html`<${Bandeau} type="info" titre="Pour vous"><p>Ce guide est pensé pour la grossesse. Indiquez-la dans <a href="#/profil/situation">Profil → Ma situation</a> : l'appli adaptera aussi les recettes, les produits scannés et le coach.</p><//>`}
       <${Bandeau} type="alerte" titre="À retenir"><p>⛔ <strong>Zéro alcool.</strong> Évitez la viande, le poisson et les œufs crus, la charcuterie crue, le poisson fumé, les fromages au lait cru et les graines germées. Cuisez bien, lavez fruits et légumes.</p><//>

@@ -62,7 +62,7 @@ export function lireRoute(hash) {
   return { ecran: simples[chemin] || 'accueil' };
 }
 const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', batch: 'plus', frigo: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
-  plus: 'plus', sources: 'plus', coach: 'coach', grossesse: 'plus', nous: 'plus', profil: 'plus' };
+  plus: 'plus', sources: 'plus', coach: 'coach', grossesse: 'grossesse', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
   const [hash, setHash] = useState(location.hash);
@@ -85,6 +85,10 @@ const ONGLETS = [
   { id: 'coach', href: '#/coach', icone: '💬', nom: 'Coach' },
   { id: 'plus', href: '#/plus', icone: '☰', nom: 'Plus' },
 ];
+// Appli « native » : pas de zoom au pincement ni au double toucher (Safari iOS ignore user-scalable : on bloque aussi les gestes).
+for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, (e) => e.preventDefault());
+// Onglet « Grossesse » dédié, ajouté dès que la grossesse ou l'allaitement est déclaré.
+const ONGLETS_GROSSESSE = [...ONGLETS.slice(0, -2), { id: 'grossesse', href: '#/grossesse', icone: '🤰', nom: 'Grossesse' }, ...ONGLETS.slice(-2)];
 const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
 function App() {
@@ -329,13 +333,14 @@ function App() {
   const plein = route.ecran === 'fiche' || route.ecran === 'cuisine';
   const personnes = profilAutre ? ['E', 'M'] : [moi];
   void versionPhotos;                                                  // change quand une photo arrive : redessine les miniatures
+  const enceinte = Boolean(profil && (profil.grossesse > 0 || profil.allaitement));
   return html`
     <div hidden=${!surListe}>
       <${Liste} index=${index} erreur=${erreur} f=${f} setF=${setF} favoris=${favorisMiens} favorisTous=${favorisTous} favorisPar=${favorisPar}
         onFavori=${onFavori} favorisSeulement=${route.ecran === 'favoris'} onOuvrir=${() => { defilSauvegarde = window.scrollY; }}
         moi=${moi} profil=${profil} onAppliquerProfil=${() => changerProfil({ ...profil, appliquer: profil.appliquer === false })} />
     </div>
-    ${route.ecran === 'accueil' && html`<${Accueil} enceinte=${Boolean(profil && (profil.grossesse > 0 || profil.allaitement))} moi=${moi} profil=${profil} besoins=${besoinsDuJour} index=${recettes} plan=${plan}
+    ${route.ecran === 'accueil' && html`<${Accueil} enceinte=${enceinte} moi=${moi} profil=${profil} besoins=${besoinsDuJour} index=${recettes} plan=${plan}
       contraintes=${contraintes} cibleKcal=${cibleKcal} sportJour=${jourSport} activite=${activiteVue ? [] : activite} onActiviteVue=${() => setActiviteVue(true)} bonus=${bonusDuStock} urgents=${urgentsStock} budgetSerre=${budgetSerre} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
       ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} parJour=${parJourSport} bonus=${bonusDuStock} budgetSerre=${budgetSerre} convives=${convives} />`}
@@ -351,8 +356,8 @@ function App() {
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
     ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
-    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} enceinte=${Boolean(profil && (profil.grossesse > 0 || profil.allaitement))} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
-    ${route.ecran === 'coach' && html`<${Coach} enceinte=${Boolean(profil && (profil.grossesse > 0 || profil.allaitement))} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
+    ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
+    ${route.ecran === 'coach' && html`<${Coach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'grossesse' && html`<${Grossesse} profil=${profil} />`}
     ${route.ecran === 'nous' && html`<${NousDeux} moi=${moi} profils=${session.profils} favorisNuage=${session.favorisNuage}
@@ -364,7 +369,7 @@ function App() {
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
       onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
-    ${!plein && html`<${BarreOnglets} onglets=${ONGLETS} actif=${ONGLET_DE[route.ecran]} />`}`;
+    ${!plein && html`<${BarreOnglets} onglets=${enceinte ? ONGLETS_GROSSESSE : ONGLETS} actif=${ONGLET_DE[route.ecran]} />`}`;
 }
 
 const racine = document.getElementById('app');

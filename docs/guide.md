@@ -52,3 +52,6 @@ Le coach a son propre onglet 💬 dans la barre du bas. Touchez 📎 pour joindr
 
 ## Grossesse : puis-je manger… ?
 Quand vous indiquez une grossesse ou un allaitement (Profil → Infos : Femme, puis Ma situation), une carte apparaît sur l'Accueil et une entrée dans « Plus ». Le guide classe une quarantaine d'aliments en Interdit / À éviter / À limiter / Autorisé, avec la raison et un conseil, et une recherche (« saumon fumé », « camembert », « sushi »…). Repères généraux issus des recommandations françaises, à faire relire par un professionnel de santé.
+
+## Comme une vraie appli
+Le zoom (pincement, double toucher) est bloqué. Quand une grossesse ou un allaitement est indiqué, un onglet 🤰 Grossesse apparaît dans la barre du bas. Les enfants ajoutés sur un téléphone apparaissent sur l'autre (profils partagés).

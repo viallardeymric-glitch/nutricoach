@@ -493,6 +493,11 @@ body.glisse { user-select: none; -webkit-user-select: none; overscroll-behavior:
 .carte-grossesse-accueil > span:first-child { font-size: 1.8rem; }
 .carte-grossesse-accueil .sous { display: block; }
 
+/* Appli : pas de zoom (pincement, double toucher) ; champs à 16 px pour éviter le zoom automatique d'iOS */
+html, body { touch-action: pan-x pan-y; }
+input, select, textarea { font-size: 16px; }
+.onglets.dense a { font-size: .56rem; letter-spacing: -.01em; }
+.onglets.dense a.centre { flex: 0 0 58px; }
 /* Onglets : 8 entrées sur un téléphone */
 .onglets a { font-size: .64rem; min-width: 0; }
 .onglets a.centre { flex: 0 0 64px; }

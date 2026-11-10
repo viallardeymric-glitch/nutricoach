@@ -238,6 +238,18 @@ await marie.waitForSelector('.fiche-photo', { timeout: 8000 }).then(
   () => verif(true, 'Marie (sans clé) voit la photo trouvée par Eymric sur la fiche'), () => verif(false, 'photo partagée chez Marie'));
 verif(appelsMarie === 0, 'aucune recherche chez Marie : la photo vient du partage');
 
+// Enfant ajouté par Eymric : visible chez Marie (profil partagé dans households/foyer/profiles)
+await eymric.goto(serveur.url + '/#/profil/enfants'); await eymric.waitForSelector('text=Ajouter un enfant');
+await eymric.click('text=Ajouter un enfant');
+await eymric.getByLabel('Prénom').fill('Léa');
+const naiss = new Date(); naiss.setFullYear(naiss.getFullYear() - 5);
+await eymric.getByLabel('Date de naissance').fill(naiss.toISOString().slice(0, 10));
+await eymric.click('role=button[name="Enregistrer"]');
+await eymric.waitForTimeout(800);
+verif([...base.keys()].some((c) => c.startsWith('households/foyer/profiles/enfant-')), 'enfant : écrit dans households/foyer/profiles/enfant-…');
+await marie.goto(serveur.url + '/#/profil/enfants');
+await marie.waitForSelector('text=Compté dans les menus et les courses', { timeout: 4000 }).then(
+  () => verif(true, 'enfant ajouté par Eymric : Marie le voit sur son téléphone'), async () => { verif(false, 'enfant partagé'); console.log('DEBUG', (await marie.textContent('.contenu:visible')).replace(/\s+/g, ' ').slice(0, 300), marie.url()); });
 // 4 sexies. Fil d'activité : « Eymric a ajouté… » depuis la dernière visite de Marie
 await marie.addInitScript(() => { const v = sessionStorage.getItem('test_dv'); if (v) localStorage.setItem('nutricoach.derniere_visite', v); });
 await marie.evaluate((t) => sessionStorage.setItem('test_dv', String(t)), Date.now() - 3600000);
