@@ -11,7 +11,7 @@ await modeLocal(ctx);
 const p = await ctx.newPage();
 const erreurs = [];
 p.on('pageerror', (e) => erreurs.push(e.message));
-p.on('console', (m) => m.type() === 'error' && erreurs.push(m.text()));
+p.on('console', (m) => m.type() === 'error' && !/status of 401/.test(m.text()) && erreurs.push(m.text()));   // le 401 est provoqué volontairement (clé de photos refusée)
 let echecs = 0;
 const verif = (ok, msg) => { console.log(ok ? 'ok   ' : 'ÉCHEC', msg); if (!ok) echecs++; };
 const toutes = JSON.parse(readFileSync(new URL('../data/recettes.json', import.meta.url), 'utf8'));
@@ -96,7 +96,7 @@ verif(await p.locator('.liste .carte').count() === 0 && (await p.textContent('.e
 // Profil : accueil de profil, pages courtes, date de naissance, besoins, garde-fou grossesse
 await p.goto(serveur.url + '/#/profil');
 await p.waitForSelector('.rangs');
-verif(await p.locator('.rang').count() === 8, 'profil : accueil avec 8 rubriques courtes');
+verif(await p.locator('.rang').count() === 9, 'profil : accueil avec 9 rubriques courtes');
 await p.goto(serveur.url + '/#/profil/infos');
 await p.waitForSelector('input[type=date]');
 await p.click('.puce:text-is("Femme")');
@@ -568,6 +568,30 @@ await p.goto(serveur.url + `/#/cuisine/${four.id}?p=2&m=airfryer&t=TM6`); await 
 verif((await p.textContent('.cuisine-titre')).includes('version IA'), 'cuisine : version IA signalée « à vérifier »');
 await p.click('text=Commencer'); await p.waitForSelector('.cuisine-texte');
 verif((await p.textContent('.cuisine-texte')).includes('airfryer'), 'cuisine : étapes de la réécriture');
+
+// Photos des recettes (fausse API Pexels)
+let appelsPhotos = 0;
+await ctx.route('https://api.pexels.com/**', async (route) => {
+  appelsPhotos++;
+  const cle = route.request().headers()['authorization'];
+  if (cle !== 'CLE-PEXELS-TEST') return route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
+  await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ photos: [{ src: { large: 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=' }, photographer: 'Anna Dupont', photographer_url: 'https://www.pexels.com/@anna' }] }) });
+});
+await p.goto(serveur.url + '/#/recette/' + toutes[20].id); await p.waitForSelector('.fiche h1');
+await p.waitForTimeout(600);
+verif(await p.locator('.fiche-photo').count() === 0 && appelsPhotos === 0, 'photos : sans clé, pictogramme et aucun appel réseau');
+await p.goto(serveur.url + '/#/profil/photos'); await p.waitForSelector('text=Obtenir une clé gratuite');
+verif((await p.textContent('.contenu')).includes('pexels.com/api'), 'photos : instructions pour obtenir la clé gratuite');
+await p.getByLabel(/Clé Pexels/).fill('CLE-PEXELS-TEST');
+await p.goto(serveur.url + '/#/recette/' + toutes[21].id); await p.waitForSelector('.fiche-photo');
+verif((await p.textContent('.fiche-photo figcaption')).includes('Anna Dupont') && (await p.textContent('.fiche-photo figcaption')).includes('Pexels'), 'photos : photo affichée avec le crédit du photographe');
+verif(appelsPhotos === 1, 'photos : une seule recherche à l\'ouverture de la fiche');
+await p.goto(serveur.url + '/#/'); await p.goto(serveur.url + '/#/recette/' + toutes[21].id); await p.waitForSelector('.fiche-photo');
+verif(appelsPhotos === 1, 'photos : photo gardée en cache (aucun nouvel appel)');
+await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill('mauvaise');
+await p.goto(serveur.url + '/#/recette/' + toutes[22].id); await p.waitForSelector('text=clé de photos est refusée');
+verif(await p.locator('.fiche-hero').count() === 1, 'photos : clé refusée, message clair et pictogramme conservé');
+await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill('');
 
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');

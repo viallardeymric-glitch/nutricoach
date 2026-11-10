@@ -14,6 +14,7 @@ import { METHODES, methodeOriginale } from '../lib/methodes.js';
 import { reecrire, chargerReecriture, oublierReecriture } from '../core/reecriture.js';
 import { chargerAppareils } from '../core/appareils.js';
 import { chargerReglagesCoach } from '../core/coach.js';
+import { photoDeRecette } from '../core/photos.js';
 import { Pictogramme, Coeur, Bandeau, Pastille, Puce } from '../ui/composants.js';
 
 /** Avertissements : toujours affichés en haut de la fiche quand la recette en comporte. */
@@ -103,6 +104,9 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
   const [erreurIA, setErreurIA] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [adaptee, setAdaptee] = useState(false);
+  const [photo, setPhoto] = useState(null);
+  const [erreurPhoto, setErreurPhoto] = useState('');
+  useEffect(() => { let actif = true; setPhoto(null); setErreurPhoto(''); photoDeRecette(r).then((p) => actif && setPhoto(p)).catch((e) => actif && setErreurPhoto(e.message)); return () => { actif = false; }; }, [r.id]);
   const premier = personnesVariantes && personnesVariantes.length ? personnesVariantes[0].id : null;
   const subsMoi = useMemo(() => (adaptee && premier ? substitutionsPour(r, contraintesDeProfil(personnesVariantes[0].profil)) : []), [adaptee, r, premier]);
   const ingredientsAffiches = useMemo(() => (adaptee ? appliquerSubstitutions(r.ingredients, subsMoi) : r.ingredients), [adaptee, subsMoi, r]);
@@ -126,7 +130,10 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
   const maxPortions = Math.max(PORTIONS_MAX, r.portions_base);
   const conseils = conseilsAdaptation(r, portions);
   return html`<article class="fiche">
-    <div class="fiche-hero"><${Pictogramme} recette=${r} grand=${true} /></div>
+    ${photo ? html`<figure class="fiche-photo"><img src=${photo.url} alt=${`Photo : ${r.titre}`} loading="lazy" />
+        <figcaption>Photo : <a href=${photo.lien} target="_blank" rel="noopener">${photo.credit}</a> · <a href=${photo.fournisseur === 'Unsplash' ? 'https://unsplash.com/?utm_source=nutricoach&utm_medium=referral' : 'https://www.pexels.com'} target="_blank" rel="noopener">${photo.fournisseur}</a></figcaption></figure>`
+      : html`<div class="fiche-hero"><${Pictogramme} recette=${r} grand=${true} /></div>`}
+    ${erreurPhoto && html`<p class="note centre-texte">${erreurPhoto}</p>`}
     <div class="fiche-corps">
       <div class="fiche-titre"><h1>${r.titre}</h1><${Coeur} actif=${favori} onClick=${onFavori} /></div>
       <div class="meta">

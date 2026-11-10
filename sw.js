@@ -35,6 +35,7 @@ const FICHIERS = [
   'js/lib/thermomix.js',
   'js/lib/activite.js',
   'js/core/biometrie.js',
+  'js/core/photos.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

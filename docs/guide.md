@@ -20,6 +20,7 @@ Envoyez-lui le lien de l'appli, son adresse et son mot de passe (par un autre ca
 - **Profil** : date de naissance, poids, taille, objectif, régimes, allergies. Les enfants s'ajoutent dans Profil › Enfants.
 - **Planning** : « Générer ma semaine » ; **Courses** : « Depuis le menu de la semaine » ; **Scanner** : bouton central.
 - **Coach IA** (facultatif) : créez une clé gratuite sur aistudio.google.com/apikey et collez-la dans Profil › Coach IA. Votre profil n'est envoyé à Google que si vous le cochez.
+- **Photos des recettes** (facultatif) : Profil › Photos des recettes. Créez une clé gratuite sur pexels.com/api (instantané) ou unsplash.com/developers et collez-la : la photo apparaît à l'ouverture d'une recette, avec le nom du photographe.
 - **Code PIN** et **Face ID / Touch ID** : Profil › Code PIN.
 
 ## 5. Mettre à jour l'appli
@@ -32,4 +33,4 @@ Plus › « Sauvegarder les données de ce téléphone » (fichier JSON, sans co
 - Pas de notification quand l'appli est fermée (il faudrait un serveur d'envoi) : un fil « Depuis votre dernière visite » apparaît sur l'accueil.
 - Les alertes de santé sont générales et à faire relire par un professionnel (`docs/sources.md`).
 - Strava et Apple Santé ne sont pas connectés : importez vos séances en GPX, CSV ou JSON.
-- Le catalogue compte 1 610 recettes originales (pas de photos).
+- Le catalogue compte 1 610 recettes originales. Les photos nécessitent une clé gratuite (Pexels ou Unsplash) et sont limitées par heure.

@@ -455,3 +455,9 @@ p { margin: 0 0 .5rem; }
 
 .reglages.thermo span { background: var(--accent); color: #fff; }
 .pesee { padding-left: 1.3rem; } .pesee li { padding: .3rem 0; }
+
+.fiche-photo { margin: 0; position: relative; }
+.fiche-photo img { display: block; width: 100%; max-height: 260px; object-fit: cover; border-radius: 0 0 26px 26px; background: var(--accent-clair); }
+.fiche-photo figcaption { position: absolute; right: .6rem; bottom: .5rem; background: rgba(0,0,0,.55); color: #fff; font-size: .72rem; padding: .15rem .55rem; border-radius: 999px; }
+.fiche-photo figcaption a { color: #fff; }
+.centre-texte { text-align: center; }

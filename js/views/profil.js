@@ -11,6 +11,7 @@ import { biometrieDisponible, biometrieActive, activerBiometrie, desactiverBiome
 import { chargerReglagesCoach } from '../core/coach.js';
 import { Puce, Pastille, Bandeau, Entete, Rang } from '../ui/composants.js';
 import { ReglagesCoach } from './coach.js';
+import { FOURNISSEURS, chargerReglagesPhotos, enregistrerReglagesPhotos } from '../core/photos.js';
 
 const CONDITIONS = { diabete: 'Diabète', hypertension: 'Hypertension', immunodeprime: 'Système immunitaire affaibli' };
 const TRIMESTRES = [[0, 'Non'], [1, '1er trimestre'], [2, '2e trimestre'], [3, '3e trimestre']];
@@ -18,7 +19,7 @@ const TRIMESTRES = [[0, 'Non'], [1, '1er trimestre'], [2, '2e trimestre'], [3, '
 const REGIMES_DEJA_AILLEURS = ['omnivore', 'enceinte', 'sportif', 'diabetique'];
 const RUBRIQUES = {
   infos: 'Mes informations', objectif: 'Objectif et activité', situation: 'Ma situation',
-  regimes: 'Régimes et allergies', enfants: 'Enfants', securite: 'Code PIN', coach: 'Coach IA', compte: 'Compte',
+  regimes: 'Régimes et allergies', enfants: 'Enfants', photos: 'Photos des recettes', securite: 'Code PIN', coach: 'Coach IA', compte: 'Compte',
 };
 
 export function ChoixPersonne({ onChoisir }) {
@@ -103,6 +104,22 @@ function SectionPin({ pin }) {
     </div>`}
     <p class="note">Le code verrouille l'écran de l'appli. Il ne remplace pas le verrouillage de votre téléphone.</p>
     <h3 class="petit-titre">Face ID / Touch ID</h3><${Biometrie} pin=${pin} />
+  </div>`;
+}
+
+function SectionPhotos() {
+  const [reg, setReg] = useState(chargerReglagesPhotos);
+  const maj = (c) => { const s = { ...reg, ...c }; setReg(s); enregistrerReglagesPhotos(s); };
+  const f = FOURNISSEURS[reg.fournisseur];
+  return html`<div>
+    <${Groupe} titre="Fournisseur"><${Choix}>${Object.entries(FOURNISSEURS).map(([k, x]) => html`<${Puce} key=${k} actif=${reg.fournisseur === k} onClick=${() => maj({ fournisseur: k })}>${x.nom}<//>`)}<//><//>
+    <${Champ} etiquette=${`Clé ${f.nom} (gratuite)`}><input type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé ici" value=${reg.cle}
+      onInput=${(e) => maj({ cle: e.target.value.trim() })} /><//>
+    <${Bandeau} type="info" titre="Obtenir une clé gratuite"><ol class="simple">
+      <li>Allez sur <strong>${f.site}</strong> et créez un compte gratuit.</li>
+      <li>${reg.fournisseur === 'pexels' ? 'Demandez une clé d\'API (instantané, sans carte bancaire).' : 'Créez une « application » (mode Demo) pour obtenir une « Access Key ».'}</li>
+      <li>Collez la clé ci-dessus : les photos apparaissent à l'ouverture des recettes (${f.delai}).</li></ol><//>
+    <p class="note">Chaque photo est cherchée à l'ouverture d'une recette puis gardée sur ce téléphone, avec le nom du photographe. La clé reste sur ce téléphone : elle n'est ni synchronisée ni enregistrée dans le dépôt. Sans clé, les recettes gardent leur pictogramme.</p>
   </div>`;
 }
 
@@ -210,6 +227,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
         <${Champ} etiquette="Aliments que je n'aime pas (séparés par des virgules)">
           <input type="text" value=${p.exclusions} placeholder="ex. coriandre, olives" onInput=${(e) => maj({ exclusions: e.target.value })} /><//>`}
       ${section === 'enfants' && html`<${SectionEnfants} enfants=${enfants} />`}
+      ${section === 'photos' && html`<${SectionPhotos} />`}
       ${section === 'securite' && html`<${SectionPin} pin=${pin} />`}
       ${section === 'coach' && html`<${ReglagesCoach} />`}
       ${section === 'compte' && html`
@@ -243,6 +261,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
       </div>
       <div class="rangs">
         <${Rang} icone="👧" titre=${RUBRIQUES.enfants} href="#/profil/enfants" sous=${enfants.liste.length ? enfants.liste.map((x) => x.prenom).join(', ') : 'Aucun enfant'} />
+        <${Rang} icone="📷" titre=${RUBRIQUES.photos} href="#/profil/photos" sous=${chargerReglagesPhotos().cle ? `${FOURNISSEURS[chargerReglagesPhotos().fournisseur].nom} activé` : 'Pictogrammes seulement'} />
         <${Rang} icone="💬" titre=${RUBRIQUES.coach} href="#/profil/coach" sous=${reglageCoach.cle ? 'Clé enregistrée' : 'À configurer'} />
         <${Rang} icone="🔒" titre=${RUBRIQUES.securite} href="#/profil/securite" sous=${pin.defini ? 'Code actif' : 'Non défini'} />
         <${Rang} icone="☁️" titre=${RUBRIQUES.compte} href="#/profil/compte" sous=${compte.actif ? compte.email : 'Mode local'} />

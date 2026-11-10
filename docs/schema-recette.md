@@ -42,4 +42,4 @@ Fichiers : `data/recettes.json` (et tout `data/recettes-*.json`), lus **sans mod
 `id, titre, categorie, sous_categorie, regimes, allergenes, temps, cuisson, kcal, nut{p,g,l,f,s,sel}, difficulte, cout, saisons, appareils, occasions, tags, risques, ingredients (noms), f` (numéro du fichier). Un exemple de chaque cas est dans `docs/recettes-exemples.md`.
 
 ## Ce qui n'existe pas encore
-Le pipeline de génération IA par lots (10 000 recettes) n'est pas écrit : le catalogue compte 1 610 recettes originales. Les photos ne sont pas fournies (un pictogramme par sous-catégorie).
+Le pipeline de génération IA par lots (10 000 recettes) n'est pas écrit : le catalogue compte 1 610 recettes originales. Les photos viennent de Pexels ou Unsplash (clé gratuite saisie dans Profil › Photos) ; sans clé, un pictogramme par sous-catégorie.

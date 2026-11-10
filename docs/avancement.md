@@ -21,7 +21,7 @@ Adulte (date de naissance), enfants du foyer (portions, alertes bébé / petit /
 ## 5.3 Sport — ✅
 Épreuves (5 km à ultra, triathlon, vélo, musculation), phases, charge en glucides 2 ou 3 jours, veille pauvre en fibres, ravitaillement, repas pré-course, récupération, rappel « rien de nouveau le jour J », import GPX / CSV / JSON, menus et cibles du jour adaptés, recettes pour l'effort. 🟡 Chaque personne a son propre objectif ; pas d'import Strava ni Apple Santé.
 ## 5.4 Recettes — 🟡
-1 610 recettes, recherche (titre, ingrédients, tags), filtres cumulables, favoris, hors ligne, schéma et exemples (`docs/schema-recette.md`). ⬜ Photos, 10 000 recettes, pipeline de génération, import de ses propres recettes (saisie, URL, photo).
+1 610 recettes, recherche (titre, ingrédients, tags), filtres cumulables, favoris, hors ligne, schéma et exemples (`docs/schema-recette.md`), **photos Pexels ou Unsplash** (clé gratuite saisie dans Profil › Photos, cache, crédit du photographe). ⬜ 10 000 recettes, pipeline de génération, import de ses propres recettes (saisie, URL, photo).
 ## 5.5 Thermomix et cuisine pas à pas — ✅
 Version Thermomix TM6 / TM5 / TM31 (pastilles, 100 °C max sur TM31), capacité du bol 2,2 L avec cuisson en deux fois, pesée guidée, mode pas à pas (écran allumé, minuteur, balayage, lecture vocale), autres méthodes (four, plaques, cocotte, Cookeo, airfryer, multicuiseur, sans cuisson) par réécriture IA (proposition à vérifier, gardée hors ligne).
 ## 5.6 Adaptation — ✅
