@@ -39,14 +39,17 @@ test('deux clés : ordre d\'essai, ancien format repris, fournisseur sans clé i
   assert.equal(normaliserReglagesPhotos({ fournisseur: 'inconnu' }).fournisseur, 'pexels');
 });
 
-import { quotaMiniatures, MINIATURES_PAR_HEURE } from '../js/core/photos.js';
-test('quota des miniatures : plafond par heure glissante', () => {
+import { quotaFournisseur, LIMITES, MINIATURES_PAR_HEURE } from '../js/core/photos.js';
+test('quotas séparés par fournisseur : heure glissante, miniatures sous le plafond total', () => {
   const t = 1_000_000;
-  assert.deepEqual(quotaMiniatures(null, t), { autorise: true, etat: { debut: t, n: 0 } });
-  assert.equal(quotaMiniatures({ debut: t, n: MINIATURES_PAR_HEURE - 1 }, t + 10).autorise, true);
-  assert.equal(quotaMiniatures({ debut: t, n: MINIATURES_PAR_HEURE }, t + 10).autorise, false);
-  const apres = quotaMiniatures({ debut: t, n: MINIATURES_PAR_HEURE }, t + 3_600_001);
+  assert.deepEqual(quotaFournisseur(null, t, 10), { autorise: true, etat: { debut: t, n: 0 } });
+  assert.equal(quotaFournisseur({ debut: t, n: 9 }, t + 10, 10).autorise, true);
+  assert.equal(quotaFournisseur({ debut: t, n: 10 }, t + 10, 10).autorise, false);
+  const apres = quotaFournisseur({ debut: t, n: 10 }, t + 3_600_001, 10);
   assert.ok(apres.autorise && apres.etat.n === 0, 'une heure plus tard : compteur remis à zéro');
+  for (const f of Object.values(LIMITES)) assert.ok(f.miniatures < f.total, 'une marge reste pour les fiches');
+  assert.ok(LIMITES.pexels.total <= 200 && LIMITES.unsplash.total <= 50, 'sous les limites gratuites des fournisseurs');
+  assert.equal(MINIATURES_PAR_HEURE, 180);
   assert.equal(normaliserReglagesPhotos({}).miniatures, true, 'miniatures activées par défaut');
   assert.equal(normaliserReglagesPhotos({ miniatures: false }).miniatures, false);
   assert.equal(lirePhoto('pexels', { photos: [{ src: { large: 'L', medium: 'M' } }] }).mini, 'M');

@@ -598,13 +598,22 @@ verif(appelsPhotos - avantListe <= 14, `miniatures : seules les cartes visibles 
 const apresListe = appelsPhotos;
 await p.goto(serveur.url + '/#/recettes'); await p.waitForTimeout(1200);
 verif(appelsPhotos === apresListe, 'miniatures : déjà en cache, aucun nouvel appel au retour sur la liste');
+// Préchargement : les favoris reçoivent leur photo sans ouvrir la fiche ni défiler la liste
+const avantPre = appelsPhotos;
+await p.goto(serveur.url + '/#/'); await p.evaluate(() => localStorage.setItem('nutricoach.favoris', JSON.stringify(['REC-000401', 'REC-000402'])));
+await p.reload(); await p.waitForSelector('.entete.grand');
+await p.waitForFunction(() => { const c = JSON.parse(localStorage.getItem('nutricoach.photos') || '{}'); return c['REC-000401'] && c['REC-000402']; }, null, { timeout: 12000 }).then(
+  () => verif(true, 'préchargement : photos des favoris récupérées en arrière-plan'), () => verif(false, 'préchargement des favoris'));
+verif(appelsPhotos - avantPre <= 12, `préchargement : ${appelsPhotos - avantPre} appels (favoris + cartes visibles de l'accueil, pas des centaines)`);
 await p.goto(serveur.url + '/#/profil/photos'); await p.click('role=button[name="✓ Miniatures activées"]');
 await p.evaluate(() => { localStorage.removeItem('nutricoach.photos'); });
+await p.waitForTimeout(800);
+const baseOff = appelsPhotos;
 await p.goto(serveur.url + '/#/recettes'); await p.waitForSelector('.carte'); await p.waitForTimeout(1500);
-verif(await p.locator('.vignette-photo').count() === 0 && appelsPhotos === apresListe, 'miniatures désactivées : pictogrammes et aucun appel');
+verif(await p.locator('.vignette-photo').count() === 0 && appelsPhotos === baseOff, 'miniatures désactivées : pictogrammes et aucun appel');
 await p.goto(serveur.url + '/#/profil/photos'); await p.click('role=button[name="Miniatures désactivées"]');
 await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill('mauvaise');
-await p.goto(serveur.url + '/#/recette/' + toutes[22].id); await p.waitForSelector('text=clé de photos est refusée');
+await p.goto(serveur.url + '/#/recette/' + toutes[1500].id); await p.waitForSelector('text=clé de photos est refusée');
 verif(await p.locator('.fiche-hero').count() === 1, 'photos : clé refusée, message clair et pictogramme conservé');
 // Deux clés : Pexels en panne (clé refusée) -> Unsplash prend le relais
 let appelsUnsplash = 0;
@@ -617,7 +626,7 @@ await ctx.route('https://api.unsplash.com/**', async (route) => {
 await p.goto(serveur.url + '/#/profil/photos'); await p.waitForSelector('text=Fournisseur principal');
 await p.getByLabel(/Clé Unsplash/).fill('CLE-UNS-TEST');
 verif((await p.textContent('.contenu')).includes('Pexels + Unsplash') || (await p.textContent('.contenu')).includes('Les deux fournisseurs sont activés'), 'photos : les deux clés peuvent être enregistrées');
-await p.goto(serveur.url + '/#/recette/' + toutes[23].id); await p.waitForSelector('.fiche-photo');
+await p.goto(serveur.url + '/#/recette/' + toutes[1501].id); await p.waitForSelector('.fiche-photo');
 verif((await p.textContent('.fiche-photo figcaption')).includes('Paul Martin') && (await p.textContent('.fiche-photo figcaption')).includes('Unsplash') && appelsUnsplash === 1, 'photos : Pexels refuse la clé, Unsplash prend le relais avec son crédit');
 await p.goto(serveur.url + '/#/profil'); await p.waitForSelector('.rangs');
 verif((await p.locator('.rang:has-text("Photos des recettes")').textContent()).includes('Unsplash'), 'photos : la rubrique du profil indique les fournisseurs activés');

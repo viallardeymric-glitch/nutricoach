@@ -40,3 +40,9 @@ Journal (menu, recette, produit scanné, libre), hydratation, poids et mensurati
 Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Thermomix modèle, Cookeo, airfryer…), rayons, sauvegarde. 🟡 Pas de réglage d'unités.
 ## §6–§9
 ✅ Firestore : profiles, planning, shoppingLists, pantry, scans, favorites, journal, weights, workouts, batchSessions (`docs/schema-firestore.md`, règles dans `docs/firestore.rules.exemple`). ✅ Tests unitaires de l'adaptation, des courses, des conversions, des besoins, des règles de profil, de la note produit, du planning, du sport, du batch, des substitutions. ✅ Guide pas à pas (`docs/guide.md`), 15 recettes d'exemple. ⬜ Pipeline de 10 000 recettes.
+
+## Photos partout, tout le temps
+- Quotas gratuits suivis séparément par fournisseur (Pexels ~200/h, Unsplash 50/h) ; bascule automatique sur l'autre si l'un est épuisé.
+- Une photo trouvée sur un téléphone est partagée avec l'autre (collection `notes`, `photo-REC-xxxxxx`), même sans clé.
+- Préchargement lent des favoris et du menu de la semaine.
+- Les 1610 photos se remplissent progressivement (plusieurs heures à quelques jours selon les quotas).

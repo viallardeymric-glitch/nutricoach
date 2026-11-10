@@ -7,7 +7,7 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, metaPlanning, idDocPhoto, photoVersDoc, docsVersPhotos, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { biometrieActive, desactiverBiometrie } from './core/biometrie.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
@@ -38,6 +38,7 @@ import { Frigo } from './views/frigo.js';
 import { evenements } from './lib/activite.js';
 import { articlesDuFrigo, bonusStock, aConsommerBientot } from './lib/frigo.js';
 import { chargerAppareils } from './core/appareils.js';
+import { definirPartage, photoEnCache, photoPartagee, photoDeRecette, peutChercherMiniature } from './core/photos.js';
 import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
 import { Plus, appliquerTheme } from './views/plus.js';
@@ -201,6 +202,13 @@ function App() {
   const colBatch = useCollection('batchSessions', session.docsBatch, connecte);
   const sessionsBatch = useMemo(() => docsVersSessionsBatch(colBatch.items), [colBatch.items]);
   const opsBatch = { ...opsCourses, ecrireSession: (s) => colBatch.ecrire(s.id, sessionBatchVersDoc(s)) };
+  // Photos : trouvées par l'un, utilisées par l'autre (un document par recette) ; préchargement des favoris et du menu.
+  const colNotes = useCollection('notes', session.docsNotes, connecte);
+  const photosPartagees = useMemo(() => docsVersPhotos(colNotes.items), [colNotes.items]);
+  useEffect(() => {
+    definirPartage(connecte ? { lire: (id) => photosPartagees.get(id), ecrire: (id, ph) => colNotes.ecrire(idDocPhoto(id), photoVersDoc(id, ph)) } : null);
+  }, [connecte, photosPartagees]);
+  const [versionPhotos, setVersionPhotos] = useState(0);
   const opsSuivi = {
     ecrireJournal: (e) => colJournal.ecrire(e.id, journalVersDoc(e)),
     supprimerJournal: (id) => colJournal.supprimer(id),
@@ -267,6 +275,24 @@ function App() {
       .map((rp) => `${nomJour(new Date(j + 'T12:00:00'))} ${rp.nom.toLowerCase()} : ${parId.get(plan[j][rp.id]) || '?'}`));
   }, [recettes, plan]);
 
+  // Préchargement : d'abord les favoris et le menu de la semaine, doucement (1 recherche à la fois) et seulement si du quota reste.
+  const idsAPrecharger = useMemo(() => [...new Set([...favorisTous, ...Object.values(plan).flatMap((j) => Object.values(j))])].slice(0, 80), [favorisTous.size, plan]);
+  useEffect(() => {
+    if (!recettes || !idsAPrecharger.length) return undefined;
+    let actif = true;
+    (async () => {
+      for (const id of idsAPrecharger) {
+        if (!actif) return;
+        if (photoEnCache(id)) continue;
+        if (!photoPartagee(id) && !peutChercherMiniature()) { if (!actif) return; continue; }
+        const r = parIdIndex.get(id);
+        if (!r) continue;
+        try { const p = await photoDeRecette(r, fetch, { miniature: true }); if (p && actif) setVersionPhotos((v) => v + 1); } catch { /* quota ou réseau : on réessaiera plus tard */ }
+        await new Promise((ok) => setTimeout(ok, 1200));
+      }
+    })();
+    return () => { actif = false; };
+  }, [recettes, idsAPrecharger.join('|'), session.docsNotes]);
   // Fil d'activité : ce que l'autre a fait depuis la dernière visite (la date de visite est gardée sur ce téléphone).
   const [derniereVisite] = useState(() => lire('derniere_visite', 0));
   useEffect(() => {
@@ -300,6 +326,7 @@ function App() {
 
   const plein = route.ecran === 'fiche' || route.ecran === 'cuisine';
   const personnes = profilAutre ? ['E', 'M'] : [moi];
+  void versionPhotos;                                                  // change quand une photo arrive : redessine les miniatures
   return html`
     <div hidden=${!surListe}>
       <${Liste} index=${index} erreur=${erreur} f=${f} setF=${setF} favoris=${favorisMiens} favorisTous=${favorisTous} favorisPar=${favorisPar}

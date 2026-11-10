@@ -58,6 +58,8 @@ async function telephone(nom) {
   await ctx.route('https://world.openfoodfacts.org/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 1, product: {
     product_name: 'Yaourt nature', brands: 'Laiterie Test', allergens_tags: ['en:milk'], categories_tags: ['en:dairies', 'en:yogurts'], nova_group: 3, nutriscore_grade: 'a',
     nutriments: { 'energy-kcal_100g': 55, 'saturated-fat_100g': 1.2, sugars_100g: 4.5, salt_100g: 0.1, proteins_100g: 4, fiber_100g: 0 } } }) }));
+  await ctx.route('https://images.pexels.com/**', (r) => r.fulfill({ contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=', 'base64') }));
+  await ctx.route('https://api.pexels.com/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ photos: [{ src: { large: 'https://images.pexels.com/test.gif' }, photographer: 'Anna Dupont', photographer_url: 'https://www.pexels.com/@anna' }] }) }));
   await ctx.exposeBinding('fsCall', async ({ page }, op, a, b) => {
     if (op === 'auth') return COMPTES[a] === b;
     if (op === 'set') { base.set(a, b); await notifier(a.split('/').slice(0, -1).join('/')); return null; }
@@ -67,7 +69,7 @@ async function telephone(nom) {
   });
   const page = await ctx.newPage();
   const erreurs = [];
-  page.on('pageerror', (e) => erreurs.push(e.message));
+  page.on('pageerror', (e) => erreurs.push(e.message + ' @ ' + String(e.stack).split('\n').slice(1,3).join(' ; ')));
   page.on('console', (m) => m.type() === 'error' && erreurs.push(m.text()));
   page.nom = nom; page.erreurs = erreurs;
   return page;
@@ -226,6 +228,19 @@ await eymric.getByLabel('Poids (kg)').fill('80,5');
 await eymric.check('.case input'); await eymric.click('role=button[name="Enregistrer"]');
 await marie.waitForFunction(() => !document.body.textContent.includes('80,5 kg'), null, { timeout: 2000 }).then(
   () => verif(true, 'option « privé » : le poids n\'apparaît plus chez Marie'), () => verif(false, 'poids privé masqué'));
+
+// 4 septies. Photos partagées : trouvée par Eymric (avec une clé), affichée chez Marie (sans clé), sans nouvelle recherche
+await eymric.evaluate(() => localStorage.setItem('nutricoach.photos.reglages', JSON.stringify({ fournisseur: 'pexels', cles: { pexels: 'CLE-EYMRIC' } })));
+await eymric.reload(); await eymric.waitForSelector('.entete', { state: 'attached' }); await eymric.waitForTimeout(1200);
+await eymric.goto(serveur.url + '/#/recette/REC-000001');
+await eymric.waitForSelector('.fiche-photo', { timeout: 6000 }).catch(async () => { console.log('DEBUG', eymric.erreurs.join(' | '), await eymric.evaluate(() => [localStorage.getItem('nutricoach.photos'), localStorage.getItem('nutricoach.photos.reglages'), localStorage.getItem('nutricoach.photos.quota')].join(' ## ')), (await eymric.textContent('body')).replace(/\s+/g, ' ').slice(0, 300), eymric.url()); });
+verif(base.has('households/foyer/notes/photo-REC-000001') && base.get('households/foyer/notes/photo-REC-000001').credit === 'Anna Dupont', 'photo écrite dans households/foyer/notes/photo-REC-000001 (partagée)');
+let appelsMarie = 0;
+await marie.context().route('https://api.pexels.com/**', async (r) => { appelsMarie++; await r.abort(); });
+await marie.goto(serveur.url + '/#/recette/REC-000001'); await marie.reload(); await marie.waitForTimeout(1500);
+await marie.waitForSelector('.fiche-photo', { timeout: 8000 }).then(
+  () => verif(true, 'Marie (sans clé) voit la photo trouvée par Eymric sur la fiche'), () => verif(false, 'photo partagée chez Marie'));
+verif(appelsMarie === 0, 'aucune recherche chez Marie : la photo vient du partage');
 
 // 4 sexies. Fil d'activité : « Eymric a ajouté… » depuis la dernière visite de Marie
 await marie.addInitScript(() => { const v = sessionStorage.getItem('test_dv'); if (v) localStorage.setItem('nutricoach.derniere_visite', v); });

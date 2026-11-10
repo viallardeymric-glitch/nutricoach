@@ -177,3 +177,18 @@ export function docsVersSessionsBatch(docs) {
 
 /** Métadonnées des jours de menu (qui l'a modifié, quand) pour le fil d'activité. */
 export const metaPlanning = (docs) => docs.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.id || '') && d.par).map((d) => ({ par: d.par, modifie: d.modifie || 0 }));
+
+// ---------- Photos de recettes partagées (collection « notes », documents photo-REC-xxxxxx) ----------
+export const idDocPhoto = (recette) => `photo-${recette}`;
+export function photoVersDoc(recette, ph) {
+  return { kind: 'photo', recette, url: ph.url, mini: ph.mini || ph.url, credit: String(ph.credit || '').slice(0, 60), lien: ph.lien || '', fournisseur: ph.fournisseur || '', t: Date.now() };
+}
+/** Documents « notes » → Map recette → photo. Seules les adresses https sont acceptées. */
+export function docsVersPhotos(docs) {
+  const m = new Map();
+  for (const d of docs) {
+    if (d.kind !== 'photo' || !/^REC-\d+$/.test(d.recette || '') || !/^https:\/\//.test(d.url || '')) continue;
+    m.set(d.recette, { url: d.url, mini: /^https:\/\//.test(d.mini || '') ? d.mini : d.url, credit: d.credit || 'Photographe', lien: /^https:\/\//.test(d.lien || '') ? d.lien : 'https://www.pexels.com', fournisseur: d.fournisseur || '' });
+  }
+  return m;
+}

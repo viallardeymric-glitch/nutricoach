@@ -146,3 +146,14 @@ test('menus à 4 repas, péremption du stock, articles récurrents', () => {
   assert.equal(recurrents.length, 1);
   assert.equal(articles.length, 0);
 });
+
+import { photoVersDoc, docsVersPhotos, idDocPhoto } from '../js/core/synchro.js';
+test('photos partagées : documents valides, adresses https seulement', () => {
+  const d = photoVersDoc('REC-000001', { url: 'https://images.pexels.com/a.jpg', mini: 'https://images.pexels.com/m.jpg', credit: 'Anna', lien: 'https://www.pexels.com/@anna', fournisseur: 'Pexels' });
+  assert.ok(Object.values(d).every((v) => v !== undefined));
+  assert.equal(idDocPhoto('REC-000001'), 'photo-REC-000001');
+  const m = docsVersPhotos([{ ...d, id: 'photo-REC-000001' }, { ...d, recette: 'x' }, { ...d, recette: 'REC-000002', url: 'javascript:alert(1)' }, { ...d, recette: 'REC-000003', url: 'http://non-securise.fr/a.jpg' }, { kind: 'autre' }, { ...d, recette: 'REC-000004', lien: 'javascript:alert(1)', mini: 'data:x' }]);
+  assert.deepEqual([...m.keys()], ['REC-000001', 'REC-000004']);
+  assert.equal(m.get('REC-000004').mini, 'https://images.pexels.com/a.jpg', 'mini non https : on retombe sur l\'url');
+  assert.ok(m.get('REC-000004').lien.startsWith('https://'));
+});

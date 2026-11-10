@@ -74,7 +74,7 @@ function Variantes({ r, personnes, appliquees, onAppliquer, premier }) {
   return html`<${Bandeau} type="info" titre="Variantes pour chacun">
     ${lignes.map((x) => html`<div key=${x.p.id}><p><${Pastille} qui=${x.p.id} label=${x.p.label} /> <strong>${x.p.label}</strong> :</p>
       <ul>${x.subs.map((s) => html`<li key=${s.index}>${s.ancien} → <strong>${s.nouveau}</strong>${s.note ? html` <span class="sous">(${s.note})</span>` : ''}</li>`)}</ul></div>`)}
-    ${premier && html`<label class="case"><input type="checkbox" checked=${appliquees} onChange=${(e) => onAppliquer(e.target.checked)} /><span>Afficher la recette adaptée pour ${lignes.find((x) => x.p.id === premier).p.label}</span></label>`}
+    ${premier && lignes.some((x) => x.p.id === premier) && html`<label class="case"><input type="checkbox" checked=${appliquees} onChange=${(e) => onAppliquer(e.target.checked)} /><span>Afficher la recette adaptée pour ${lignes.find((x) => x.p.id === premier).p.label}</span></label>`}
     <p class="note">Substitutions indicatives. La nutrition adaptée est une estimation, recalculée d'après les ingrédients remplacés.</p><//>`;
 }
 

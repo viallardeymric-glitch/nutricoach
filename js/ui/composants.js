@@ -1,5 +1,6 @@
 // Petits composants réutilisables.
-import { html } from '../../vendor/preact-htm.js';
+import { html, useState, useEffect, useRef } from '../../vendor/preact-htm.js';
+import { photoEnCache, photoDeRecette, photoPartagee, chargerReglagesPhotos } from '../core/photos.js';
 import { pictogramme } from '../data/pictogrammes.js';
 
 export function Puce({ actif, onClick, exclu, children }) {
@@ -9,6 +10,33 @@ export function Puce({ actif, onClick, exclu, children }) {
 
 export function Pictogramme({ recette, grand }) {
   return html`<span class=${'picto' + (grand ? ' grand' : '')} aria-hidden="true">${pictogramme(recette.sous_categorie, recette.categorie)}</span>`;
+}
+
+/** Pictogramme, remplacé par la miniature de la recette quand elle existe ; elle est cherchée une fois la carte restée visible à l'écran. */
+export function Vignette({ r }) {
+  const [, majPhoto] = useState(0);
+  const ref = useRef(null);
+  const c = photoEnCache(r.id);
+  const photo = c && c.url ? c : null;
+  useEffect(() => {
+    if (photo || !('IntersectionObserver' in window)) return undefined;
+    let actif = true;
+    let minuteur = null;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        minuteur = setTimeout(() => {
+          const reg = chargerReglagesPhotos();         // lus à ce moment-là : une clé saisie après le démarrage compte
+          if (!reg.miniatures || !(Object.values(reg.cles).some(Boolean) || photoPartagee(r.id))) return;
+          obs.disconnect();
+          photoDeRecette(r, fetch, { miniature: true }).then((p) => actif && p && majPhoto((n) => n + 1)).catch(() => {});
+        }, 500);                                       // 0,5 s visible : on cherche
+      } else clearTimeout(minuteur);
+    });
+    if (ref.current) obs.observe(ref.current);
+    return () => { actif = false; clearTimeout(minuteur); obs.disconnect(); };
+  }, [r.id, photo]);
+  const montrer = photo && chargerReglagesPhotos().miniatures;     // miniatures désactivées : pictogramme tout de suite
+  return html`<span class="vignette-zone" ref=${ref}>${montrer ? html`<img class="picto vignette-photo" src=${photo.mini || photo.url} alt="" loading="lazy" />` : html`<${Pictogramme} recette=${r} />`}</span>`;
 }
 
 export function Coeur({ actif, onClick }) {
@@ -58,7 +86,7 @@ export function Rang({ icone, titre, sous, href }) {
 export function MiniRecette({ r, risques = [], children, large }) {
   return html`<div class=${'mini' + (large ? ' large' : '')}>
     <a class="mini-lien" href=${'#/recette/' + r.id}>
-      <${Pictogramme} recette=${r} />
+      <${Vignette} r=${r} />
       <span class="mini-texte"><strong>${r.titre}</strong>
         <span class="sous">⏱ ${r.temps} min${r.kcal ? ` · ${r.kcal} kcal` : ''}</span>
         ${risques.length > 0 && html`<span class="alerte-carte">⚠ Déconseillé : ${risques.join(', ')}</span>`}</span>
