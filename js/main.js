@@ -22,6 +22,7 @@ import { entreeDepuisRecette, entreeDepuisProduit, repasSelonHeure, bilanJour, o
 import { cleDate } from './lib/planning.js';
 import { rayonDe } from './data/rayons.js';
 import { BarreOnglets } from './ui/composants.js';
+import { Garde } from './ui/garde.js';
 import { Accueil } from './views/accueil.js';
 import { Liste } from './views/liste.js';
 import { Semaine } from './views/semaine.js';
@@ -404,7 +405,7 @@ function App() {
 
 const racine = document.getElementById('app');
 racine.textContent = ''; // retire le « Chargement… » de départ
-render(html`<${App} />`, racine);
+render(html`<${Garde}><${App} /><//>`, racine);
 
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

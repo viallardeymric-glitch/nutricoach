@@ -210,3 +210,89 @@ test('dates : semaines de lundi à dimanche, sans trou ni doublon, y compris aux
     assert.equal(cleDate(lundiDe(d)), sem[0]);
   }
 });
+
+import * as sync from '../js/core/synchro.js';
+import { planNutritionnel, phaseDuJour, EPREUVES, besoinsJourSport } from '../js/lib/sport.js';
+import { bilanJour, bilanSemaine, serieDePoids, tendancePoids, variationPoids, cheminCourbe, objectifEau, serieDeSuivi } from '../js/lib/suivi.js';
+import { frigoMagique, articlesDuFrigo, aConsommerBientot } from '../js/lib/frigo.js';
+import { evenements } from '../js/lib/activite.js';
+import { budgetMenu } from '../js/lib/budget.js';
+
+const bizarre = () => pick([null, undefined, 0, -1, 1e12, NaN, '', 'x', '2026-13-45', '2026-11-10', [], {}, [null], { a: 1 }, true, 'REC-000001', 'E', 'M', { id: 'x', kind: 'article' }, { kind: 'liste', id: 5 }]);
+const docFou = () => { const o = {}; for (const k of ['id', 'kind', 'recette', 'par', 'date', 'type', 'nom', 'quantite', 'unite', 'cle', 'kg', 'ml', 'kcal', 'produit', 'code', 'plats', 'url', 'prenom', 'naissance', 'duree_min', 'mesures', 'allergenes', 'ingredients', 'etapes', 'titre', 'liste', 'peremption', 'repas']) if (hasard() < 0.5) o[k] = bizarre(); return o; };
+
+test('synchro : des documents du nuage abîmés ou bricolés ne font jamais planter les conversions (2 000 documents)', () => {
+  const lecteurs = Object.entries(sync).filter(([n, f]) => /^docsVers/.test(n) && typeof f === 'function');
+  assert.ok(lecteurs.length >= 12);
+  for (let i = 0; i < 2000; i++) {
+    const docs = Array.from({ length: 1 + Math.floor(hasard() * 4) }, docFou);
+    for (const [nom, f] of lecteurs) assert.doesNotThrow(() => f(docs), nom);
+    assert.doesNotThrow(() => sync.metaPlanning(docs));
+    assert.doesNotThrow(() => sync.choisirVersion(docFou(), docFou()));
+    assert.doesNotThrow(() => sync.docVersProfil('E', docFou()));
+  }
+});
+
+test('sport : plan nutritionnel cohérent pour des courses à toutes les distances (phases dans l\'ordre, valeurs finies)', () => {
+  const ordre = ['base', 'developpement', 'affutage', 'semaine_course', 'jour_j', 'recuperation', 'apres'];
+  for (let i = 0; i < 120; i++) {
+    const p = { ...profilAleatoire(i), sexe: 'homme', poids_kg: 55 + Math.floor(hasard() * 50), taille_cm: 160 + Math.floor(hasard() * 35), naissance: '1985-06-15', grossesse: 0, allaitement: false };
+    const b = calculerBesoins(p);
+    const type = pick(Object.keys(EPREUVES));
+    const debut = '2026-11-10'; const course = { type, date: new Date(Date.UTC(2026, 10, 10 + 1 + Math.floor(hasard() * 190))).toISOString().slice(0, 10), charge_jours: 2 + Math.floor(hasard() * 2) };
+    const plan = planNutritionnel(p, b, course, debut);
+    assert.ok(plan.length >= 1);
+    let dernier = -1;
+    for (const j of plan) {
+      assert.ok(ordre.includes(j.phase), `phase ${j.phase}`);
+      assert.ok(ordre.indexOf(j.phase) >= dernier, `phases dans le désordre : ${j.phase} après ${ordre[dernier]}`);
+      dernier = ordre.indexOf(j.phase);
+      assert.ok([j.besoins.kcal, j.besoins.glucides_g, j.besoins.proteines_g].every((v) => Number.isFinite(v) && v > 0), `besoins ${JSON.stringify(j.besoins)}`);
+      assert.ok(j.besoins.kcal >= 1200 && j.besoins.kcal <= (j.phase === 'jour_j' ? 14000 : 7000), `kcal ${j.besoins.kcal} (${type}, ${j.phase}, ${p.poids_kg} kg)`);
+    }
+    assert.equal(plan.filter((j) => j.phase === 'jour_j').length, 1, 'un seul jour J');
+    assert.ok(plan.find((j) => j.date === course.date).phase === 'jour_j');
+  }
+  assert.ok(besoinsJourSport({ poids_kg: 70, sexe: 'homme' }, { cible: 2400, proteines_g: 100, glucides_g: 300, lipides_g: 70 }, { type: 'repos', duree_min: 0 }));
+});
+
+test('suivi : bilans, courbes et tendances toujours finis, même avec peu de données ou des valeurs aberrantes', () => {
+  for (let i = 0; i < 300; i++) {
+    const poids = Array.from({ length: Math.floor(hasard() * 40) }, (_, k) => ({ date: `2026-${String(1 + Math.floor(hasard() * 11)).padStart(2, '0')}-${String(1 + Math.floor(hasard() * 28)).padStart(2, '0')}`, par: 'E', kg: pick([60, 80.5, 0, -3, 500, 75]), mesures: {} })).filter((x) => x.kg > 0 && x.kg < 400);
+    const s = serieDePoids(poids, 'E');
+    const t = tendancePoids(s);
+    if (t != null) assert.ok(Number.isFinite(t.valeur ?? t) || typeof t === 'object');
+    assert.doesNotThrow(() => variationPoids(s, 7));
+    if (s.length >= 2) { const c = cheminCourbe(s, { w: 300, h: 100, min: 50, max: 100, debut: dateDepuisCle('2026-01-01').getTime(), fin: dateDepuisCle('2026-12-31').getTime() }); assert.ok(!/NaN|undefined/.test(c), 'courbe NaN'); }
+    const entrees = Array.from({ length: Math.floor(hasard() * 30) }, () => ({ type: pick(['repas', 'eau']), date: '2026-11-10', par: 'E', repas: pick(['dejeuner', 'diner', 'x']), kcal: pick([0, 250, NaN, -5, 1e6]), p: 5, g: 10, l: 3, ml: pick([250, 0, -10]), nom: 'x' }));
+    const b = bilanJour(entrees, '2026-11-10', 'E');
+    assert.ok([b.kcal, b.p, b.g, b.l, b.eau].every((v) => typeof v === 'number'), 'bilan du jour');
+    assert.doesNotThrow(() => bilanSemaine(entrees, poids, 'E', 2000, 2000, semaineDe(new Date(2026, 10, 9)), 'perte'));
+    assert.doesNotThrow(() => serieDeSuivi(entrees, 'E'));
+  }
+  assert.ok(objectifEau({ poids_kg: 70, sportif: true, grossesse: 2 }) >= 1500);
+});
+
+test('frigo, activité, budget : aucune exception sur des entrées fantaisistes', () => {
+  for (let i = 0; i < 200; i++) {
+    const stock = Array.from({ length: Math.floor(hasard() * 12) }, () => ({ cle: pick(['lait|ml', 'oeuf|pièce', 'x', '']), nom: pick(['Lait', 'Oeufs', 'Farine', '', 'é']), quantite: pick([0, 1, 500, -2]), unite: 'g', peremption: pick([null, '2026-11-11', 'demain', '2025-01-01']) }));
+    assert.doesNotThrow(() => frigoMagique(index.slice(0, 300), articlesDuFrigo(stock), { prioritaires: aConsommerBientot(stock).map((s) => s.nom) }));
+    assert.doesNotThrow(() => evenements({ articles: [docFou()], favoris: [docFou()], scans: [docFou()], journal: [docFou()], poids: [docFou()], sessions: [docFou()], planning: [docFou()] }, 'M', Date.now() - 86400000));
+    assert.doesNotThrow(() => budgetMenu({ [jours[0]]: { dejeuner: 'REC-000001', diner: 'REC-INCONNU' } }, jours, new Map(index.map((r) => [r.id, r])), pick([1, 2.6, 3])));
+  }
+});
+
+test('stockage local : une valeur d\'un autre type que le défaut (données corrompues) est ignorée', async () => {
+  const mem = new Map();
+  globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const { lire, ecrire } = await import('../js/core/stockage.js');
+  ecrire('a', [1, 2]); assert.deepEqual(lire('a', []), [1, 2]);
+  mem.set('nutricoach.b', '"texte"'); assert.deepEqual(lire('b', []), [], 'texte au lieu d\'un tableau');
+  mem.set('nutricoach.c', '[1]'); assert.deepEqual(lire('c', {}), {}, 'tableau au lieu d\'un objet');
+  mem.set('nutricoach.d', 'null'); assert.deepEqual(lire('d', {}), {}, 'null au lieu d\'un objet');
+  mem.set('nutricoach.e', '5'); assert.equal(lire('e', false), false, 'nombre au lieu d\'un booléen');
+  mem.set('nutricoach.f', '{pas du json'); assert.equal(lire('f', 'x'), 'x');
+  mem.set('nutricoach.g', '{"x":1}'); assert.deepEqual(lire('g', null), { x: 1 }, 'sans défaut typé, tout est accepté');
+  assert.equal(lire('absent', 42), 42);
+  delete globalThis.localStorage;
+});

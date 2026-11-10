@@ -47,6 +47,8 @@ Défauts trouvés et corrigés : (1) le bouton « congeler » apparaissait pour 
 | Formulaire « Nouvelle recette » : débordement horizontal | Affichage | Champs de grille réductibles |
 | Test du glisser-déposer instable (défilement animé) | Qualité des tests | Défilement instantané, 3 passages consécutifs sans échec |
 | 27 imports et variables inutilisés | Maintenance | Supprimés |
+| Données locales corrompues (bon JSON, mauvais type) : page blanche définitive | Robustesse | Lecture locale qui ignore une valeur d'un autre type que le défaut ; filet de sécurité (`Garde`) avec « Recharger » et « Réparer » si un écran plante ; testé (30 jeux de données corrompues, 22 écrans) |
+| Un document de sessions de batch abîmé dans le nuage (plat vide) faisait planter la lecture | Robustesse | Documents invalides ignorés ; test sur 2 000 documents aléatoires pour toutes les conversions de synchro |
 
 **Mesures** (processeur ×4 plus lent, 4G lente, première visite sans cache) : premier écran 4,2 s, puis liste des recettes 63 ms, recherche 45 ms, génération de la semaine 0,6 s, autre repas 0,16 s ; 1,6 Mo téléchargés la première fois (l'index de 1 Mo est compressé à 128 Ko sur GitHub Pages).
 

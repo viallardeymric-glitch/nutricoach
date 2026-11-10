@@ -947,6 +947,17 @@ await p.waitForSelector('.fiche h1', { timeout: 8000 }).then(() => verif(true, '
 await p.goto(serveur.url + '/#/recettes');
 await p.waitForSelector('.carte', { timeout: 8000 }).then(() => verif(true, 'liste affichée hors ligne'), () => verif(false, 'liste affichée hors ligne'));
 
+// Données locales corrompues (bon JSON, mauvais type) : l'appli démarre quand même et affiche ses écrans
+{
+  const c2 = await navigateur.newContext({ viewport: { width: 390, height: 844 } });
+  await modeLocal(c2);
+  await c2.addInitScript(() => { if (!sessionStorage.getItem('init')) { sessionStorage.setItem('init', '1'); const g = { favoris: '"texte"', planning: '[1,2]', 'col.notes': '5', 'col.pantry': '[]', 'col.profiles': '"x"', appareils: '"x"', 'planning.recents': '5', rayons: 'null', 'photos.reglages': '[]', theme: '7', moi: '"E"' }; for (const [k, v] of Object.entries(g)) localStorage.setItem('nutricoach.' + k, v); } });
+  const p2 = await c2.newPage(); const err2 = [];
+  p2.on('pageerror', (e) => err2.push(e.message));
+  for (const r of ['#/', '#/semaine', '#/courses', '#/plus', '#/recettes', '#/profil']) { await p2.goto(serveur.url + '/' + r); await p2.waitForTimeout(500); if ((await p2.evaluate(() => document.body.innerText.trim().length)) < 25) err2.push('écran vide ' + r); }
+  verif(err2.length === 0, 'données locales corrompues : l\'appli démarre et affiche ses écrans ' + err2.join(' | '));
+  await c2.close();
+}
 const vraiesErreurs = erreurs.filter((e) => !/Content Security Policy/.test(e));       // la seule violation CSP attendue est celle du test de sécurité
 verif(vraiesErreurs.length === 0, 'aucune erreur console ' + vraiesErreurs.join(' | '));
 await navigateur.close();

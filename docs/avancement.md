@@ -1,7 +1,7 @@
 # Avancement par rapport au cahier des charges
 
 Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire. Dernière mise à jour : novembre 2026.
-La suite de contrôles : 135 tests unitaires, vérification des 1 610 recettes et de la syntaxe de tous les modules, affichage des 1 610 fiches, deux parcours complets dans Chromium au format téléphone (mode local, puis synchro à deux téléphones simulés). La connexion réelle à Firebase, la vraie API Open Food Facts, la vraie API Gemini et un vrai iPhone/Android n'ont **pas** pu être testés depuis l'environnement de développement.
+La suite de contrôles : environ 210 tests unitaires (dont 18 tests « propriétés » sur plus de 9 000 cas aléatoires), vérification des 1 610 recettes et de la syntaxe de tous les modules, affichage des 1 610 fiches, un parcours complet dans Chromium au format téléphone (mode local, environ 255 contrôles), un parcours de synchro à deux téléphones simulés (environ 62 contrôles), un test « singe » (clics et saisies au hasard), un audit d'accessibilité (axe-core) et un test de données locales corrompues. La connexion réelle à Firebase, les vraies API Open Food Facts / Gemini / Groq / Pexels / Unsplash et un vrai iPhone/Android n'ont **pas** pu être testés depuis l'environnement de développement (voir `docs/audit.md`).
 
 ## Décisions confirmées
 - **Recettes : 1 610** (confirmé : le catalogue n'est pas porté à 10 000 pour le moment). Le pipeline de génération IA par lots (§5.4) n'est donc pas écrit.
