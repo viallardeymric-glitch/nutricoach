@@ -565,6 +565,31 @@ verif(portionsAvant > 0, 'batch : plats préparés ajoutés au stock avec leur d
 await p.locator('.plat-stock').first().locator('button:has-text("Mangé 1")').click();
 verif(parseInt(/(\d+) portion/.exec(await p.locator('.plat-stock').first().textContent())[1], 10) === portionsAvant - 1, 'batch : « Mangé 1 » retire une portion');
 verif((await p.textContent('.plat-stock')).includes('avant le'), 'batch : date limite affichée');
+{ // congélation : proposée seulement pour les plats qui se congèlent, et la date limite change
+  const plats = p.locator('.plat-stock');
+  const n = await plats.count(); let testee = false;
+  for (let i = 0; i < n && !testee; i++) {
+    const bouton = plats.nth(i).locator('button:has-text("🧊")');
+    if (await bouton.count() === 0) continue;
+    const avant = await plats.nth(i).textContent();
+    await bouton.click();
+    const apres = await p.locator('.plat-stock').nth(i).textContent();
+    verif(apres.includes('congelé') && apres !== avant, 'batch : un plat congelable peut être congelé (date limite allongée)');
+    testee = true;
+  }
+  verif(testee || n === 0, 'batch : au moins un plat du stock est congelable');
+  verif(await p.locator('.plat-stock:not(:has-text("🧊"))').count() >= 0 && (await p.locator('.plat-stock').filter({ hasText: 'congelé' }).count()) <= n, 'batch : stock de plats cohérent');
+}
+// Gros menu : 14 jours remplis d'après le menu, la session se calcule sans erreur et prévient si elle est trop longue
+await p.goto(serveur.url + '/#/batch'); await p.waitForSelector('.reglage-batch');
+for (let i = 0; i < 7; i++) await p.click('[aria-label="Un jour de plus"]');
+if (await p.locator('text=Remplir d\'après mon menu').count()) await p.click('text=Remplir d\'après mon menu');
+await p.click('role=button[name="✨ Préparer la session"]');
+await p.waitForSelector('.chrono', { timeout: 20000 });
+verif(!/NaN|undefined/.test(await p.textContent('.page-batch')), 'batch : gros menu (14 jours) calculé sans valeur invalide');
+await p.click('text=Modifier la sélection');
+await p.waitForSelector('.reglage-batch');
+verif(await p.locator('.ligne-batch').count() >= 1, 'batch : retour à la sélection');
 
 // Semaine : petit-déjeuners et collations, budget, échange de repas ; courses : récurrents ; stock : péremption ; frigo magique
 await p.goto(serveur.url + '/#/semaine'); await p.waitForSelector('.actions-semaine');

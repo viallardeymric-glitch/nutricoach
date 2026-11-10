@@ -28,3 +28,7 @@ Règles d'alerte, régimes médicaux, guide grossesse, score santé, consignes m
 
 ## Chiffres
 Aucun débordement horizontal, aucune erreur console sur les 23 écrans, aucune page de plus de 2,5 s au chargement dans l'environnement de test. Index des recettes : 128 Ko compressé.
+
+## Vérification du batch cooking (novembre 2026)
+600 sessions simulées au hasard sur le catalogue (1 à 6 recettes, 4 configurations d'appareils) : étapes jamais perdues, ordre respecté, jamais deux tâches manuelles en même temps, capacité des appareils respectée, aucune valeur invalide, dates et étiquettes cohérentes. Une version allégée (300 sessions) fait partie des tests automatiques.
+Défauts trouvés et corrigés : (1) le bouton « congeler » apparaissait pour des plats non congelables ; (2) le Thermomix ne tenait pas compte de la capacité du bol (plusieurs fournées) ; (3) aucun avertissement quand un appareil nécessaire (four, Thermomix, Cookeo) n'était pas coché ; (4) aucun message si les recettes choisies ne pouvaient plus être chargées.

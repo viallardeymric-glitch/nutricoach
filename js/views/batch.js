@@ -44,6 +44,7 @@ export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, perso
         const recette = await chargerFiche(catalogue, id);
         if (recette) selection.push({ recette, portions: portionsPourRepas(repas[id], portionsRepas) });
       }
+      if (!selection.length) { setMessage({ type: 'alerte', texte: 'Aucune des recettes choisies n\'a pu être chargée (recette supprimée ?). Choisissez-en d\'autres.' }); setEnCours(false); return; }
       const planning = planningSession(selection, { dureeDispo, appareils });
       const cond = conditionnement(selection, aujourdhui, parBoite);
       const { articles, enStock: couverts } = deduireStock(articlesBatch(selection), stock);
@@ -76,7 +77,7 @@ export function Batch({ plan, catalogue, index, sessions, ops, stock, moi, perso
           <div><strong>${p.titre}</strong><span class="sous">${p.restant} portion${p.restant > 1 ? 's' : ''} · ${p.congele ? '🧊 congelé' : 'frigo'} · avant le ${fr(p.limite)}</span>
             ${p.perime ? html`<span class="alerte-carte">⛔ Date dépassée : ne pas consommer</span>` : p.urgent ? html`<span class="alerte-carte">⚠ À manger en premier</span>` : ''}</div>
           <div class="puces sans-marge"><button type="button" class="mini-action" aria-label=${`Manger une portion de ${p.titre}`} onClick=${() => manger(p)}>Mangé 1</button>
-            ${p.congelationMois !== 0 && html`<button type="button" class="mini-action" aria-label=${`Congeler ${p.titre}`} onClick=${() => congeler(p)}>${p.congele ? 'Sorti' : '🧊'}</button>`}</div></div>`)}
+            ${p.limiteCongelation && html`<button type="button" class="mini-action" aria-label=${`Congeler ${p.titre}`} onClick=${() => congeler(p)}>${p.congele ? 'Sorti' : '🧊'}</button>`}</div></div>`)}
         <p class="note">Les plats sont classés par date limite. Décongelez toujours au réfrigérateur et réchauffez à cœur.</p><//>`}
       ${!resultat ? html`
         <${Section} titre="1. Que prépare-t-on ?">

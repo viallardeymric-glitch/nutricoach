@@ -3,6 +3,7 @@
 import { dureeEtape } from './cuisine.js';
 import { fusionner, arrondirCourses } from './courses.js';
 import { cleDate, dateDepuisCle, ajouterJours } from './planning.js';
+import { capaciteBol, recetteThermomix } from './thermomix.js';
 
 const DUREE_ACTIVE_PAR_DEFAUT = 4;      // minutes pour une étape sans durée indiquée
 const PRECHAUFFAGE_MIN = 10;
@@ -62,15 +63,27 @@ function classer(etape, appareils) {
 export function planningSession(selection, { dureeDispo = null, appareils = {} } = {}) {
   const cap = { plaque: appareils.plaques || 3, four: appareils.four === false ? 0 : 2, thermomix: appareils.thermomix ? 1 : 0, cookeo: appareils.cookeo ? 1 : 0, multicuiseur: appareils.multicuiseur ? 1 : 0 };
   const files = { plaque: [], four: [], thermomix: [], cookeo: [], multicuiseur: [] };     // heures de libération des places
-  const recettes = selection.map(({ recette }) => ({
-    r: recette, i: 0, pret: 0,
-    etapes: recette.etapes.map((e) => ({ e, ...classer(e, appareils) })),
-  }));
+  const avertissements = [];
+  const recettes = selection.map(({ recette, portions }) => {
+    const etapes = recette.etapes.map((e) => ({ e, ...classer(e, appareils) }));
+    // Thermomix : le bol (2,2 L) ne contient pas toujours les quantités d'une session. Au-delà, on cuisine en plusieurs fournées.
+    if (appareils.thermomix && portions && recetteThermomix(recette)) {
+      const bol = capaciteBol(recette, portions, appareils.modele || 'TM6');
+      if (bol.fournees > 1) {
+        for (const x of etapes) if (x.ressource === 'thermomix') x.duree *= bol.fournees;
+        avertissements.push(`${recette.titre} : trop volumineux pour un seul bol Thermomix pour ${portions} portions. Comptez ${bol.fournees} fournées (environ ${bol.portionsParFournee} portions chacune) : la durée du Thermomix est multipliée d'autant.`);
+      }
+    }
+    // Appareil absent : on prévient (l'étape reste planifiée sans contrainte d'appareil)
+    if (appareils.four === false && etapes.some((x) => x.ressource === 'four')) avertissements.push(`${recette.titre} utilise le four, que vous n'avez pas coché dans vos appareils (Plus › Appareils de cuisine).`);
+    if (appareils.thermomix === false && recetteThermomix(recette)) avertissements.push(`${recette.titre} est écrite pour le Thermomix, que vous n'avez pas coché dans vos appareils : les durées sont comptées comme du travail manuel.`);
+    if (appareils.cookeo === false && recette.etapes.some((e) => e.reglages && e.reglages.pression)) avertissements.push(`${recette.titre} utilise l'autocuiseur (Cookeo), que vous n'avez pas coché dans vos appareils.`);
+    return { r: recette, i: 0, pret: 0, etapes };
+  });
   for (const x of recettes) x.passifTotal = x.etapes.filter((s) => !s.actif).reduce((t, s) => t + s.duree, 0);
   const taches = [];
   let tMain = 0;
   let sequentiel = 0;
-  const avertissements = [];
   const libre = (res, depuis) => {
     if (!res || cap[res] === undefined) return depuis;
     if (cap[res] === 0) return depuis;                      // pas d'appareil de ce type : géré comme une étape sans contrainte
@@ -161,5 +174,5 @@ export function platsEnStock(sessions, aujourdhui = new Date()) {
 
 /** Entrée d'une session pour le stock : un plat par recette avec ses boîtes. */
 export function platsDeSession(cond) {
-  return cond.map((c) => ({ recette: c.recette, titre: c.titre, portions: c.portions, restant: c.portions, limiteFrigo: c.limiteFrigo, limiteCongelation: c.limiteCongelation, congele: false }));
+  return cond.map((c) => ({ recette: c.recette, titre: c.titre, portions: c.portions, restant: c.portions, limiteFrigo: c.limiteFrigo, limiteCongelation: c.limiteCongelation, congelationMois: c.congelationMois, congele: false }));
 }

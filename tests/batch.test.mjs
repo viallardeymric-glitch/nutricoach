@@ -112,3 +112,63 @@ test('durées vraisemblables : aucune tâche de plus de 8 h, session de 3 recett
   assert.equal(simple.taches[1].fin - simple.taches[1].debut, 30, '30 min restent 30 min');
   assert.ok(simple.duree >= 30 && simple.duree <= 45);
 });
+
+import { aleatoire } from '../js/lib/planning.js';
+const CATALOGUE = JSON.parse(readFileSync(new URL('../data/recettes.json', import.meta.url), 'utf8'));
+
+test('batch sur le catalogue : 300 sessions au hasard, planning cohérent (étapes, ordre, capacités, durées, dates)', () => {
+  const hasard = aleatoire(777);
+  const CONF = [{ plaques: 3, four: true }, { plaques: 2, four: true, thermomix: true, modele: 'TM6', cookeo: true }, { plaques: 4, four: false }, { plaques: 1, four: true, thermomix: true, multicuiseur: true }];
+  for (let essai = 0; essai < 300; essai++) {
+    const k = 1 + Math.floor(hasard() * 6);
+    const sel = Array.from({ length: k }, () => ({ recette: CATALOGUE[Math.floor(hasard() * CATALOGUE.length)], portions: portionsPourRepas(1 + Math.floor(hasard() * 4), 1 + Math.floor(hasard() * 4)) }));
+    if (new Set(sel.map((s) => s.recette.id)).size !== sel.length) continue;
+    const app = CONF[essai % CONF.length];
+    const p = planningSession(sel, { dureeDispo: 180, appareils: app });
+    const id = sel.map((s) => s.recette.id).join(',');
+    assert.equal(p.taches.length, sel.reduce((t, s) => t + s.recette.etapes.length, 0), `étapes perdues : ${id}`);
+    assert.ok([p.duree, p.sequentiel, p.gain, p.lavages].every(Number.isFinite), `NaN : ${id}`);
+    assert.ok(p.taches.every((t) => t.fin > t.debut && t.debut >= 0), `durées : ${id}`);
+    assert.ok(p.duree <= 1500, `session de ${p.duree} min : ${id}`);
+    const actives = p.taches.filter((t) => t.actif).sort((a, b) => a.debut - b.debut);
+    for (let i = 1; i < actives.length; i++) assert.ok(actives[i].debut >= actives[i - 1].fin, `deux tâches actives en même temps : ${id}`);
+    for (const s of sel) {
+      const t = p.taches.filter((x) => x.recette === s.recette.id).sort((a, b) => a.etape - b.etape);
+      for (let i = 1; i < t.length; i++) { assert.ok(t[i].debut >= t[i - 1].debut, `ordre des étapes : ${s.recette.id}`); if (t[i - 1].actif) assert.ok(t[i].debut >= t[i - 1].fin, `étape lancée avant la fin de la précédente : ${s.recette.id}`); }
+    }
+    const cap = { plaque: app.plaques, four: app.four === false ? 0 : 2, thermomix: app.thermomix ? 1 : 0, cookeo: app.cookeo ? 1 : 0, multicuiseur: app.multicuiseur ? 1 : 0 };
+    for (const [res, max] of Object.entries(cap)) if (max) for (const t of p.taches.filter((x) => !x.actif && x.ressource === res)) assert.ok(p.taches.filter((u) => !u.actif && u.ressource === res && u.debut <= t.debut && u.fin > t.debut).length <= max, `capacité ${res} dépassée : ${id}`);
+    for (const c of conditionnement(sel, '2026-11-10', 1 + (essai % 4))) {
+      assert.ok(c.boites * c.portionsParBoite >= c.portions && c.limiteFrigo > c.preparation && !/undefined|NaN/.test(texteEtiquette(c)));
+      if (c.limiteCongelation) assert.ok(c.limiteCongelation > c.limiteFrigo);
+    }
+    for (const a of articlesBatch(sel)) assert.ok(a.quantite > 0 && Number.isFinite(a.quantite), `article invalide : ${id}`);
+  }
+});
+
+test('batch Thermomix : trop de portions pour le bol → fournées, durée multipliée et avertissement', () => {
+  const r = CATALOGUE.find((x) => x.etapes.some((e) => e.reglages && e.reglages.vitesse) && x.ingredients.length > 4);
+  const peu = planningSession([{ recette: r, portions: r.portions_base }], { appareils: { plaques: 3, four: true, thermomix: true, modele: 'TM6' } });
+  const enorme = planningSession([{ recette: r, portions: r.portions_base * 6 }], { appareils: { plaques: 3, four: true, thermomix: true, modele: 'TM6' } });
+  assert.ok(enorme.avertissements.some((a) => /fournées/.test(a)), 'avertissement fournées');
+  assert.ok(enorme.duree > peu.duree, 'durée plus longue');
+  assert.ok(!peu.avertissements.some((a) => /fournées/.test(a)));
+});
+
+test('stock de plats : congélation proposée seulement si le plat se congèle', () => {
+  const cond = conditionnement([{ recette: { id: 'A', titre: 'A', conservation: { frigo_jours: 3, congelation_mois: 3 }, ingredients: [], etapes: [] }, portions: 4 }, { recette: { id: 'B', titre: 'B', conservation: { frigo_jours: 2, congelation_mois: 0 }, ingredients: [], etapes: [] }, portions: 2 }], '2026-11-10', 2);
+  const plats = platsDeSession(cond);
+  assert.ok(plats[0].limiteCongelation && plats[0].congelationMois === 3);
+  assert.equal(plats[1].limiteCongelation, null);
+  assert.equal(plats[1].congelationMois, 0);
+});
+
+test('batch : avertissement quand un appareil nécessaire n\'est pas coché', () => {
+  const four = CATALOGUE.find((x) => x.appareil_principal === 'four' && x.etapes.some((e) => /four/i.test(e.texte)));
+  const thermo = CATALOGUE.find((x) => x.etapes.some((e) => e.reglages && e.reglages.vitesse));
+  const w = planningSession([{ recette: four, portions: 4 }, { recette: thermo, portions: thermo.portions_base }], { appareils: { plaques: 3, four: false, thermomix: false } }).avertissements.join(' ');
+  assert.match(w, /four, que vous n'avez pas coché/);
+  assert.match(w, /Thermomix, que vous n'avez pas coché/);
+  const ok = planningSession([{ recette: four, portions: 4 }], { appareils: { plaques: 3, four: true, thermomix: true } }).avertissements.join(' ');
+  assert.doesNotMatch(ok, /pas coché/);
+});
