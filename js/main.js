@@ -88,8 +88,8 @@ const ONGLETS = [
   { id: 'coach', href: '#/coach', icone: '💬', nom: 'Coach' },
   { id: 'plus', href: '#/plus', icone: '☰', nom: 'Plus' },
 ];
-// Grossesse déclarée : l'onglet Grossesse prend la place du Planning (toujours accessible depuis l'Accueil et « Plus »).
-const ONGLETS_GROSSESSE = [ONGLETS[0], ONGLETS[2], { id: 'grossesse', href: '#/grossesse', icone: '🤰', nom: 'Grossesse' }, ONGLETS[3], ONGLETS[4]];
+// Grossesse déclarée : l'onglet Grossesse s'ajoute aux autres (6 entrées, la caméra au centre).
+const ONGLETS_GROSSESSE = [ONGLETS[0], ONGLETS[1], ONGLETS[2], { id: 'grossesse', href: '#/grossesse', icone: '🤰', nom: 'Grossesse' }, ONGLETS[3], ONGLETS[4]];
 // Appli « native » : pas de zoom au pincement ni au double toucher (Safari iOS ignore user-scalable : on bloque aussi les gestes).
 for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, (e) => e.preventDefault());
 const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);

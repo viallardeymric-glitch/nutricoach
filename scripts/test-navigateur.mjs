@@ -275,10 +275,10 @@ await p.fill('input[aria-label="Chercher un aliment"]', '');
 await p.click('.puce:has-text("Autorisé")');
 verif(await p.locator('.carte-grossesse.ok').count() > 5 && await p.locator('.carte-grossesse.interdit').count() === 0, 'grossesse : filtre « Autorisé »');
 verif((await p.getAttribute('.onglets a.actif', 'href')) === '#/grossesse' && await p.locator('.onglets a:has-text("Grossesse")').count() === 1, 'grossesse : onglet dédié dans la barre du bas, actif sur la page');
-verif(await p.locator('.onglets a').count() === 5, 'ergonomie : 5 entrées au plus dans la barre du bas (grossesse déclarée)');
+verif(await p.locator('.onglets a').count() === 6 && await p.locator('.onglets a:has-text("Planning")').count() === 1, 'ergonomie : grossesse déclarée → 6 entrées, le Planning reste dans la barre');
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
 verif(await p.evaluate(() => document.querySelector('.contenu').firstElementChild.classList.contains('carte-profil')), 'plus : le profil est en premier');
-{ const t = await p.textContent('.contenu'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : Recettes, Ma semaine, Courses et Suivi sont dans « Plus »'); }
+{ const t = await p.textContent('.contenu'); verif(['Recettes', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : Recettes, Courses et Suivi sont dans « Plus »'); }
 await p.goto(serveur.url + '/#/'); await p.waitForSelector('.raccourcis');
 { const t = await p.textContent('.raccourcis'); verif(['Recettes', 'Ma semaine', 'Courses', 'Suivi'].every((n) => t.includes(n)), 'ergonomie : raccourcis vers Recettes, Ma semaine, Courses et Suivi sur l\'accueil'); }
 await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');

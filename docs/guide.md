@@ -60,7 +60,7 @@ Le zoom (pincement, double toucher) est bloqué. Quand une grossesse ou un allai
 Dans Profil → Coach IA, ajoutez aussi une clé Groq (gratuite, console.groq.com/keys). L'appli interroge alors Gemini et Groq en même temps et affiche la première réponse (le nom de l'IA est indiqué sous la réponse). Groq ne lit pas les photos ni les PDF : dans ce cas, seul Gemini répond. Les clés restent sur le téléphone.
 
 ## Barre du bas simplifiée
-5 entrées : Accueil, Planning, 📷 Scanner, Coach, Plus (quand une grossesse est déclarée : Accueil, Scanner, Grossesse, Coach, Plus). Recettes, Planning, Courses et Suivi sont aussi sur l'Accueil et dans « Plus ». Marie a le thème rose par défaut (changeable dans Plus).
+5 entrées : Accueil, Planning, 📷 Scanner, Coach, Plus (quand une grossesse est déclarée, l'onglet Grossesse s'ajoute : Accueil, Planning, Scanner, Grossesse, Coach, Plus). Recettes, Planning, Courses et Suivi sont aussi sur l'Accueil et dans « Plus ». Marie a le thème rose par défaut (changeable dans Plus).
 
 ## Un coach qui connaît toute l'appli
 Si « Personnaliser les réponses » est coché, le coach reçoit : votre profil et celui de votre conjoint(e) (grossesse, allaitement, allergies, régimes), vos enfants, votre objectif sportif et la phase du jour, votre menu, vos courses, votre frigo (et ce qu'il faut consommer vite), votre poids et votre journal du jour. Il a des bases de santé publique (grossesse, allaitement, enfants, sport) mais **n'est pas un médecin** : il ne fait pas de diagnostic, ne touche à aucun traitement, renvoie vers un professionnel et vers le 15 en cas d'urgence. En grossesse et allaitement, chaque réponse est suivie d'un rappel « je ne suis pas médecin ».
