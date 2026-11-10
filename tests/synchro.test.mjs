@@ -86,3 +86,20 @@ test('stock et scans', () => {
   const l = docsVersScans([sc, { code: 'abc', produit: { nom: 'x' } }, { code: '3017620422003', produit: {} }, { ...sc, code: '5449000000996', t: sc.t + 5 }]);
   assert.deepEqual(l.map((x) => x.code), ['5449000000996', '3017620422003']);
 });
+
+import { journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour } from '../js/core/synchro.js';
+test('journal et poids : documents valides, privé masqué à l\'autre', () => {
+  const r = journalVersDoc({ type: 'repas', date: '2026-11-09', par: 'E', repas: 'diner', nom: 'Soupe', kcal: 250.4, p: 8, g: 30, l: 9, source: 'recette', ref: 'REC-000001' });
+  const e = journalVersDoc({ type: 'eau', date: '2026-11-09', par: 'M', ml: 250.2 });
+  assert.ok([r, e].every((d) => Object.values(d).every((v) => v !== undefined)));
+  assert.equal(e.ml, 250);
+  const l = docsVersJournal([{ ...r, id: 'a' }, { ...e, id: 'b' }, { type: 'repas', date: 'hier', par: 'E', nom: 'x' }, { type: 'eau', date: '2026-11-09', par: 'Z', ml: 1 }, { type: 'repas', date: '2026-11-09', par: 'E' }]);
+  assert.equal(l.length, 2);
+  const p = poidsVersDoc({ date: '2026-11-09', par: 'M', kg: 61.8, mesures: { tour_taille: 70, hanches: NaN, bras: 0 }, prive: true });
+  assert.deepEqual(p.mesures, { tour_taille: 70 });
+  assert.equal(idDocPoids('2026-11-09', 'M'), '2026-11-09_M');
+  assert.equal(docsVersPoids([{ ...p, id: 'x' }, { date: '2026-11-09', par: 'E', kg: 5 }]).length, 1);
+  const items = [{ par: 'M', prive: true, kg: 1 }, { par: 'E', prive: false, kg: 2 }, { par: 'E', prive: true, kg: 3 }];
+  assert.deepEqual(visiblePour(items, 'M').map((x) => x.kg), [1, 2]);
+  assert.deepEqual(visiblePour(items, 'E').map((x) => x.kg), [2, 3]);
+});

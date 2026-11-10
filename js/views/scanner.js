@@ -91,6 +91,7 @@ export function Produit({ code, scans, moi, profil, ops, articlesListe }) {
   const [attenteAlt, setAttenteAlt] = useState(false);
   const [retour, setRetour] = useState(null);
   const [essai, setEssai] = useState(0);
+  const [grammes, setGrammes] = useState(100);
 
   useEffect(() => {
     if (enCache) { setProduit(enCache.produit); setStatut('ok'); return undefined; }
@@ -158,6 +159,9 @@ export function Produit({ code, scans, moi, profil, ops, articlesListe }) {
       <button type="button" class=${'bouton secondaire' + (favori ? ' on' : '')} aria-pressed=${favori} onClick=${() => basculer('favoriPar')}>${favori ? '♥ Favori' : '♡ Favori'}</button>
       <button type="button" class=${'bouton secondaire' + (eviter ? ' on' : '')} aria-pressed=${eviter} onClick=${() => basculer('eviterPar')}>🚫 À éviter</button>
     </div>
+    <div class="ligne-journal"><span>📓 Au journal :</span><button type="button" aria-label="Moins" onClick=${() => setGrammes((g) => Math.max(10, g - 10))}>−</button><output>${grammes} g</output>
+      <button type="button" aria-label="Plus" onClick=${() => setGrammes((g) => g + 10)}>+</button>
+      <button type="button" class="bouton" onClick=${() => { ops.ajouterAuJournal(produit, grammes); setRetour(`Ajouté au journal : ${grammes} g.`); }}>Ajouter</button></div>
     ${dansLaListe && html`<button type="button" class="bouton secondaire large" onClick=${() => { ops.cocher(dansLaListe); setRetour(`« ${dansLaListe.nom} » coché dans votre liste.`); }}>✓ Cocher « ${dansLaListe.nom} » dans ma liste</button>`}
 
     <h2 class="petit-titre">Pourquoi cette note ?</h2>

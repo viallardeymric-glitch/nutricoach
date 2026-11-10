@@ -205,6 +205,28 @@ verif((await marie.textContent('.sans-marge-liste')).includes('Yaourt nature'), 
 await marie.goto(serveur.url + '/#/produit/3017620422003'); await marie.waitForSelector('.produit .jauge');
 verif((await marie.textContent('.bandeau.alerte')).includes('lait'), 'le même produit : alerte selon le profil de Marie (lait)');
 
+// 4 quinquies. Suivi partagé : journal, hydratation, poids (et « privé »)
+await eymric.goto(serveur.url + '/#/suivi'); await eymric.waitForSelector('.bilan-jour');
+await eymric.locator('section.section:has(h2:text-is("☀️ Déjeuner")) .ajout').click();
+await eymric.click('.ajout-repas .puce:text-is("Libre")');
+await eymric.locator('.ajout-repas input[type=text]').first().fill('Soupe maison');
+await eymric.getByLabel('kcal', { exact: true }).fill('200');
+await eymric.click('.ajout-repas button[type=submit]');
+await eymric.click('role=button[name="＋ Un verre (250 ml)"]');
+const docsJ = [...base.keys()].filter((k) => k.startsWith('households/foyer/journal/'));
+verif(docsJ.length === 2 && docsJ.some((k) => base.get(k).type === 'eau' && base.get(k).ml === 250) && docsJ.some((k) => base.get(k).nom === 'Soupe maison' && base.get(k).par === 'E'), 'journal et eau écrits dans households/foyer/journal/…');
+await eymric.click('role=tab[name="Poids"]'); await eymric.getByLabel('Poids (kg)').fill('80,5'); await eymric.click('role=button[name="Enregistrer"]');
+const docPoids = [...base.keys()].filter((k) => /households\/foyer\/weights\/\d{4}-\d{2}-\d{2}_E$/.test(k));
+verif(docPoids.length === 1 && base.get(docPoids[0]).kg === 80.5, 'poids écrit dans households/foyer/weights/AAAA-MM-JJ_E');
+await marie.goto(serveur.url + '/#/nous');
+await marie.waitForSelector('.carte-nous >> text=200 kcal', { timeout: 2000 }).then(
+  () => verif(true, '« Nous deux » : Marie voit le journal d\'Eymric (200 kcal) en moins de 2 s'), async () => { verif(false, 'journal partagé'); console.log('   DEBUG', (await marie.textContent('.contenu')).replace(/\s+/g, ' ').slice(0, 400)); });
+verif((await marie.textContent('.contenu')).includes('80,5 kg'), '« Nous deux » : Marie voit le poids d\'Eymric (partagé par défaut)');
+await eymric.getByLabel('Poids (kg)').fill('80,5');
+await eymric.check('.case input'); await eymric.click('role=button[name="Enregistrer"]');
+await marie.waitForFunction(() => !document.body.textContent.includes('80,5 kg'), null, { timeout: 2000 }).then(
+  () => verif(true, 'option « privé » : le poids n\'apparaît plus chez Marie'), () => verif(false, 'poids privé masqué'));
+
 // 5. Favoris déjà gardés en local avant la connexion : ils rejoignent le nuage
 const tardif = await telephone('Tardif');
 await tardif.goto(serveur.url + '/');

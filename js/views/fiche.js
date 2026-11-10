@@ -51,7 +51,7 @@ function Ingredients({ liste, facteur }) {
 }
 
 /** Contenu d'une fiche déjà chargée (composant pur : utilisé aussi par scripts/verifier-affichage.mjs). */
-export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil }) {
+export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil, onMange }) {
   const facteur = portions / r.portions_base;
   const t = r.temps;
   const c = r.conservation;
@@ -74,6 +74,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
       <${AlerteProfil} r=${r} moi=${moi} profil=${profil} />
       <${Avertissements} liste=${r.deconseille_a} />
       <a class="bouton cuisiner" href=${`#/cuisine/${r.id}?p=${portions}`}>👩‍🍳 Cuisiner pas à pas</a>
+      ${onMange && html`<button type="button" class="bouton secondaire large" onClick=${() => onMange(1)}>📓 Je l'ai mangé (1 portion au journal)</button>`}
       ${r.allergenes.length > 0 && html`<div class="etiquettes" aria-label="Allergènes">
         <strong>Contient :</strong>
         ${r.allergenes.map((a) => html`<span class="etiquette allergene">${lib(ALLERGENES, a)}</span>`)}</div>`}
@@ -122,7 +123,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
 }
 
 /** Charge la fiche complète puis l'affiche. */
-export function Fiche({ id, index, favori, onFavori, moi, profil }) {
+export function Fiche({ id, index, favori, onFavori, moi, profil, onMange }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [portions, setPortions] = useState(1);
@@ -156,5 +157,5 @@ export function Fiche({ id, index, favori, onFavori, moi, profil }) {
   }
   const choisir = (f) => setPortions((p) => { const v = typeof f === 'function' ? f(p) : f; ecrire('portionsDefaut', v); return v; });
   return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${choisir}
-    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} /></div>`;
+    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} /></div>`;
 }

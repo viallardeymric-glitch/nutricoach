@@ -31,7 +31,7 @@ function Message({ m }) {
   </div>`;
 }
 
-export function Coach({ profil, besoins, prenom, repasSemaine, saison }) {
+export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi }) {
   const [reg, setReg] = useState(chargerReglagesCoach);
   const [messages, setMessages] = useState(chargerConversation);
   const [saisie, setSaisie] = useState('');
@@ -46,7 +46,7 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison }) {
     const suite = [...messages, { role: 'user', texte: t }];
     setMessages(suite); setSaisie(''); setErreur(''); setEnCours(true);
     try {
-      const contexte = reg.partagerProfil ? construireContexte({ profil, besoins, prenom, repasSemaine, saison }) : construireContexte({ saison });
+      const contexte = reg.partagerProfil ? construireContexte({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi }) : construireContexte({ saison });
       const reponse = await demanderAuCoach({ cle: reg.cle, modele: reg.modele, historique: suite.slice(-20), contexte });
       const final = [...suite, { role: 'coach', texte: reponse }];
       setMessages(final); enregistrerConversation(final);

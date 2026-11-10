@@ -11,7 +11,7 @@ const risquesDe = (r, profil) => {
   return r.risques.filter((x) => miens.includes(x)).map((x) => lib(PROFILS, x).toLowerCase());
 };
 
-export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris }) {
+export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange }) {
   const [nonce, setNonce] = useState(0);
   const [rapide, setRapide] = useState(false);
   const maintenant = new Date();
@@ -41,7 +41,7 @@ export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleK
         ${REPAS.map((rp) => {
           const r = parId.get(aujourdhui[rp.id]);
           return r ? html`<div class="repas-jour" key=${rp.id}><span class="repas-nom">${rp.icone} ${rp.nom}</span>
-              <${MiniRecette} r=${r} risques=${risquesDe(r, profil)} /></div>`
+              <${MiniRecette} r=${r} risques=${risquesDe(r, profil)}>${onMange && html`<button type="button" class="mini-action" aria-label=${`J'ai mangé : ${r.titre}`} onClick=${() => onMange(r.id, rp.id)}>✓ Mangé</button>`}<//></div>`
             : html`<div class="repas-jour vide" key=${rp.id}><span class="repas-nom">${rp.icone} ${rp.nom}</span>
               <span class="sous">Rien de prévu</span></div>`;
         })}

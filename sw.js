@@ -18,6 +18,8 @@ const FICHIERS = [
   'vendor/preact-htm.js', 'vendor/firebase.js', 'vendor/zxing.js', 'vendor/LISEZMOI.txt',
   'js/data/regimes.js',
   'js/lib/index-entree.js',
+  'js/lib/suivi.js',
+  'js/views/suivi.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

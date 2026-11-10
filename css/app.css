@@ -370,3 +370,32 @@ p { margin: 0 0 .5rem; }
   body { background: #fff; color: #000; padding: 0; }
   .articles { box-shadow: none; border: 1px solid #ccc; }
 }
+
+/* ---------- Suivi ---------- */
+.nav-jour { display: flex; align-items: center; justify-content: space-between; margin: .2rem 0 .8rem; }
+.nav-jour button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--carte); box-shadow: var(--ombre); font-size: 1.3rem; color: var(--accent); }
+.nav-jour button:disabled { opacity: .35; }
+.bilan-jour { background: var(--carte); border-radius: var(--rayon); box-shadow: var(--ombre); padding: .9rem 1rem; }
+.barre-macro { margin: .5rem 0; }
+.barre-tete { display: flex; justify-content: space-between; font-size: .85rem; color: var(--gris); }
+.hydratation .verres { display: flex; flex-wrap: wrap; gap: .1rem; font-size: 1.4rem; }
+.hydratation .verres span { opacity: .25; } .hydratation .verres span.plein { opacity: 1; }
+.entree-journal { display: flex; align-items: center; gap: .5rem; background: var(--carte); border-radius: 12px; padding: .5rem .7rem; margin: .35rem 0; }
+.entree-journal > span:first-child { flex: 1; min-width: 0; }
+.ajout-repas { background: var(--carte); border-radius: var(--rayon); box-shadow: var(--ombre); padding: .7rem; }
+.ligne-choix { display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; background: var(--fond); border: 0; border-radius: 12px; padding: .6rem .8rem; margin: .3rem 0; min-height: 48px; }
+.champ-recherche { width: 100%; height: 48px; padding: 0 1rem; font-size: 16px; border: 1px solid var(--bord); border-radius: var(--rayon-bouton); background: var(--fond); color: var(--texte); margin: .3rem 0; }
+.portions.petit { margin: .3rem 0; }
+.courbe { width: 100%; height: auto; background: var(--carte); border-radius: var(--rayon); box-shadow: var(--ombre); }
+.grille-svg { stroke: var(--bord); stroke-width: 1; } .axe { fill: var(--gris); font-size: 9px; }
+.legende { display: flex; gap: 1rem; margin: .4rem 0; font-size: .9rem; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; text-align: center; margin: .6rem 0; }
+.stats > div { background: var(--carte); border-radius: 12px; padding: .5rem .2rem; display: flex; flex-direction: column; box-shadow: var(--ombre); }
+.stats strong { font-size: 1.15rem; color: var(--accent); }
+.barres-semaine { display: flex; gap: .4rem; align-items: flex-end; height: 90px; margin: .6rem 0; }
+.barres-semaine > div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.barres-semaine span { display: block; width: 100%; background: var(--accent); border-radius: 6px 6px 0 0; min-height: 3px; }
+
+.ligne-journal { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; flex-wrap: wrap; }
+.ligne-journal button:not(.bouton) { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--accent); background: var(--carte); color: var(--accent); font-size: 1.3rem; }
+.ligne-journal .bouton { min-height: 44px; margin-left: auto; }

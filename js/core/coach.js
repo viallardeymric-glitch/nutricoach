@@ -22,7 +22,7 @@ Règles de sécurité :
 Tu peux proposer des idées de repas, équilibrer la semaine, expliquer une recette ou conseiller des substitutions.`;
 
 /** Texte de contexte (profil et menu) envoyé au coach, uniquement si la personne l'a accepté. */
-export function construireContexte({ profil, besoins, prenom, repasSemaine = [], saison }) {
+export function construireContexte({ profil, besoins, prenom, repasSemaine = [], saison, lignesSuivi = [] }) {
   const lignes = [];
   if (saison) lignes.push(`Saison : ${saison}.`);
   if (profil) {
@@ -41,6 +41,7 @@ export function construireContexte({ profil, besoins, prenom, repasSemaine = [],
     if (profil.conditions && profil.conditions.length) lignes.push(`Conditions : ${profil.conditions.join(', ')}.`);
   }
   if (repasSemaine.length) lignes.push('Menu de la semaine : ' + repasSemaine.join(' ; ') + '.');
+  for (const l of lignesSuivi) lignes.push(l);
   return lignes.join('\n');
 }
 

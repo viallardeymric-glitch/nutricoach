@@ -7,7 +7,7 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
@@ -15,6 +15,8 @@ import { calculerBesoins } from './lib/besoins.js';
 import { profilComplet } from './lib/profils.js';
 import { contraintesCouple, semaineDe, nomJour, REPAS, saisonDe } from './lib/planning.js';
 import { cleArticle, ajouterAuStock } from './lib/courses.js';
+import { entreeDepuisRecette, entreeDepuisProduit, repasSelonHeure, bilanJour, objectifEau, serieDePoids } from './lib/suivi.js';
+import { cleDate } from './lib/planning.js';
 import { rayonDe } from './data/rayons.js';
 import { BarreOnglets } from './ui/composants.js';
 import { Accueil } from './views/accueil.js';
@@ -28,12 +30,13 @@ import { Connexion } from './views/connexion.js';
 import { Verrou } from './views/verrou.js';
 import { NousDeux } from './views/nous-deux.js';
 import { Courses } from './views/courses.js';
+import { Suivi } from './views/suivi.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
 import { Plus, appliquerTheme } from './views/plus.js';
 
 /**
  * Écran courant d'après l'ancre. Retourne { ecran, id?, portions?, section? } avec ecran parmi
- * accueil, recettes, favoris, semaine, courses, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
+ * accueil, recettes, favoris, semaine, courses, suivi, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
  */
 export function lireRoute(hash) {
   const [chemin, requete = ''] = hash.split('?');
@@ -45,10 +48,10 @@ export function lireRoute(hash) {
   if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
   if (m) return { ecran: 'profil', section: m[1] || null };
-  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
+  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
-const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', scan: 'scan', produit: 'scan', scans: 'scan',
+const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', scan: 'scan', produit: 'scan', scans: 'scan',
   plus: 'plus', sources: 'plus', coach: 'plus', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
@@ -68,6 +71,7 @@ const ONGLETS = [
   { id: 'semaine', href: '#/semaine', icone: '📅', nom: 'Planning' },
   { id: 'scan', href: '#/scan', icone: '📷', nom: 'Scanner', centre: true },
   { id: 'courses', href: '#/courses', icone: '🛒', nom: 'Courses' },
+  { id: 'suivi', href: '#/suivi', icone: '📈', nom: 'Suivi' },
   { id: 'plus', href: '#/plus', icone: '☰', nom: 'Plus' },
 ];
 const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -174,7 +178,21 @@ function App() {
     ecrireStock: (s) => colStock.ecrire(idDocStock(s.cle), stockVersDoc(s)),
     supprimerStock: (s) => colStock.supprimer(idDocStock(s.cle)),
   };
+  const colJournal = useCollection('journal', session.docsJournal, connecte);
+  const colPoids = useCollection('weights', session.docsPoids, connecte);
+  const journal = useMemo(() => visiblePour(docsVersJournal(colJournal.items), moi), [colJournal.items, moi]);
+  const poids = useMemo(() => visiblePour(docsVersPoids(colPoids.items), moi), [colPoids.items, moi]);
+  const opsSuivi = {
+    ecrireJournal: (e) => colJournal.ecrire(e.id, journalVersDoc(e)),
+    supprimerJournal: (id) => colJournal.supprimer(id),
+    ecrirePoids: (p) => colPoids.ecrire(idDocPoids(p.date, p.par), poidsVersDoc(p)),
+  };
+  const mangerRecette = (id, repas, portions = 1) => {
+    const r = recettes && recettes.find((x) => x.id === id);
+    if (r) opsSuivi.ecrireJournal({ ...entreeDepuisRecette(r, portions, repas || repasSelonHeure(), moi, cleDate(new Date())), id: nouvelId() });
+  };
   const opsScan = {
+    ajouterAuJournal: (p, grammes) => opsSuivi.ecrireJournal({ ...entreeDepuisProduit(p, grammes, repasSelonHeure(), moi, cleDate(new Date())), id: nouvelId() }),
     ecrireScan: (s) => colScans.ecrire(s.code, scanVersDoc(s)),
     ajouterAuxCourses: (p) => opsCourses.ecrireArticle({ id: nouvelId(), liste: 'semaine', nom: p.nom, quantite: 1, unite: 'pièce', cle: cleArticle(p.nom, 'pièce'),
       rayon: rayonDe(`${p.nom} ${(p.categories || []).join(' ').replace(/-/g, ' ')}`), par: moi, source: 'scan', coche: false, cochePar: '', recettes: [] }),
@@ -196,6 +214,16 @@ function App() {
       .map((rp) => `${nomJour(new Date(j + 'T12:00:00'))} ${rp.nom.toLowerCase()} : ${parId.get(plan[j][rp.id]) || '?'}`));
   }, [recettes, plan]);
 
+  const lignesSuivi = useMemo(() => {
+    const aujourdhui = cleDate(new Date());
+    const b = bilanJour(journal, aujourdhui, moi);
+    const l = [`Aujourd'hui : ${b.kcal} kcal consommées${besoins ? ` sur ${besoins.cible} (il reste ${Math.max(0, besoins.cible - b.kcal)})` : ''}, protéines ${b.p} g, glucides ${b.g} g, lipides ${b.l} g, eau ${b.eau} ml sur ${objectifEau(profil)}.`];
+    const noms = Object.values(b.repas).flat().map((e) => e.nom);
+    if (noms.length) l.push(`Mangé aujourd'hui : ${noms.join(', ')}.`);
+    const s = serieDePoids(poids, moi);
+    if (s.length) l.push(`Dernier poids : ${s[s.length - 1].kg} kg (${s[s.length - 1].date}).`);
+    return l;
+  }, [journal, poids, besoins, moi, profil]);
   // --- Écrans qui remplacent l'appli : verrou, chargement, connexion, choix de la personne.
   if (verrouille && pin) return html`<${Verrou} enreg=${pin} onDeverrouiller=${() => setVerrouille(false)} />`;
   if (session.statut === 'chargement') return html`<p class="etat">Chargement…</p>`;
@@ -213,26 +241,28 @@ function App() {
         moi=${moi} profil=${profil} onAppliquerProfil=${() => changerProfil({ ...profil, appliquer: profil.appliquer === false })} />
     </div>
     ${route.ecran === 'accueil' && html`<${Accueil} moi=${moi} profil=${profil} besoins=${besoins} index=${recettes} plan=${plan}
-      contraintes=${contraintes} cibleKcal=${cibleKcal} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} />`}
+      contraintes=${contraintes} cibleKcal=${cibleKcal} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
       ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} />`}
     ${route.ecran === 'courses' && html`<${Courses} donnees=${donneesCourses} stock=${stock} ops=${opsCourses} moi=${moi}
       profils=${{ [moi]: profil, [autre]: profilAutre }} plan=${plan} catalogue=${index} />`}
+    ${route.ecran === 'suivi' && html`<${Suivi} moi=${moi} profil=${profil} besoins=${besoins} journal=${journal} poids=${poids} ops=${opsSuivi}
+      index=${recettes || []} plan=${plan} scans=${scans} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
     ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
     ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
     ${route.ecran === 'coach' && html`<${Coach} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
-      repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} />`}
+      repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'nous' && html`<${NousDeux} moi=${moi} profils=${session.profils} favorisNuage=${session.favorisNuage}
-      erreurSynchro=${session.erreurSynchro} />`}
+      erreurSynchro=${session.erreurSynchro} journal=${journal} poids=${poids} />`}
     ${route.ecran === 'profil' && html`<${Profil} moi=${moi} profil=${profil} onMoi=${changerMoi} onChange=${changerProfil} section=${route.section}
       compte=${{ actif: session.actif, email: session.email, onDeconnecter: () => deconnecter() }}
       pin=${{ defini: Boolean(pin), onDefinir: async (code) => { const e = await creerPin(code); enregistrerPin(e); setPin(e); },
         onRetirer: () => { retirerPin(); setPin(null); setVerrouille(false); } }} />`}
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
-      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} />`}
+      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} />`}
     ${!plein && html`<${BarreOnglets} onglets=${ONGLETS} actif=${ONGLET_DE[route.ecran]} />`}`;
 }
