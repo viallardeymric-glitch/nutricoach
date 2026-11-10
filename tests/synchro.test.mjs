@@ -112,3 +112,12 @@ test('enfants du foyer : documents valides, seuls les enfants sont retenus', () 
   assert.deepEqual(l.map((x) => x.id), ['enfant-1']);
   assert.deepEqual(l[0].allergenes, ['arachides']);
 });
+
+import { seanceVersDoc, docsVersSeances } from '../js/core/synchro.js';
+test('séances de sport : documents valides', () => {
+  const d = seanceVersDoc({ date: '2026-11-08', par: 'E', type: 'longue', duree_min: 95.4, distance_km: 16.04, source: 'gpx' });
+  assert.ok(Object.values(d).every((v) => v !== undefined));
+  assert.deepEqual([d.duree_min, d.distance_km], [95, 16]);
+  assert.equal(seanceVersDoc({ date: 'x', par: 'E', type: 'bizarre', duree_min: 5 }).type, 'courte');
+  assert.deepEqual(docsVersSeances([{ ...d, id: 'a' }, { ...d, id: 'b', par: 'Z' }, { ...d, id: 'c', duree_min: 0 }, { ...d, id: 'd', date: '2026-11-10' }]).map((x) => x.id), ['d', 'a']);
+});

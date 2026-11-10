@@ -180,7 +180,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
       ${section === 'regimes' && html`
         <${Groupe} titre="Régimes du catalogue" aide="Cumulables : les recettes affichées respectent tous vos choix."><${Choix}>${Object.keys(REGIMES).filter((k) => !REGIMES_DEJA_AILLEURS.includes(k)).map((k) => html`<${Puce} key=${k}
           actif=${p.regimes.includes(k)} onClick=${() => maj({ regimes: basculer(p.regimes, k) })}>${REGIMES[k]}<//>`)}<//><//>
-        ${['mode', 'populaire', 'exclusion', 'medical'].map((fam) => html`<${Groupe} key=${fam} titre=${FAMILLES_REGIMES[fam]} aide=${fam === 'medical' ? RAPPEL_MEDICAL : null}>
+        ${['mode', 'populaire', 'exclusion', 'medical', 'sport'].map((fam) => html`<${Groupe} key=${fam} titre=${FAMILLES_REGIMES[fam]} aide=${fam === 'medical' ? RAPPEL_MEDICAL : null}>
           <${Choix}>${Object.entries(REGIMES_AVANCES).filter(([, r]) => r.famille === fam).map(([k, r]) => html`<${Puce} key=${k} actif=${p.regimes.includes(k)}
             onClick=${() => maj({ regimes: basculer(p.regimes, k) })}>${r.nom}<//>`)}<//><//>`)}
         ${p.regimes.some((k) => REGIMES_AVANCES[k]) && html`<${Bandeau} type="info" titre="Vos régimes">

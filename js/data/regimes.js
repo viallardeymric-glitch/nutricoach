@@ -9,6 +9,7 @@ export const FAMILLES_REGIMES = {
   populaire: 'Régimes populaires',
   exclusion: 'Exclusions',
   medical: 'Médicaux (avis médical obligatoire)',
+  sport: 'Sport',
 };
 
 const ingr = (r) => (r._ingr !== undefined ? r._ingr : normaliser((r.ingredients || []).join(' | ')));
@@ -41,6 +42,11 @@ export const REGIMES_AVANCES = {
   points: R('populaire', 'Suivi de points maison', 'Chaque recette a des points (calculés par NutriCoach) ; vous gardez un budget de points par jour.', () => true, { points: true }),
   hypocalorique: R('populaire', 'Hypocalorique', '400 kcal ou moins par portion.', (r) => r.regimes.includes('hypocalorique') || r.kcal <= 400),
   hypercalorique: R('populaire', 'Hypercalorique', '600 kcal ou plus par portion.', (r) => r.kcal >= 600),
+  // Sport (recettes pour l'effort)
+  sport_pre: R('sport', 'Avant l\'effort', 'Riche en glucides, peu de graisses et de fibres.', (r) => r.nut.g >= 45 && r.nut.l <= 15 && r.nut.f <= 6),
+  sport_glucides: R('sport', 'Riche en glucides', '60 g de glucides ou plus par portion.', (r) => r.nut.g >= 60),
+  sport_recup: R('sport', 'Récupération', 'Au moins 20 g de protéines et 35 g de glucides.', (r) => r.nut.p >= 20 && r.nut.g >= 35),
+  sport_veille: R('sport', 'Veille de course', 'Riche en glucides, pauvre en fibres et en graisses.', (r) => r.nut.g >= 50 && r.nut.f <= 5 && r.nut.l <= 20),
   // Exclusions
   sans_oeuf: R('exclusion', 'Sans œuf', 'Aucun œuf.', (r) => !r.allergenes.includes('oeuf')),
   sans_arachide: R('exclusion', 'Sans arachide', 'Aucune arachide.', (r) => !r.allergenes.includes('arachides')),

@@ -392,6 +392,51 @@ verif((await p.locator('.page-courses .bandeau').first().textContent()).includes
 await p.fill('input[aria-label="Ajouter un article"]', 'cacahuètes'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
 verif(await p.locator('.article', { hasText: 'Cacahuètes' }).locator('.alerte-article.rouge .pastille.enfant').count() === 1, 'courses : cacahuètes signalées pour Léa (allergie), pastille enfant');
 
+// Sport : objectif de course, plan par phases, import de séances, charge en glucides
+const plusJours = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+await p.goto(serveur.url + '/#/sport'); await p.waitForSelector('text=Objectif sportif');
+await p.click('.puce:text-is("Marathon")');
+await p.getByLabel('Date de l\'épreuve').fill(plusJours(60));
+await p.click('role=button[name="Générer mon plan nutritionnel"]');
+await p.waitForSelector('.pastille-info');
+verif(/J-60/.test(await p.textContent('.pastille-info')) && (await p.textContent('.pastille-info')).includes('Développement'), 'sport : J-60, phase « Développement »');
+verif((await p.textContent('.contenu')).includes('Ne testez rien de nouveau'), 'sport : rappel « rien de nouveau le jour J »');
+verif(await p.locator('.jour-sport').count() === 14, 'sport : plan des 14 prochains jours');
+verif((await p.textContent('.contenu')).includes('g par heure'), 'sport : stratégie de ravitaillement (glucides par heure)');
+const kcalAvant = parseInt((await p.locator('.bilan-jour .stats strong').first().textContent()), 10);
+const jourGpx = new Date().toISOString().slice(0, 10);
+const gpx = `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="48.8566" lon="2.3522"><ele>35</ele><time>${jourGpx}T06:00:00Z</time></trkpt><trkpt lat="48.9566" lon="2.3522"><ele>60</ele><time>${jourGpx}T07:30:00Z</time></trkpt><trkpt lat="49.0566" lon="2.3522"><ele>50</ele><time>${jourGpx}T09:00:00Z</time></trkpt></trkseg></trk></gpx>`;
+await p.setInputFiles('input[aria-label="Importer des séances"]', { name: 'sortie-longue.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(gpx) });
+await p.waitForSelector('text=1 séance importée');
+verif((await p.textContent('.contenu')).includes('séance importée') && (await p.textContent('.contenu')).includes('Sortie longue'), 'sport : séance GPX importée (sortie longue de 3 h)');
+const kcalApres = parseInt((await p.locator('.bilan-jour .stats strong').first().textContent()), 10);
+verif(kcalApres > kcalAvant, `sport : le plan s'ajuste à la séance importée (${kcalAvant} → ${kcalApres} kcal aujourd'hui)`);
+const csv = `Date;Type;Durée (min);Distance (km)\n${plusJours(1)};Fractionné VMA;55;9\n${plusJours(2)};Footing;45;7`;
+await p.setInputFiles('input[aria-label="Importer des séances"]', { name: 'seances.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+await p.waitForSelector('text=2 séances importées');
+await p.setInputFiles('input[aria-label="Importer des séances"]', { name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ plan: [{ date: plusJours(3), type: 'Sortie longue', duree: 110, distance: 18 }] })) });
+await p.waitForSelector('text=1 séance importée');
+verif(await p.locator('.sport-seances .article, .contenu .articles .article').count() >= 4, 'sport : séances importées (GPX, CSV, JSON) listées');
+await p.setInputFiles('input[aria-label="Importer des séances"]', { name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('rien d\'utile') });
+await p.waitForSelector('text=Aucune séance reconnue');
+verif(true, 'sport : fichier non reconnu signalé clairement');
+await p.click('text=Modifier mon objectif');
+await p.getByLabel('Date de l\'épreuve').fill(plusJours(2));
+await p.click('role=button[name="Générer mon plan nutritionnel"]');
+await p.waitForSelector('.pastille-info');
+verif((await p.textContent('.pastille-info')).includes('J-2') && (await p.textContent('.pastille-info')).includes('Semaine de course'), 'sport : J-2, semaine de course');
+verif((await p.locator('.jour-sport.special').allTextContents()).filter((t) => /charge glucides/.test(t)).length >= 2, 'sport : charge en glucides affichée sur les 2 jours avant');
+verif((await p.textContent('.contenu')).includes('pauvres en fibres'), 'sport : veille de course : repas pauvres en fibres');
+await p.goto(serveur.url + '/#/semaine'); await p.waitForSelector('.actions-semaine');
+verif((await p.textContent('.contenu')).includes('Menus adaptés à votre préparation sportive'), 'semaine : menus adaptés à la préparation');
+await p.goto(serveur.url + '/#/'); await p.waitForSelector('.carte-sport');
+verif((await p.textContent('.carte-sport')).includes('J-2'), 'accueil : carte « J-2 » avec les besoins du jour');
+await p.goto(serveur.url + '/#/sport'); await p.waitForSelector('.pastille-info');
+p.once('dialog', (d) => d.accept());
+await p.click('text=Supprimer l\'objectif');
+await p.waitForSelector('text=Objectif sportif');
+verif(true, 'sport : objectif supprimé');
+
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
 await p.click('.puce:text-is("Rose")');

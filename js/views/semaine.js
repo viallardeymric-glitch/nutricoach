@@ -13,7 +13,7 @@ function resumeContraintes(c) {
   return t.length ? t.join(', ') : 'aucune contrainte particulière';
 }
 
-export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, profil, personnes, enfants = [] }) {
+export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, profil, personnes, enfants = [], parJour = {} }) {
   const [decalage, setDecalage] = useState(0);
   const maintenant = new Date();
   const lundi = ajouterJours(lundiDe(maintenant), decalage * 7);
@@ -26,7 +26,7 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
   const nbRepas = jours.reduce((n, j) => n + Object.keys(plan[j] || {}).length, 0);
 
   const completer = (base) => {
-    const { plan: suivant, manquants } = genererSemaine(index, jours, base, { contraintes, saison, cibleKcal, graine: graine(jours[0] + '|' + Date.now()) });
+    const { plan: suivant, manquants } = genererSemaine(index, jours, base, { contraintes, saison, cibleKcal, parJour, graine: graine(jours[0] + '|' + Date.now()) });
     const changes = {};
     for (const j of jours) if (JSON.stringify(suivant[j]) !== JSON.stringify(base[j] || {})) changes[j] = suivant[j];
     ecrireJours(changes);
@@ -59,6 +59,7 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
     <//>
     <div class="contenu">
       <p class="note">Menus pensés pour ${[...personnes.map((id) => PERSONNES[id].prenom), ...enfants.map((e) => e.prenom)].join(', ').replace(/, ([^,]*)$/, ' et $1')} : ${resumeContraintes(contraintes)}.</p>
+      ${Object.keys(parJour).some((j) => jours.includes(j)) && html`<p class="note">🏃 Menus adaptés à votre préparation sportive : calories et glucides selon la charge, repas riches en glucides les jours de charge, pauvres en fibres la veille.</p>`}
       <div class="actions-semaine">
         <button type="button" class="bouton" disabled=${!index} onClick=${() => completer(plan)}>✨ ${nbRepas ? 'Compléter la semaine' : 'Générer ma semaine'}</button>
         ${nbRepas > 0 && html`<button type="button" class="bouton secondaire" onClick=${toutRefaire}>Tout refaire</button>`}

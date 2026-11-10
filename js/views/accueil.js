@@ -5,13 +5,14 @@ import { PROFILS, lib } from '../data/libelles.js';
 import { REPAS, cleDate, lundiDe, nomJour, nomMois, saisonDe, proposer, graine } from '../lib/planning.js';
 import { profilsARisque } from '../lib/profils.js';
 import { Entete, Section, MiniRecette, Pictogramme } from '../ui/composants.js';
+import { PHASES } from '../lib/sport.js';
 
 const risquesDe = (r, profil) => {
   const miens = profil && profil.appliquer !== false ? profilsARisque(profil) : [];
   return r.risques.filter((x) => miens.includes(x)).map((x) => lib(PROFILS, x).toLowerCase());
 };
 
-export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange }) {
+export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleKcal, changerJour, nuage, nbFavoris, onMange, sportJour }) {
   const [nonce, setNonce] = useState(0);
   const [rapide, setRapide] = useState(false);
   const maintenant = new Date();
@@ -37,6 +38,7 @@ export function Accueil({ moi, profil, besoins, index, plan, contraintes, cibleK
       ${besoins && html`<p class="pastille-info">🎯 Objectif du jour : <strong>${besoins.cible} kcal</strong></p>`}
     <//>
     <div class="contenu">
+      ${sportJour && html`<a class="carte-sport" href="#/sport"><span>🏃</span><span><strong>${sportJour.reste > 0 ? `J-${sportJour.reste}` : sportJour.reste === 0 ? 'Jour J' : `J+${-sportJour.reste}`} · ${PHASES[sportJour.phase]}</strong><span class="sous">${sportJour.besoins.kcal} kcal · ${sportJour.besoins.glucides_g} g de glucides aujourd'hui</span></span></a>`}
       <${Section} titre="Aujourd'hui" lien=${{ href: '#/semaine', nom: 'Voir la semaine' }}>
         ${REPAS.map((rp) => {
           const r = parId.get(aujourdhui[rp.id]);

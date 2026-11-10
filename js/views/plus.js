@@ -52,6 +52,7 @@ export function Plus({ nuage, section }) {
         <${Rang} icone="💬" titre="Coach IA" sous="Posez vos questions" href="#/coach" />
         <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />
         ${nuage && html`<${Rang} icone="👫" titre="Nous deux" sous="Votre situation à tous les deux" href="#/nous" />`}
+        <${Rang} icone="🏃" titre="Sport et compétition" sous="Plan nutritionnel, séances, ravitaillement" href="#/sport" />
         <${Rang} icone="🕘" titre="Historique des scans" sous="Produits scannés, partagés" href="#/scans" />
         <${Rang} icone="👤" titre="Profil" sous="Informations, objectifs, régimes, sécurité" href="#/profil" />
         <${Rang} icone="📚" titre="Sources et règles d'alerte" sous="HAS, ANSES, Santé publique France, PNNS" href="#/sources" />

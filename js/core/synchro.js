@@ -149,3 +149,14 @@ export function docsVersEnfants(docs) {
   return docs.filter((d) => /^enfant-/.test(String(d.id)) && d.prenom && /^\d{4}-\d{2}-\d{2}$/.test(d.naissance || ''))
     .map((d) => ({ id: d.id, prenom: d.prenom, naissance: d.naissance, allergenes: d.allergenes || [], regimes: d.regimes || [], exclusions: d.exclusions || '', appliquer: d.appliquer !== false, dansMenus: d.dansMenus !== false, modifie: d.modifie || 0 }));
 }
+
+// ---------- Séances de sport (workouts) ----------
+export function seanceVersDoc(s) {
+  return { date: s.date, par: s.par, type: ['courte', 'longue', 'fractionne'].includes(s.type) ? s.type : 'courte', duree_min: Math.round(s.duree_min || 0),
+    distance_km: Math.round((s.distance_km || 0) * 10) / 10, denivele_m: Math.round(s.denivele_m || 0), source: s.source || 'manuel', t: s.t || Date.now() };
+}
+export function docsVersSeances(docs) {
+  return docs.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') && PERSONNES_IDS.includes(d.par) && d.duree_min > 0)
+    .map((d) => ({ id: d.id, date: d.date, par: d.par, type: d.type, duree_min: d.duree_min, distance_km: d.distance_km || 0, denivele_m: d.denivele_m || 0, source: d.source || 'manuel' }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}

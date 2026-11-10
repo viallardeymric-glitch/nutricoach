@@ -20,6 +20,8 @@ const FICHIERS = [
   'js/lib/index-entree.js',
   'js/lib/suivi.js',
   'js/views/suivi.js',
+  'js/lib/sport.js',
+  'js/views/sport.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

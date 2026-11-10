@@ -14,6 +14,7 @@ export function useSession() {
   const [docsStock, setDocsStock] = useState(null);
   const [docsScans, setDocsScans] = useState(null);
   const [docsProfils, setDocsProfils] = useState(null);
+  const [docsSeances, setDocsSeances] = useState(null);
   const [docsJournal, setDocsJournal] = useState(null);
   const [docsPoids, setDocsPoids] = useState(null);
   const [erreurSynchro, setErreurSynchro] = useState(false);
@@ -29,7 +30,7 @@ export function useSession() {
   }, []);
 
   useEffect(() => {
-    if (statut !== 'connecte') { setProfils(null); setFavorisNuage(null); setPlanningNuage(null); setDocsCourses(null); setDocsStock(null); setDocsScans(null); setDocsJournal(null); setDocsPoids(null); setDocsProfils(null); return undefined; }
+    if (statut !== 'connecte') { setProfils(null); setFavorisNuage(null); setPlanningNuage(null); setDocsCourses(null); setDocsStock(null); setDocsScans(null); setDocsJournal(null); setDocsPoids(null); setDocsProfils(null); setDocsSeances(null); return undefined; }
     const erreur = () => setErreurSynchro(true);
     const a1 = nuage.ecouterCollection('profiles', (docs) => {
       setErreurSynchro(false);
@@ -45,8 +46,9 @@ export function useSession() {
     const a6 = nuage.ecouterCollection('scans', setDocsScans, erreur);
     const a7 = nuage.ecouterCollection('journal', setDocsJournal, erreur);
     const a8 = nuage.ecouterCollection('weights', setDocsPoids, erreur);
-    return () => { a1(); a2(); a3(); a4(); a5(); a6(); a7(); a8(); };
+    const a9 = nuage.ecouterCollection('workouts', setDocsSeances, erreur);
+    return () => { a1(); a2(); a3(); a4(); a5(); a6(); a7(); a8(); a9(); };
   }, [statut]);
 
-  return { actif, statut, email, profils, favorisNuage, planningNuage, docsCourses, docsStock, docsScans, docsJournal, docsPoids, docsProfils, erreurSynchro };
+  return { actif, statut, email, profils, favorisNuage, planningNuage, docsCourses, docsStock, docsScans, docsJournal, docsPoids, docsProfils, docsSeances, erreurSynchro };
 }

@@ -102,7 +102,7 @@ export function proposer(recettes, c, options) {
  * Vise au moins 2 repas de poisson et 2 végétariens par semaine quand les contraintes le permettent.
  * Retourne { plan, manquants } (manquants : repas pour lesquels rien ne convenait).
  */
-export function genererSemaine(recettes, jours, plan, { contraintes, saison, cibleKcal, graine: g = 1 }) {
+export function genererSemaine(recettes, jours, plan, { contraintes, saison, cibleKcal, graine: g = 1, parJour = {} }) {
   const hasard = aleatoire(g);
   const suivant = {};
   for (const j of jours) suivant[j] = { ...(plan[j] || {}) };
@@ -130,8 +130,12 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
 
   const manquants = [];
   for (const [j, repas] of vides) {
-    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1 };
-    let choix = proposer(recettes, contraintes, { ...options, filtre: exigences.get(`${j}|${repas}`) || (() => true) });
+    const pj = parJour[j] || {};                                    // sport : cible et filtre propres à la journée
+    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1 };
+    const exigence = exigences.get(`${j}|${repas}`) || (() => true);
+    const filtreJour = pj.filtre || (() => true);
+    let choix = proposer(recettes, contraintes, { ...options, filtre: (r) => exigence(r) && filtreJour(r) });
+    if (!choix.length) choix = proposer(recettes, contraintes, { ...options, filtre: filtreJour });
     if (!choix.length) choix = proposer(recettes, contraintes, options); // exigence impossible : on prend le meilleur plat
     if (!choix.length) { manquants.push([j, repas]); continue; }
     suivant[j][repas] = choix[0].id;

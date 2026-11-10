@@ -401,3 +401,18 @@ p { margin: 0 0 .5rem; }
 .ligne-journal .bouton { min-height: 44px; margin-left: auto; }
 
 .pastille.enfant { background: #f5a623; }
+
+/* ---------- Sport ---------- */
+.jour-sport { display: flex; align-items: center; gap: .7rem; background: var(--carte); border-radius: 12px; padding: .5rem .8rem; margin: .35rem 0; }
+.jour-sport.special { border-left: 5px solid var(--accent); background: var(--accent-clair); }
+.js-date { display: flex; flex-direction: column; min-width: 56px; }
+.js-texte { flex: 1; display: flex; flex-direction: column; }
+.js-kcal { text-align: right; display: flex; flex-direction: column; font-weight: 600; }
+.jour-sport small, .js-kcal small { color: var(--gris); font-weight: 400; font-size: .78rem; }
+.sans-marge-h { margin: 0; }
+.fichier { cursor: pointer; position: relative; }
+.fichier input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+
+.carte-sport { display: flex; align-items: center; gap: .8rem; background: var(--accent-clair); border-radius: var(--rayon); padding: .8rem 1rem; margin: .8rem 0; color: inherit; text-decoration: none; }
+.carte-sport > span:first-child { font-size: 1.8rem; }
+.carte-sport > span:last-child { display: flex; flex-direction: column; }

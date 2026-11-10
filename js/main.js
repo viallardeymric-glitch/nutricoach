@@ -7,7 +7,7 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, seanceVersDoc, docsVersSeances, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
@@ -31,12 +31,14 @@ import { Verrou } from './views/verrou.js';
 import { NousDeux } from './views/nous-deux.js';
 import { Courses } from './views/courses.js';
 import { Suivi } from './views/suivi.js';
+import { Sport } from './views/sport.js';
+import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
 import { Plus, appliquerTheme } from './views/plus.js';
 
 /**
  * Écran courant d'après l'ancre. Retourne { ecran, id?, portions?, section? } avec ecran parmi
- * accueil, recettes, favoris, semaine, courses, suivi, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
+ * accueil, recettes, favoris, semaine, courses, suivi, sport, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
  */
 export function lireRoute(hash) {
   const [chemin, requete = ''] = hash.split('?');
@@ -48,10 +50,10 @@ export function lireRoute(hash) {
   if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
   if (m) return { ecran: 'profil', section: m[1] || null };
-  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
+  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
-const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', scan: 'scan', produit: 'scan', scans: 'scan',
+const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
   plus: 'plus', sources: 'plus', coach: 'plus', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
@@ -182,6 +184,12 @@ function App() {
   const colPoids = useCollection('weights', session.docsPoids, connecte);
   const journal = useMemo(() => visiblePour(docsVersJournal(colJournal.items), moi), [colJournal.items, moi]);
   const poids = useMemo(() => visiblePour(docsVersPoids(colPoids.items), moi), [colPoids.items, moi]);
+  const colSeances = useCollection('workouts', session.docsSeances, connecte);
+  const seances = useMemo(() => docsVersSeances(colSeances.items), [colSeances.items]);
+  const opsSport = {
+    ecrireSeance: (s) => colSeances.ecrire(`${s.date}-${s.par}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`, seanceVersDoc(s)),
+    supprimerSeance: (id) => colSeances.supprimer(id),
+  };
   const opsSuivi = {
     ecrireJournal: (e) => colJournal.ecrire(e.id, journalVersDoc(e)),
     supprimerJournal: (id) => colJournal.supprimer(id),
@@ -216,6 +224,16 @@ function App() {
   const besoinsAutre = profilAutre && profilComplet(profilAutre) ? calculerBesoins(profilAutre) : null;
   const cibleKcal = besoins && besoinsAutre ? Math.round((besoins.cible + besoinsAutre.cible) / 2) : (besoins || besoinsAutre || { cible: 2000 }).cible;
   const recettes = index ? index.recettes : null;
+  const sportActif = profil && profil.sport && profil.sport.date ? profil.sport : null;
+  const planSport = useMemo(() => (sportActif && besoins ? planNutritionnel(profil, besoins, sportActif, cleDate(new Date()), seances.filter((s) => s.par === moi)) : []),
+    [sportActif, besoins, profil, seances, moi]);
+  const jourSport = planSport.find((p) => p.date === cleDate(new Date())) || null;
+  // Les jours de sport, les objectifs du jour suivent la charge (calories, glucides, protéines).
+  const besoinsDuJour = jourSport && besoins ? { ...besoins, cible: jourSport.besoins.kcal, glucides_g: jourSport.besoins.glucides_g, proteines_g: jourSport.besoins.proteines_g, lipides_g: jourSport.besoins.lipides_g } : besoins;
+  const parJourSport = useMemo(() => Object.fromEntries(planSport.map((p) => [p.date, {
+    cibleKcal: p.besoins.kcal,
+    ...(p.laVeille ? { filtre: FILTRES_SPORT.veille.test } : p.enCharge ? { filtre: FILTRES_SPORT.riche_glucides.test } : {}),
+  }])), [planSport]);
   const portionsChacun = useMemo(() => [
     ...(besoins ? [{ id: moi, label: PERSONNES[moi].prenom, cible: besoins.cible }] : []),
     ...(besoinsAutre ? [{ id: autre, label: PERSONNES[autre].prenom, cible: besoinsAutre.cible }] : []),
@@ -254,14 +272,15 @@ function App() {
         onFavori=${onFavori} favorisSeulement=${route.ecran === 'favoris'} onOuvrir=${() => { defilSauvegarde = window.scrollY; }}
         moi=${moi} profil=${profil} onAppliquerProfil=${() => changerProfil({ ...profil, appliquer: profil.appliquer === false })} />
     </div>
-    ${route.ecran === 'accueil' && html`<${Accueil} moi=${moi} profil=${profil} besoins=${besoins} index=${recettes} plan=${plan}
-      contraintes=${contraintes} cibleKcal=${cibleKcal} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
+    ${route.ecran === 'accueil' && html`<${Accueil} moi=${moi} profil=${profil} besoins=${besoinsDuJour} index=${recettes} plan=${plan}
+      contraintes=${contraintes} cibleKcal=${cibleKcal} sportJour=${jourSport} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
-      ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} />`}
+      ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} parJour=${parJourSport} />`}
     ${route.ecran === 'courses' && html`<${Courses} donnees=${donneesCourses} stock=${stock} ops=${opsCourses} moi=${moi}
       profils=${{ [moi]: profil, [autre]: profilAutre, ...Object.fromEntries(enfantsListe.map((e) => [e.id, e])) }} plan=${plan} catalogue=${index} convives=${convives} />`}
-    ${route.ecran === 'suivi' && html`<${Suivi} moi=${moi} profil=${profil} besoins=${besoins} journal=${journal} poids=${poids} ops=${opsSuivi}
+    ${route.ecran === 'suivi' && html`<${Suivi} moi=${moi} profil=${profil} besoins=${besoinsDuJour} journal=${journal} poids=${poids} ops=${opsSuivi}
       index=${recettes || []} plan=${plan} scans=${scans} />`}
+    ${route.ecran === 'sport' && html`<${Sport} profil=${profil} besoins=${besoins} seances=${seances} ops=${opsSport} index=${recettes} moi=${moi} contraintes=${contraintes} onChangeProfil=${changerProfil} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
