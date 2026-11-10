@@ -28,6 +28,11 @@ const FICHIERS = [
   'js/lib/frigo.js',
   'js/lib/budget.js',
   'js/views/frigo.js',
+  'js/core/reecriture.js',
+  'js/data/substitutions.js',
+  'js/lib/methodes.js',
+  'js/lib/substitutions.js',
+  'js/lib/thermomix.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

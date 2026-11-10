@@ -49,7 +49,7 @@ export function lireRoute(hash) {
   let m = chemin.match(/^#\/recette\/(REC-\d+)$/);
   if (m) return { ecran: 'fiche', id: m[1] };
   m = chemin.match(/^#\/cuisine\/(REC-\d+)$/);
-  if (m) return { ecran: 'cuisine', id: m[1], portions: Math.min(20, Math.max(1, Number(new URLSearchParams(requete).get('p')) || 2)) };
+  if (m) { const q = new URLSearchParams(requete); return { ecran: 'cuisine', id: m[1], portions: Math.min(20, Math.max(1, Number(q.get('p')) || 2)), methode: q.get('m') || null, modele: q.get('t') || 'TM6' }; }
   m = chemin.match(/^#\/produit\/(\d{8,14})$/);
   if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
@@ -248,6 +248,11 @@ function App() {
     cibleKcal: p.besoins.kcal,
     ...(p.laVeille ? { filtre: FILTRES_SPORT.veille.test } : p.enCharge ? { filtre: FILTRES_SPORT.riche_glucides.test } : {}),
   }])), [planSport]);
+  const personnesVariantes = useMemo(() => [
+    ...(profil ? [{ id: moi, label: PERSONNES[moi].prenom, profil }] : []),
+    ...(profilAutre ? [{ id: autre, label: PERSONNES[autre].prenom, profil: profilAutre }] : []),
+    ...enfantsMenus.map((e) => ({ id: e.id, label: e.prenom, profil: e })),
+  ], [profil, profilAutre, enfantsMenus, moi]);
   const portionsChacun = useMemo(() => [
     ...(besoins ? [{ id: moi, label: PERSONNES[moi].prenom, cible: besoins.cible }] : []),
     ...(besoinsAutre ? [{ id: autre, label: PERSONNES[autre].prenom, cible: besoinsAutre.cible }] : []),
@@ -312,8 +317,8 @@ function App() {
       pin=${{ defini: Boolean(pin), onDefinir: async (code) => { const e = await creerPin(code); enregistrerPin(e); setPin(e); },
         onRetirer: () => { retirerPin(); setPin(null); setVerrouille(false); } }} />`}
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
-      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} />`}
-    ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} />`}
+      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} />`}
+    ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} methode=${route.methode} modele=${route.modele} />`}
     ${!plein && html`<${BarreOnglets} onglets=${ONGLETS} actif=${ONGLET_DE[route.ecran]} />`}`;
 }
 

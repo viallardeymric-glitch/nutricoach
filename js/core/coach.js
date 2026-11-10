@@ -86,3 +86,21 @@ export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, histori
   if (!texte) throw new Error('Le coach n\'a pas pu répondre à cette question. Reformulez-la.');
   return texte;
 }
+
+/** Appel Gemini avec une consigne propre (réécriture de recette…) : retourne le texte de la réponse (JSON demandé). */
+export async function demanderJSON({ cle, modele = MODELE_PAR_DEFAUT, systeme, message }, appeler = fetch) {
+  if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
+  let rep;
+  try {
+    rep = await appeler(`${URL_BASE}${encodeURIComponent(modele)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: systeme }] }, contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2000, responseMimeType: 'application/json' } }),
+    });
+  } catch { throw new Error(messageErreurCoach(0)); }
+  if (!rep.ok) throw new Error(messageErreurCoach(rep.status));
+  const texte = extraireTexte(await rep.json());
+  if (!texte) throw new Error('L\'IA n\'a pas pu répondre. Réessayez.');
+  return texte;
+}

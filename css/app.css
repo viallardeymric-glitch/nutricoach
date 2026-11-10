@@ -452,3 +452,6 @@ p { margin: 0 0 .5rem; }
 .carte-sport.gaspi { background: var(--allergene-fond); }
 .champ.ligne { flex-direction: row; align-items: center; justify-content: space-between; }
 .champ.ligne input { width: 120px; height: 44px; }
+
+.reglages.thermo span { background: var(--accent); color: #fff; }
+.pesee { padding-left: 1.3rem; } .pesee li { padding: .3rem 0; }

@@ -522,6 +522,49 @@ verif((await p.locator('.resultat-frigo >> nth=0').textContent()).includes('♻'
 const manquant = p.locator('.resultat-frigo .lien:has-text("Ajouter aux courses")').first();
 if (await manquant.count()) { await manquant.click(); await p.waitForSelector('text=ajouté'); verif(true, 'frigo magique : ingrédients manquants ajoutés aux courses'); }
 
+// Variantes (substitutions), Thermomix, réécriture par l'IA, lecture à voix haute
+const avecLait = toutes.find((r) => r.allergenes.includes('lait') && r.ingredients.some((i) => /^(beurre|lait|crème)/i.test(i.aliment)) && r.portions_base !== 2);
+await p.goto(serveur.url + '/#/recette/' + avecLait.id); await p.waitForSelector('text=Variantes pour chacun');
+verif((await p.textContent('.fiche')).includes('Variantes pour chacun') && (await p.textContent('.fiche')).includes('→'), 'fiche : variantes pour chacun (Marie évite le lait)');
+await p.check('.case input');
+await p.waitForSelector('text=Estimation recalculée');
+verif((await p.textContent('.ingredients')).includes('remplace :'), 'fiche : la recette adaptée remplace les ingrédients (avec rappel de l\'ingrédient d\'origine)');
+
+const th = toutes.find((r) => r.appareil_principal === 'thermomix' && r.etapes.some((e) => e.reglages && e.reglages.temperature === '120°C'));
+await p.goto(serveur.url + '/#/recette/' + th.id); await p.waitForSelector('text=Capacité du bol');
+verif(await p.locator('.reglages.thermo span').count() > 3, 'Thermomix : pastilles durée / température / vitesse / sens / accessoire');
+verif((await p.textContent('.fiche')).includes('Pesée guidée'), 'Thermomix : pesée guidée');
+verif((await p.textContent('.fiche')).includes('120 °C'), 'Thermomix TM6 : 120 °C');
+await p.click('.puce:text-is("TM31")');
+verif((await p.textContent('.fiche')).includes('100 °C au maximum'), 'Thermomix TM31 : 100 °C au maximum, avertissement');
+await p.goto(serveur.url + `/#/cuisine/${th.id}?p=2&m=thermomix&t=TM6`); await p.waitForSelector('.cuisine-corps h2');
+await p.click('text=Commencer'); await p.waitForSelector('.reglages.grands.thermo');
+verif((await p.textContent('.cuisine-titre')).includes('Thermomix TM6'), 'cuisine : mode pas à pas en version Thermomix avec pastilles');
+
+// réécriture par l'IA (fausse API)
+const reponses = [];
+await ctx.route('https://generativelanguage.googleapis.com/**', async (route) => {
+  const corps = route.request().postData() || '';
+  if (!corps.includes('responseMimeType')) return route.fallback();
+  reponses.push(corps);
+  await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: '```json\n{"etapes":[{"texte":"Préchauffez l\'airfryer à 180 °C pendant 5 minutes.","duree":"5 min","temperature":"180°C"},{"texte":"Disposez les morceaux dans le panier et cuisez 18 minutes en les retournant à mi-cuisson.","duree":"18 min","temperature":"180°C"}],"remarques":["Ne surchargez pas le panier."]}\n```' }] } }] }) });
+});
+const four = toutes.find((r) => r.appareil_principal === 'four' && r.portions_base !== 2);
+await p.goto(serveur.url + '/#/recette/' + four.id); await p.waitForSelector('text=Méthode de cuisson');
+await p.click('.puce:has-text("Airfryer")');
+await p.waitForSelector('text=Version proposée par l\'IA');
+await p.click('role=button[name="✨ Réécrire pour airfryer"]');
+await p.waitForSelector('text=Ne surchargez pas le panier');
+verif((await p.textContent('.etapes')).includes('airfryer') && reponses.length === 1, 'IA : étapes réécrites pour l\'airfryer (proposition à vérifier)');
+verif(reponses[0].includes('Airfryer') && reponses[0].includes(four.titre.slice(0, 20)), 'IA : la requête contient la méthode cible et la recette');
+await p.reload(); await p.waitForSelector('text=Méthode de cuisson'); await p.click('.puce:has-text("Airfryer")');
+await p.waitForSelector('text=Ne surchargez pas le panier');
+verif(reponses.length === 1, 'IA : réécriture gardée sur le téléphone (aucun nouvel appel, disponible hors ligne)');
+await p.goto(serveur.url + `/#/cuisine/${four.id}?p=2&m=airfryer&t=TM6`); await p.waitForSelector('.cuisine-corps h2');
+verif((await p.textContent('.cuisine-titre')).includes('version IA'), 'cuisine : version IA signalée « à vérifier »');
+await p.click('text=Commencer'); await p.waitForSelector('.cuisine-texte');
+verif((await p.textContent('.cuisine-texte')).includes('airfryer'), 'cuisine : étapes de la réécriture');
+
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
 await p.click('.puce:text-is("Rose")');

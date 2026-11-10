@@ -72,6 +72,18 @@ for (const f of [...lister('js'), ...lister('css'), ...lister('vendor'), ...list
 }
 if (!existsSync(join(racine, '.nojekyll'))) ko('.nojekyll manquant');
 
+// 3 bis. Syntaxe de tous les modules (une faute de frappe ne doit jamais atteindre le téléphone)
+section('Syntaxe JavaScript');
+import { execFileSync } from 'node:child_process';
+let nbModules = 0;
+for (const f of [...lister('js'), 'sw.js']) {
+  if (!f.endsWith('.js')) continue;
+  nbModules++;
+  try { execFileSync(process.execPath, ['--check', join(racine, f)], { stdio: 'pipe' }); }
+  catch (e) { ko(`${f} : erreur de syntaxe — ${String(e.stderr || e.message).split('\n').find((l) => /Error/.test(l)) || ''}`); }
+}
+console.log(`${nbModules} modules vérifiés`);
+
 // 4. Aucune donnée personnelle ni clé dans le dépôt --------------------------
 section('Secrets');
 const suspect = /(AIza[0-9A-Za-z_-]{30,}|sk-[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY)/;

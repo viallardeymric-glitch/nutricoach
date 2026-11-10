@@ -1,5 +1,5 @@
 // Fiche recette : avertissements, ingrédients adaptés au nombre de personnes, étapes, nutrition.
-import { html, useState, useEffect } from '../../vendor/preact-htm.js';
+import { html, useState, useEffect, useMemo } from '../../vendor/preact-htm.js';
 import { PORTIONS_MIN, PORTIONS_MAX } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { lire, ecrire } from '../core/stockage.js';
@@ -8,7 +8,13 @@ import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
 import { conflitsProfil, portionConseillee } from '../lib/profils.js';
 import { nomRegime } from '../data/regimes.js';
 import { PERSONNES } from '../core/config.js';
-import { Pictogramme, Coeur, Bandeau, Pastille } from '../ui/composants.js';
+import { contraintesDeProfil, substitutionsPour, appliquerSubstitutions, nutritionAdaptee } from '../lib/substitutions.js';
+import { etapesThermomix, recetteThermomix, capaciteBol, ordrePesee, MODELES } from '../lib/thermomix.js';
+import { METHODES, methodeOriginale } from '../lib/methodes.js';
+import { reecrire, chargerReecriture, oublierReecriture } from '../core/reecriture.js';
+import { chargerAppareils } from '../core/appareils.js';
+import { chargerReglagesCoach } from '../core/coach.js';
+import { Pictogramme, Coeur, Bandeau, Pastille, Puce } from '../ui/composants.js';
 
 /** Avertissements : toujours affichés en haut de la fiche quand la recette en comporte. */
 function Avertissements({ liste }) {
@@ -60,9 +66,62 @@ function PortionsChacun({ r, personnes }) {
     <p class="note">Repère d'après les besoins de chacun (un repas ≈ 35 % de la journée). Pour un enfant, c'est un ordre de grandeur.</p><//>`;
 }
 
-export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun }) {
+/** Variantes : pour chaque personne du foyer, les ingrédients à remplacer pour que la recette lui convienne. */
+function Variantes({ r, personnes, appliquees, onAppliquer, premier }) {
+  const lignes = (personnes || []).map((p) => ({ p, subs: substitutionsPour(r, contraintesDeProfil(p.profil)) })).filter((x) => x.subs.length);
+  if (!lignes.length) return null;
+  return html`<${Bandeau} type="info" titre="Variantes pour chacun">
+    ${lignes.map((x) => html`<div key=${x.p.id}><p><${Pastille} qui=${x.p.id} label=${x.p.label} /> <strong>${x.p.label}</strong> :</p>
+      <ul>${x.subs.map((s) => html`<li key=${s.index}>${s.ancien} → <strong>${s.nouveau}</strong>${s.note ? html` <span class="sous">(${s.note})</span>` : ''}</li>`)}</ul></div>`)}
+    ${premier && html`<label class="case"><input type="checkbox" checked=${appliquees} onChange=${(e) => onAppliquer(e.target.checked)} /><span>Afficher la recette adaptée pour ${lignes.find((x) => x.p.id === premier).p.label}</span></label>`}
+    <p class="note">Substitutions indicatives. La nutrition adaptée est une estimation, recalculée d'après les ingrédients remplacés.</p><//>`;
+}
+
+/** Choix de la méthode : version d'origine, Thermomix (si disponible) ou réécriture par l'IA (proposition à vérifier). */
+function Methodes({ r, methode, setMethode, modele, setModele, reecriture, erreur, enCours, onReecrire }) {
+  const origine = methodeOriginale(r);
+  const dispo = new Set([origine, ...r.appareils_possibles.map((a) => (a === 'classique' ? 'plaque' : a))]);
+  const reel = methode === origine || (methode === 'thermomix' && recetteThermomix(r));
+  return html`<div>
+    <h2 class="petit-titre">Méthode de cuisson</h2>
+    <div class="puces libres">${Object.entries(METHODES).map(([k, n]) => html`<${Puce} key=${k} actif=${methode === k} onClick=${() => setMethode(k)}>${n}${k === origine ? ' ✓' : ''}<//>`)}</div>
+    ${methode === 'thermomix' && html`<div class="puces libres">${Object.keys(MODELES).map((m) => html`<${Puce} key=${m} actif=${modele === m} onClick=${() => setModele(m)}>${m}<//>`)}</div>`}
+    ${!reel && html`<${Bandeau} type="avertissement" titre="Version proposée par l'IA">
+      <p>Les étapes d'origine sont écrites pour : <strong>${METHODES[origine] || origine}</strong>. ${reecriture ? 'Voici une réécriture proposée par l\'IA : vérifiez les durées et les températures avant de cuisiner.' : `Pour ${METHODES[methode].toLowerCase()}, l'IA peut réécrire les étapes (clé Gemini nécessaire dans Profil › Coach IA).`}</p>
+      ${erreur && html`<p class="erreur-champ" role="alert">${erreur}</p>`}
+      ${!reecriture && html`<button type="button" class="bouton secondaire" disabled=${enCours} onClick=${onReecrire}>${enCours ? 'Réécriture…' : `✨ Réécrire pour ${METHODES[methode].toLowerCase()}`}</button>`}
+      ${reecriture && html`<button type="button" class="lien" onClick=${() => onReecrire(true)}>Refaire la réécriture</button>`}<//>`}
+  </div>`;
+}
+
+export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
+  const origine = methodeOriginale(r);
+  const appareils = chargerAppareils();
+  const [methode, setMethode] = useState(origine);
+  const [modele, setModele] = useState(appareils.modele || 'TM6');
+  const [reecriture, setReecriture] = useState(null);
+  const [erreurIA, setErreurIA] = useState('');
+  const [enCours, setEnCours] = useState(false);
+  const [adaptee, setAdaptee] = useState(false);
+  const premier = personnesVariantes && personnesVariantes.length ? personnesVariantes[0].id : null;
+  const subsMoi = useMemo(() => (adaptee && premier ? substitutionsPour(r, contraintesDeProfil(personnesVariantes[0].profil)) : []), [adaptee, r, premier]);
+  const ingredientsAffiches = useMemo(() => (adaptee ? appliquerSubstitutions(r.ingredients, subsMoi) : r.ingredients), [adaptee, subsMoi, r]);
+  const nutAdaptee = useMemo(() => (adaptee ? nutritionAdaptee(r, subsMoi) : null), [adaptee, subsMoi, r]);
+  const reel = methode === origine || (methode === 'thermomix' && recetteThermomix(r));
+  useEffect(() => { setReecriture(!reel ? chargerReecriture(r.id, methode, modele) : null); setErreurIA(''); }, [r.id, methode, modele]);
+  const reecrireIA = async (refaire) => {
+    setEnCours(true); setErreurIA('');
+    try { if (refaire === true) oublierReecriture(r.id, methode, modele); setReecriture(await reecrire(r, methode, modele)); }
+    catch (e) { setErreurIA(e.message); }
+    setEnCours(false);
+  };
+  const etapesAffichees = methode === 'thermomix' && recetteThermomix(r) ? etapesThermomix(r, modele)
+    : reecriture ? reecriture.etapes.map((e) => ({ ...e, pastilles: [], avertissements: [] })) : r.etapes.map((e) => ({ ...e, pastilles: [], avertissements: [] }));
+  const bol = methode === 'thermomix' ? capaciteBol(r, portions, modele) : null;
+  const pesee = methode === 'thermomix' && recetteThermomix(r) ? ordrePesee(ingredientsAffiches, portions / r.portions_base) : null;
   const facteur = portions / r.portions_base;
   const t = r.temps;
+  const nutri = nutAdaptee ? { ...r.nutrition_par_portion, calories_kcal: nutAdaptee.kcal, proteines_g: nutAdaptee.p, glucides_g: nutAdaptee.g, lipides_g: nutAdaptee.l } : r.nutrition_par_portion;
   const c = r.conservation;
   const maxPortions = Math.max(PORTIONS_MAX, r.portions_base);
   const conseils = conseilsAdaptation(r, portions);
@@ -83,7 +142,8 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
       <${AlerteProfil} r=${r} moi=${moi} profil=${profil} />
       <${Avertissements} liste=${r.deconseille_a} />
       <${PortionsChacun} r=${r} personnes=${portionsChacun} />
-      <a class="bouton cuisiner" href=${`#/cuisine/${r.id}?p=${portions}`}>👩‍🍳 Cuisiner pas à pas</a>
+      <${Variantes} r=${r} personnes=${personnesVariantes} appliquees=${adaptee} onAppliquer=${setAdaptee} premier=${premier} />
+      <a class="bouton cuisiner" href=${`#/cuisine/${r.id}?p=${portions}&m=${methode}&t=${modele}`}>👩‍🍳 Cuisiner pas à pas</a>
       ${onMange && html`<button type="button" class="bouton secondaire large" onClick=${() => onMange(1)}>📓 Je l'ai mangé (1 portion au journal)</button>`}
       ${r.allergenes.length > 0 && html`<div class="etiquettes" aria-label="Allergènes">
         <strong>Contient :</strong>
@@ -103,14 +163,19 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
       </div>
       ${conseils.length > 0 && html`<${Bandeau} type="info" titre="Pour ${portions} personne${portions > 1 ? 's' : ''}">
         <ul>${conseils.map((x) => html`<li>${x}</li>`)}</ul><//>`}
-      <${Ingredients} liste=${r.ingredients} facteur=${facteur} />
+      ${bol && html`<${Bandeau} type=${bol.depasse ? 'avertissement' : 'info'} titre="Capacité du bol"><p>Volume estimé : ${bol.volume_ml} ml pour ${bol.max_ml} ml au maximum (${Math.round(bol.rempli * 100)} %).${bol.conseil ? ' ' + bol.conseil : ''}${bol.conseilPetrin ? ' ' + bol.conseilPetrin : ''}</p><//>`}
+      <${Ingredients} liste=${ingredientsAffiches} facteur=${facteur} />
+      ${pesee && html`<details class="repli"><summary>⚖ Pesée guidée (ordre optimisé)</summary><ol class="pesee">${pesee.map((x) => html`<li key=${x.ordre}><strong>${x.aliment}</strong> : ${String(Math.round(x.quantite * 10) / 10).replace('.', ',')} ${x.unite}<span class="sous"> · ${{ sec: 'sec', solide: 'solide', liquide: 'liquide', a_part: 'à ajouter à part' }[x.groupe]}</span></li>`)}</ol><p class="note">Placez le bol sur la balance, tarez après chaque ajout.</p></details>`}
+      <${Methodes} r=${r} methode=${methode} setMethode=${setMethode} modele=${modele} setModele=${setModele} reecriture=${reecriture} erreur=${erreurIA} enCours=${enCours} onReecrire=${reecrireIA} />
       ${r.ustensiles.length > 0 && html`<p class="note">Ustensiles : ${r.ustensiles.join(', ')}</p>`}
 
       <h2 class="petit-titre">Étapes</h2>
+      ${reecriture && reecriture.remarques && reecriture.remarques.length > 0 && html`<ul class="simple">${reecriture.remarques.map((x) => html`<li key=${x}>${x}</li>`)}</ul>`}
       <ol class="etapes">
-        ${r.etapes.map((e) => html`<li key=${e.numero}><span>${e.texte}</span>
-          ${e.reglages && Object.keys(e.reglages).length > 0 && html`<div class="reglages">
-            ${Object.entries(e.reglages).map(([k, v]) => html`<span>${lib(REGLAGES, k)} : ${v}</span>`)}</div>`}
+        ${etapesAffichees.map((e, i) => html`<li key=${i}><span>${e.texte}</span>
+          ${e.pastilles && e.pastilles.length > 0 ? html`<div class="reglages thermo">${e.pastilles.map((p) => html`<span key=${p.cle}>${p.icone} ${p.texte}</span>`)}</div>`
+            : e.reglages && Object.keys(e.reglages).length > 0 && html`<div class="reglages">${Object.entries(e.reglages).map(([k, v]) => html`<span key=${k}>${lib(REGLAGES, k)} : ${v}</span>`)}</div>`}
+          ${e.avertissements && e.avertissements.map((a) => html`<p class="note" key=${a}>⚠ ${a}</p>`)}
         </li>`)}
       </ol>
 
@@ -125,15 +190,15 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
 
       <h2 class="petit-titre">Nutrition par portion <small>(valeurs estimées)</small></h2>
       <table class="nutrition"><tbody>
-        ${NUTRITION.map(([k, nom, u]) => r.nutrition_par_portion[k] != null && html`<tr key=${k}>
-          <th scope="row">${nom}</th><td>${String(r.nutrition_par_portion[k]).replace('.', ',')} ${u}</td></tr>`)}
+        ${NUTRITION.map(([k, nom, u]) => nutri[k] != null && html`<tr key=${k}>
+          <th scope="row">${nom}</th><td>${String(nutri[k]).replace('.', ',')} ${u}</td></tr>`)}
       </tbody></table>
-      <p class="note">Estimations pour une portion de la recette de base ; elles ne changent pas avec le nombre de personnes.</p>
+      <p class="note">${nutAdaptee ? `Estimation recalculée d'après ${nutAdaptee.nb} ingrédient${nutAdaptee.nb > 1 ? 's' : ''} remplacé${nutAdaptee.nb > 1 ? 's' : ''}.` : 'Estimations pour une portion de la recette de base ; elles ne changent pas avec le nombre de personnes.'}</p>
     </div></article>`;
 }
 
 /** Charge la fiche complète puis l'affiche. */
-export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun }) {
+export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun, personnesVariantes }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [portions, setPortions] = useState(1);
@@ -167,5 +232,5 @@ export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, porti
   }
   const choisir = (f) => setPortions((p) => { const v = typeof f === 'function' ? f(p) : f; ecrire('portionsDefaut', v); return v; });
   return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${choisir}
-    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} portionsChacun=${portionsChacun} /></div>`;
+    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} portionsChacun=${portionsChacun} personnesVariantes=${personnesVariantes} /></div>`;
 }

@@ -4,6 +4,9 @@ import { chargerFiche } from '../core/catalogue.js';
 import { REGLAGES, lib } from '../data/libelles.js';
 import { ligneIngredient } from '../lib/adaptation.js';
 import { dureeEtape, formaterMinuteur } from '../lib/cuisine.js';
+import { etapesThermomix, recetteThermomix } from '../lib/thermomix.js';
+import { chargerReecriture } from '../core/reecriture.js';
+import { lire, ecrire } from '../core/stockage.js';
 
 function bip() {
   try {
@@ -44,11 +47,21 @@ function Minuteur({ secondes, cle }) {
     </div></div>`;
 }
 
-export function Cuisine({ id, index, portions }) {
+const vocalDisponible = () => typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+function lireAVoixHaute(texte) {
+  if (!vocalDisponible()) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texte);
+  u.lang = 'fr-FR'; u.rate = 0.95;
+  window.speechSynthesis.speak(u);
+}
+
+export function Cuisine({ id, index, portions, methode = null, modele = 'TM6' }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [i, setI] = useState(0);           // 0 : ingrédients, 1..n : étapes, n+1 : fin
   const [veille, setVeille] = useState(true);
+  const [voixAuto, setVoixAuto] = useState(() => lire('cuisine.voix', false));
   const toucheX = useRef(null);
 
   useEffect(() => {
@@ -75,9 +88,12 @@ export function Cuisine({ id, index, portions }) {
   if (!r) {
     return html`<div class="cuisine">${sortie}<p class="etat">${erreur ? 'Recette introuvable hors ligne.' : 'Chargement…'}</p></div>`;
   }
-  const n = r.etapes.length;
-  const aller = (k) => setI(Math.min(n + 1, Math.max(0, k)));
-  const etape = i >= 1 && i <= n ? r.etapes[i - 1] : null;
+  const thermo = methode === 'thermomix' && recetteThermomix(r);
+  const reecrite = !thermo && methode && methode !== r.appareil_principal ? chargerReecriture(r.id, methode, modele) : null;
+  const etapes = thermo ? etapesThermomix(r, modele) : reecrite ? reecrite.etapes.map((e) => ({ ...e, pastilles: [], avertissements: [] })) : r.etapes.map((e) => ({ ...e, pastilles: [], avertissements: [] }));
+  const n = etapes.length;
+  const aller = (k) => { const j = Math.min(n + 1, Math.max(0, k)); setI(j); if (voixAuto && j >= 1 && j <= n) lireAVoixHaute(etapes[j - 1].texte); };
+  const etape = i >= 1 && i <= n ? etapes[i - 1] : null;
   const duree = etape ? dureeEtape(etape) : null;
   const facteur = portions / r.portions_base;
   return html`<div class="cuisine"
@@ -85,7 +101,7 @@ export function Cuisine({ id, index, portions }) {
       onTouchEnd=${(e) => { if (toucheX.current == null) return; const dx = e.changedTouches[0].clientX - toucheX.current; toucheX.current = null; if (Math.abs(dx) > 70) aller(i + (dx < 0 ? 1 : -1)); }}>
     ${sortie}
     <div class="cuisine-progres" aria-hidden="true"><span style=${`width:${(i / (n + 1)) * 100}%`}></span></div>
-    <p class="cuisine-titre">${r.titre}</p>
+    <p class="cuisine-titre">${r.titre}${thermo ? ` · Thermomix ${modele}` : reecrite ? ` · ${methode} (version IA, à vérifier)` : ''}</p>
     <div class="cuisine-corps">
       ${i === 0 && html`<h2>Ingrédients <small>pour ${portions} personne${portions > 1 ? 's' : ''}</small></h2>
         <ul class="ingredients">${r.ingredients.map((ing, k) => { const l = ligneIngredient(ing, facteur);
@@ -93,8 +109,11 @@ export function Cuisine({ id, index, portions }) {
         ${!veille && html`<p class="note">L'écran peut s'éteindre : ce navigateur ne permet pas de le garder allumé.</p>`}`}
       ${etape && html`<p class="cuisine-etape-num">Étape ${i} sur ${n}</p>
         <p class="cuisine-texte">${etape.texte}</p>
-        ${etape.reglages && Object.keys(etape.reglages).length > 0 && html`<div class="reglages grands">
-          ${Object.entries(etape.reglages).map(([k, v]) => html`<span>${lib(REGLAGES, k)} : ${v}</span>`)}</div>`}
+        ${etape.pastilles && etape.pastilles.length > 0 ? html`<div class="reglages grands thermo">${etape.pastilles.map((p) => html`<span key=${p.cle}>${p.icone} ${p.texte}</span>`)}</div>`
+          : etape.reglages && Object.keys(etape.reglages).length > 0 && html`<div class="reglages grands">${Object.entries(etape.reglages).map(([k, v]) => html`<span key=${k}>${lib(REGLAGES, k)} : ${v}</span>`)}</div>`}
+        ${etape.avertissements && etape.avertissements.map((a) => html`<p class="note" key=${a}>⚠ ${a}</p>`)}
+        ${vocalDisponible() && html`<div class="puces sans-marge"><button type="button" class="puce" onClick=${() => lireAVoixHaute(etape.texte)}>🔊 Lire l'étape</button>
+          <button type="button" class="puce" aria-pressed=${voixAuto} onClick=${() => { const v = !voixAuto; setVoixAuto(v); ecrire('cuisine.voix', v); if (v) lireAVoixHaute(etape.texte); else window.speechSynthesis.cancel(); }}>Lecture automatique</button></div>`}
         ${duree && html`<${Minuteur} secondes=${duree} cle=${`${id}-${i}`} />`}`}
       ${i === n + 1 && html`<h2>Bon appétit ! 🍽️</h2>
         ${r.astuces.length > 0 && html`<ul class="simple">${r.astuces.map((a) => html`<li>${a}</li>`)}</ul>`}
