@@ -131,3 +131,18 @@ test('sessions de batch : documents valides', () => {
   assert.equal(l[0].plats.length, 1);
   assert.equal(l[1].plats.length, 0);
 });
+
+import { idDocRecurrent, recurrentVersDoc } from '../js/core/synchro.js';
+test('menus à 4 repas, péremption du stock, articles récurrents', () => {
+  const plan = docsVersPlan([{ id: '2026-11-10', petit_dejeuner: 'REC-000100', dejeuner: 'REC-000010', collation: 'REC-000200', diner: 'bof' }]);
+  assert.deepEqual(plan['2026-11-10'], { petit_dejeuner: 'REC-000100', dejeuner: 'REC-000010', collation: 'REC-000200' });
+  assert.deepEqual(Object.keys(jourVersDoc('2026-11-10', { collation: 'REC-000200', diner: 'REC-000020' })).sort(), ['collation', 'date', 'diner', 'modifie']);
+  const s = stockVersDoc({ cle: 'lait|ml', nom: 'Lait', quantite: 1000, unite: 'ml', peremption: '2026-11-12' });
+  assert.equal(docsVersStock([s])[0].peremption, '2026-11-12');
+  assert.equal(docsVersStock([{ ...s, peremption: 'demain' }])[0].peremption, null);
+  const r = recurrentVersDoc({ nom: 'Lait', quantite: 2, unite: 'l', cle: 'lait|ml' });
+  assert.ok(!/^__.*__$/.test(idDocRecurrent('lait|ml')));
+  const { recurrents, articles } = docsVersCourses([{ ...r, id: 'rec-1' }, { kind: 'recurrent', nom: 'x' }]);
+  assert.equal(recurrents.length, 1);
+  assert.equal(articles.length, 0);
+});

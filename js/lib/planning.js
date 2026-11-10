@@ -7,6 +7,22 @@ export const REPAS = [
   { id: 'dejeuner', nom: 'Déjeuner', icone: '☀️' },
   { id: 'diner', nom: 'Dîner', icone: '🌙' },
 ];
+/** Tous les repas possibles d'une journée (petit-déjeuner et collation sont facultatifs). */
+export const REPAS_COMPLETS = [
+  { id: 'petit_dejeuner', nom: 'Petit-déjeuner', icone: '🥐' },
+  { id: 'dejeuner', nom: 'Déjeuner', icone: '☀️' },
+  { id: 'diner', nom: 'Dîner', icone: '🌙' },
+  { id: 'collation', nom: 'Collation', icone: '🍎' },
+];
+export const repasActifs = (inclurePetitDej) => (inclurePetitDej ? REPAS_COMPLETS : REPAS);
+const RATIO_KCAL = { petit_dejeuner: 0.25, dejeuner: 0.35, diner: 0.35, collation: 0.1 };
+/** Un plat convient-il à ce moment de la journée ? Plats pour déjeuner/dîner ; petit-déjeuner et collations dans les goûters. */
+function convientAuRepas(r, repas) {
+  if (repas === 'petit_dejeuner') return r.categorie === 'Goûters' && r.sous_categorie === 'petit_dejeuner';
+  if (repas === 'collation') return (r.categorie === 'Goûters' && r.sous_categorie !== 'petit_dejeuner') || (r.categorie === 'Desserts' && r.kcal <= 300);
+  return r.categorie === 'Plats';
+}
+const SCORE_COUT = { economique: 1.2, moyen: 0, eleve: -2.5 };
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
@@ -76,13 +92,13 @@ const SOUS_CATEGORIES_ECARTEES = new Set(['enfants', 'fete', 'batch']);
  */
 export function proposer(recettes, c, options) {
   const { jour, repas = 'diner', saison, cibleKcal = 2000, utilises = new Set(), types = new Map(),
-    graine: g = 1, n = 3, rapideMax = null, filtre = () => true } = options;
+    graine: g = 1, n = 3, rapideMax = null, filtre = () => true, bonus = null, budgetSerre = false } = options;
   const hasard = aleatoire(g);
-  const cibleRepas = cibleKcal * 0.35;
+  const cibleRepas = cibleKcal * (RATIO_KCAL[repas] || 0.35);
   const semaine = !estWeekEnd(jour);
   const notes = [];
   for (const r of recettes) {
-    if (r.categorie !== 'Plats' || utilises.has(r.id) || SOUS_CATEGORIES_ECARTEES.has(r.sous_categorie)) continue;
+    if (!convientAuRepas(r, repas) || utilises.has(r.id) || (r.categorie === 'Plats' && SOUS_CATEGORIES_ECARTEES.has(r.sous_categorie))) continue;
     if (!convient(r, c) || !filtre(r)) continue;
     if (rapideMax && r.temps > rapideMax) continue;
     let s = hasard() * 2;
@@ -91,6 +107,8 @@ export function proposer(recettes, c, options) {
     if (r.sous_categorie === 'dominical' && jour.getDay() === 0 && repas === 'dejeuner') s += 3;
     if (r.kcal) s -= (Math.abs(r.kcal - cibleRepas) / cibleRepas) * 2;
     s -= (types.get(r.sous_categorie) || 0) * 3;
+    if (bonus) s += bonus(r);
+    if (budgetSerre) s += SCORE_COUT[r.cout] || 0;
     notes.push([s, r]);
   }
   notes.sort((a, b) => b[0] - a[0]);
@@ -102,7 +120,7 @@ export function proposer(recettes, c, options) {
  * Vise au moins 2 repas de poisson et 2 végétariens par semaine quand les contraintes le permettent.
  * Retourne { plan, manquants } (manquants : repas pour lesquels rien ne convenait).
  */
-export function genererSemaine(recettes, jours, plan, { contraintes, saison, cibleKcal, graine: g = 1, parJour = {} }) {
+export function genererSemaine(recettes, jours, plan, { contraintes, saison, cibleKcal, graine: g = 1, parJour = {}, repas: repasUtilises = REPAS, bonus = null, budgetSerre = false }) {
   const hasard = aleatoire(g);
   const suivant = {};
   for (const j of jours) suivant[j] = { ...(plan[j] || {}) };
@@ -111,18 +129,19 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
   const types = new Map();
   let poissons = 0;
   let vegetariens = 0;
-  for (const j of jours) for (const id of Object.values(suivant[j])) {
+  for (const j of jours) for (const [rp, id] of Object.entries(suivant[j])) {
     const r = parId.get(id);
     if (!r) continue;
     utilises.add(id);
+    if (rp !== 'dejeuner' && rp !== 'diner') continue;
     types.set(r.sous_categorie, (types.get(r.sous_categorie) || 0) + 1);
     if (EST_POISSON(r)) poissons++;
     if (EST_VEGE(r)) vegetariens++;
   }
   const vides = [];
-  for (const j of jours) for (const { id } of REPAS) if (!suivant[j][id]) vides.push([j, id]);
+  for (const j of jours) for (const { id } of repasUtilises) if (!suivant[j][id]) vides.push([j, id]);
   // Quotas : on réserve d'abord des repas au hasard pour le poisson et le végétarien.
-  const ordre = vides.map((v) => [hasard(), v]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+  const ordre = vides.filter((v) => v[1] === 'dejeuner' || v[1] === 'diner').map((v) => [hasard(), v]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
   const exigences = new Map();
   let i = 0;
   for (let k = poissons; k < 2 && i < ordre.length; k++) exigences.set(ordre[i++].join('|'), EST_POISSON);
@@ -131,7 +150,7 @@ export function genererSemaine(recettes, jours, plan, { contraintes, saison, cib
   const manquants = [];
   for (const [j, repas] of vides) {
     const pj = parJour[j] || {};                                    // sport : cible et filtre propres à la journée
-    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1 };
+    const options = { jour: dateDepuisCle(j), repas, saison, cibleKcal: pj.cibleKcal || cibleKcal, utilises, types, graine: g + graine(j + repas), n: 1, bonus, budgetSerre };
     const exigence = exigences.get(`${j}|${repas}`) || (() => true);
     const filtreJour = pj.filtre || (() => true);
     let choix = proposer(recettes, contraintes, { ...options, filtre: (r) => exigence(r) && filtreJour(r) });

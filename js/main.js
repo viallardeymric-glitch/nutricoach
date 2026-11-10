@@ -7,7 +7,7 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, journalVersDoc, docsVersJournal, idDocRecurrent, recurrentVersDoc, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
@@ -33,6 +33,8 @@ import { Courses } from './views/courses.js';
 import { Suivi } from './views/suivi.js';
 import { Sport } from './views/sport.js';
 import { Batch } from './views/batch.js';
+import { Frigo } from './views/frigo.js';
+import { articlesDuFrigo, bonusStock, aConsommerBientot } from './lib/frigo.js';
 import { chargerAppareils } from './core/appareils.js';
 import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
@@ -40,7 +42,7 @@ import { Plus, appliquerTheme } from './views/plus.js';
 
 /**
  * Écran courant d'après l'ancre. Retourne { ecran, id?, portions?, section? } avec ecran parmi
- * accueil, recettes, favoris, semaine, courses, suivi, sport, batch, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
+ * accueil, recettes, favoris, semaine, courses, suivi, sport, batch, frigo, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
  */
 export function lireRoute(hash) {
   const [chemin, requete = ''] = hash.split('?');
@@ -52,10 +54,10 @@ export function lireRoute(hash) {
   if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
   if (m) return { ecran: 'profil', section: m[1] || null };
-  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/batch': 'batch', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
+  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/batch': 'batch', '#/frigo': 'frigo', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
-const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', batch: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
+const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', batch: 'plus', frigo: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
   plus: 'plus', sources: 'plus', coach: 'plus', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
@@ -181,6 +183,8 @@ function App() {
     ecrireListe: (l) => colCourses.ecrire(l.id, listeVersDoc(l)),
     ecrireStock: (s) => colStock.ecrire(idDocStock(s.cle), stockVersDoc(s)),
     supprimerStock: (s) => colStock.supprimer(idDocStock(s.cle)),
+    ecrireRecurrent: (r) => colCourses.ecrire(idDocRecurrent(r.cle), recurrentVersDoc(r)),
+    supprimerRecurrent: (r) => colCourses.supprimer(r.id),
   };
   const colJournal = useCollection('journal', session.docsJournal, connecte);
   const colPoids = useCollection('weights', session.docsPoids, connecte);
@@ -229,6 +233,11 @@ function App() {
   const besoinsAutre = profilAutre && profilComplet(profilAutre) ? calculerBesoins(profilAutre) : null;
   const cibleKcal = besoins && besoinsAutre ? Math.round((besoins.cible + besoinsAutre.cible) / 2) : (besoins || besoinsAutre || { cible: 2000 }).cible;
   const recettes = index ? index.recettes : null;
+  const parIdIndex = useMemo(() => new Map((recettes || []).map((r) => [r.id, r])), [recettes]);
+  const articlesStock = useMemo(() => articlesDuFrigo(stock), [stock]);
+  const urgentsStock = useMemo(() => aConsommerBientot(stock), [stock]);
+  const bonusDuStock = useMemo(() => (articlesStock.length ? bonusStock(articlesStock, urgentsStock) : null), [articlesStock, urgentsStock]);
+  const budgetSerre = (profil && (profil.secondaires || []).includes('budget')) || (profilAutre && (profilAutre.secondaires || []).includes('budget'));
   const sportActif = profil && profil.sport && profil.sport.date ? profil.sport : null;
   const planSport = useMemo(() => (sportActif && besoins ? planNutritionnel(profil, besoins, sportActif, cleDate(new Date()), seances.filter((s) => s.par === moi)) : []),
     [sportActif, besoins, profil, seances, moi]);
@@ -278,16 +287,17 @@ function App() {
         moi=${moi} profil=${profil} onAppliquerProfil=${() => changerProfil({ ...profil, appliquer: profil.appliquer === false })} />
     </div>
     ${route.ecran === 'accueil' && html`<${Accueil} moi=${moi} profil=${profil} besoins=${besoinsDuJour} index=${recettes} plan=${plan}
-      contraintes=${contraintes} cibleKcal=${cibleKcal} sportJour=${jourSport} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
+      contraintes=${contraintes} cibleKcal=${cibleKcal} sportJour=${jourSport} bonus=${bonusDuStock} urgents=${urgentsStock} budgetSerre=${budgetSerre} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
-      ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} parJour=${parJourSport} />`}
+      ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} parJour=${parJourSport} bonus=${bonusDuStock} budgetSerre=${budgetSerre} convives=${convives} />`}
     ${route.ecran === 'courses' && html`<${Courses} donnees=${donneesCourses} stock=${stock} ops=${opsCourses} moi=${moi}
-      profils=${{ [moi]: profil, [autre]: profilAutre, ...Object.fromEntries(enfantsListe.map((e) => [e.id, e])) }} plan=${plan} catalogue=${index} convives=${convives} />`}
+      profils=${{ [moi]: profil, [autre]: profilAutre, ...Object.fromEntries(enfantsListe.map((e) => [e.id, e])) }} plan=${plan} catalogue=${index} convives=${convives} parId=${parIdIndex} />`}
     ${route.ecran === 'suivi' && html`<${Suivi} moi=${moi} profil=${profil} besoins=${besoinsDuJour} journal=${journal} poids=${poids} ops=${opsSuivi}
       index=${recettes || []} plan=${plan} scans=${scans} />`}
     ${route.ecran === 'sport' && html`<${Sport} profil=${profil} besoins=${besoins} seances=${seances} ops=${opsSport} index=${recettes} moi=${moi} contraintes=${contraintes} onChangeProfil=${changerProfil} />`}
     ${route.ecran === 'batch' && html`<${Batch} plan=${plan} catalogue=${index} index=${recettes} sessions=${sessionsBatch} ops=${opsBatch} stock=${stock} moi=${moi}
       convives=${convives} appareils=${chargerAppareils()} />`}
+    ${route.ecran === 'frigo' && html`<${Frigo} index=${recettes} stock=${stock} contraintes=${contraintes} ops=${opsCourses} moi=${moi} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}

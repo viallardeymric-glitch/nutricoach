@@ -48,7 +48,7 @@ export function choisirVersion(local, nuage) {
 }
 
 // ---------- Planning : un document par jour (planning/AAAA-MM-JJ) ----------
-const REPAS_IDS = ['dejeuner', 'diner'];
+const REPAS_IDS = ['petit_dejeuner', 'dejeuner', 'diner', 'collation'];
 
 /** Documents « planning » → { 'AAAA-MM-JJ': { dejeuner, diner } } (jours et recettes invalides ignorés). */
 export function docsVersPlan(docs) {
@@ -97,12 +97,16 @@ export function docsVersCourses(docs) {
     }
   }
   if (!listes.some((l) => l.id === LISTE_PAR_DEFAUT.id)) listes.unshift({ ...LISTE_PAR_DEFAUT, archivee: false, cree: 0, par: '' });
-  return { listes, articles };
+  const recurrents = docs.filter((d) => d.kind === 'recurrent' && d.nom && d.cle && typeof d.quantite === 'number')
+    .map((d) => ({ id: d.id, nom: d.nom, quantite: d.quantite, unite: d.unite || 'pièce', rayon: d.rayon || 'autre', cle: d.cle }));
+  return { listes, articles, recurrents };
 }
 
+export const idDocRecurrent = (cle) => 'rec-' + encodeURIComponent(cle).slice(0, 120);
+export function recurrentVersDoc(a) { return { kind: 'recurrent', nom: String(a.nom).slice(0, 80), quantite: a.quantite, unite: a.unite, rayon: a.rayon || 'autre', cle: a.cle }; }
 export const idDocStock = (cle) => encodeURIComponent(cle).slice(0, 150);
-export function stockVersDoc(s) { return { cle: s.cle, nom: String(s.nom).slice(0, 80), quantite: s.quantite, unite: s.unite, rayon: s.rayon || 'autre', maj: Date.now() }; }
-export const docsVersStock = (docs) => docs.filter((d) => d.cle && typeof d.quantite === 'number').map((d) => ({ cle: d.cle, nom: d.nom || d.cle, quantite: d.quantite, unite: d.unite, rayon: d.rayon || 'autre' }));
+export function stockVersDoc(s) { return { cle: s.cle, nom: String(s.nom).slice(0, 80), quantite: s.quantite, unite: s.unite, rayon: s.rayon || 'autre', peremption: s.peremption || '', maj: Date.now() }; }
+export const docsVersStock = (docs) => docs.filter((d) => d.cle && typeof d.quantite === 'number').map((d) => ({ cle: d.cle, nom: d.nom || d.cle, quantite: d.quantite, unite: d.unite, rayon: d.rayon || 'autre', peremption: /^\d{4}-\d{2}-\d{2}$/.test(d.peremption || '') ? d.peremption : null }));
 
 export function scanVersDoc(s) {
   return { code: s.code, produit: s.produit, t: s.t || Date.now(), par: s.par || '', favoriPar: s.favoriPar || [], eviterPar: s.eviterPar || [], saisie: Boolean(s.saisie) };

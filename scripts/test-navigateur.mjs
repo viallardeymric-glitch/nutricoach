@@ -470,6 +470,58 @@ await p.locator('.plat-stock').first().locator('button:has-text("Mangé 1")').cl
 verif(parseInt(/(\d+) portion/.exec(await p.locator('.plat-stock').first().textContent())[1], 10) === portionsAvant - 1, 'batch : « Mangé 1 » retire une portion');
 verif((await p.textContent('.plat-stock')).includes('avant le'), 'batch : date limite affichée');
 
+// Semaine : petit-déjeuners et collations, budget, échange de repas ; courses : récurrents ; stock : péremption ; frigo magique
+await p.goto(serveur.url + '/#/semaine'); await p.waitForSelector('.actions-semaine');
+verif((await p.textContent('.budget-semaine')).includes('€'), 'semaine : budget estimé affiché');
+await p.getByLabel('Budget de la semaine').fill('5');
+verif((await p.textContent('.budget-semaine')).includes('dépasse votre budget'), 'semaine : alerte quand le menu dépasse le budget');
+await p.getByLabel('Budget de la semaine').fill('');
+const idsAvant = await idsSemaine();
+await p.locator('[aria-label^="Déplacer le"]').first().click();
+await p.waitForSelector('text=Choisissez où placer ce repas');
+await p.locator('.mini-action:has-text("⇄ Ici")').nth(2).click();
+const idsApres = await idsSemaine();
+verif(JSON.stringify(idsApres) !== JSON.stringify(idsAvant) && [...idsApres].sort().join() === [...idsAvant].sort().join(), 'semaine : deux repas échangés (mêmes recettes, autres places)');
+await p.click('.puce:has-text("Petit-déjeuners et collations")');
+await p.click('text=Compléter la semaine'); await p.waitForTimeout(600);
+const nbSlots = await p.locator('.jour .repas-jour').count();
+verif(nbSlots === 28, `semaine : 4 repas par jour avec petit-déjeuner et collation (${nbSlots} repas)`);
+const pdj = await p.$$eval('.jour .repas-jour:has(.repas-nom:has-text("Petit-déjeuner")) .mini-lien', (els) => els.map((e) => e.getAttribute('href').split('/').pop()));
+verif(pdj.length === 7 && pdj.every((id) => parId.get(id).sous_categorie === 'petit_dejeuner'), 'semaine : 7 petits-déjeuners tirés de la catégorie petit-déjeuner');
+await p.click('.puce:has-text("Petit-déjeuners et collations")');
+
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+await p.fill('input[aria-label="Ajouter un article"]', 'yaourts nature'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+await p.locator('.article', { hasText: 'Yaourts nature' }).locator('.article-etoile').click();
+await p.locator('.article', { hasText: 'Yaourts nature' }).locator('.supprimer').click();
+await p.click('text=Ajouter mes articles récurrents');
+verif(await p.locator('.article', { hasText: 'Yaourts nature' }).count() === 1, 'courses : article récurrent remis dans la liste en un geste');
+verif((await p.textContent('.budget-ligne')).includes('€'), 'courses : budget estimé');
+
+// stock : péremption -> anti-gaspi -> frigo magique
+await p.fill('input[aria-label="Ajouter un article"]', '1 kg de carottes'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+await p.fill('input[aria-label="Ajouter un article"]', '500 g de riz'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+await p.fill('input[aria-label="Ajouter un article"]', '3 oignons'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+for (const nom of [/carotte/i, /^\s*riz/i, /oignon/i]) await p.locator('.article', { hasText: nom }).first().locator('.case-article').click();
+p.once('dialog', (d) => d.accept());
+await p.click('text=Terminer les courses'); await p.waitForSelector('text=Courses terminées');
+await p.click('role=tab[name="📦 Stock"]');
+const demain = new Date(); demain.setDate(demain.getDate() + 1);
+await p.getByLabel(/Date de péremption de carotte/i).fill(demain.toISOString().slice(0, 10));
+await p.waitForSelector('text=À consommer bientôt');
+verif(/carotte/i.test(await p.textContent('.page-courses')), 'stock : la date de péremption déclenche « à consommer bientôt »');
+await p.goto(serveur.url + '/#/'); await p.waitForSelector('.carte-sport.gaspi');
+verif(/carotte/i.test(await p.textContent('.carte-sport.gaspi')), 'accueil : carte anti-gaspi');
+await p.goto(serveur.url + '/#/frigo'); await p.waitForSelector('text=Anti-gaspi');
+await p.waitForSelector('.resultat-frigo');
+const nbFrigo = await p.locator('.resultat-frigo').count();
+verif(nbFrigo > 0, `frigo magique : ${nbFrigo} recettes possibles avec le stock`);
+const titresFrigo = await p.$$eval('.resultat-frigo .mini-lien', (els) => els.map((e) => e.getAttribute('href').split('/').pop()));
+verif(titresFrigo.every((id) => !parId.get(id).allergenes.includes('lait') && !parId.get(id).allergenes.includes('arachides')), 'SÉCURITÉ : le frigo magique respecte les allergies de la famille');
+verif((await p.locator('.resultat-frigo >> nth=0').textContent()).includes('♻'), 'frigo magique : la première recette utilise ce qui périme');
+const manquant = p.locator('.resultat-frigo .lien:has-text("Ajouter aux courses")').first();
+if (await manquant.count()) { await manquant.click(); await p.waitForSelector('text=ajouté'); verif(true, 'frigo magique : ingrédients manquants ajoutés aux courses'); }
+
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
 await p.click('.puce:text-is("Rose")');

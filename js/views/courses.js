@@ -8,6 +8,8 @@ import { semaineDe } from '../lib/planning.js';
 import { alertesTexte } from '../lib/alertes.js';
 import { analyserSaisie, articlesDepuisPlan, deduireStock, ajouterAuStock, planifierMiseAJour, versBase, cleArticle, libelleQuantite, arrondirCourses, idArticle } from '../lib/courses.js';
 import { rayonDe } from '../data/rayons.js';
+import { aConsommerBientot } from '../lib/frigo.js';
+import { budgetListe } from '../lib/budget.js';
 import { Entete, Pastille, Bandeau, Puce } from '../ui/composants.js';
 
 const nouvelId = () => 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -21,7 +23,7 @@ function groupesParRayon(articles) {
     .map(([id, items]) => ({ rayon: RAYONS.find((r) => r.id === id) || RAYONS[RAYONS.length - 1], items: items.sort((x, y) => x.nom.localeCompare(y.nom, 'fr')) }));
 }
 
-function Article({ a, profils, onCoche, onSuppr }) {
+function Article({ a, profils, onCoche, onSuppr, recurrent, onRecurrent }) {
   const alertes = useMemo(() => Object.entries(profils).filter(([, p]) => p).flatMap(([qui, p]) => alertesTexte(a.nom, p).map((x) => ({ ...x, qui }))), [a.nom, profils]);
   return html`<li class=${'article' + (a.coche ? ' coche' : '')}>
     <button type="button" class="case-article" role="checkbox" aria-checked=${a.coche} aria-label=${`${a.coche ? 'Décocher' : 'Cocher'} ${a.nom}`} onClick=${onCoche}>
@@ -30,6 +32,7 @@ function Article({ a, profils, onCoche, onSuppr }) {
         ${alertes.map((x) => html`<span class=${'alerte-article ' + x.niveau} key=${x.id + x.qui}><${Pastille} qui=${x.qui} label=${(profils[x.qui] || {}).prenom} /> ${x.niveau === 'rouge' ? '⛔' : '⚠'} ${x.raison}</span>`)}</span>
     </button>
     <span class="article-qui" title=${a.coche && a.cochePar ? 'Coché par' : 'Ajouté par'}>${(a.coche && a.cochePar) || a.par ? html`<${Pastille} qui=${(a.coche && a.cochePar) || a.par} />` : ''}</span>
+    ${onRecurrent && html`<button type="button" class=${'article-etoile' + (recurrent ? ' on' : '')} aria-pressed=${recurrent} aria-label=${recurrent ? `${a.nom} n'est plus récurrent` : `Rendre ${a.nom} récurrent`} onClick=${onRecurrent}>${recurrent ? '★' : '☆'}</button>`}
     <button type="button" class="supprimer" aria-label=${`Retirer ${a.nom}`} onClick=${onSuppr}>✕</button>
   </li>`;
 }
@@ -44,8 +47,8 @@ function texteListe(nom, articles) {
   return lignes.join('\n');
 }
 
-export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, convives = 2 }) {
-  const { listes, articles } = donnees;
+export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, convives = 2, parId = new Map() }) {
+  const { listes, articles, recurrents = [] } = donnees;
   const [vue, setVue] = useState('liste');
   const [courant, setCourant] = useState('semaine');
   const [saisie, setSaisie] = useState('');
@@ -59,6 +62,22 @@ export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, co
   const restants = deLaListe.filter((a) => !a.coche);
   const pris = deLaListe.filter((a) => a.coche);
 
+  const cleRec = (a) => a.cle || cleArticle(a.nom, a.unite);
+  const basculerRecurrent = (a) => {
+    const ex = recurrents.find((r) => r.cle === cleRec(a));
+    if (ex) ops.supprimerRecurrent(ex);
+    else ops.ecrireRecurrent({ nom: a.nom, quantite: a.quantite, unite: a.unite, rayon: a.rayon, cle: cleRec(a) });
+  };
+  const ajouterRecurrents = () => {
+    let n = 0;
+    for (const r of recurrents) {
+      if (deLaListe.some((a) => cleRec(a) === r.cle && !a.coche)) continue;
+      ops.ecrireArticle({ id: nouvelId(), liste: liste.id, nom: r.nom, quantite: r.quantite, unite: r.unite, rayon: r.rayon, cle: r.cle, par: moi, source: 'recurrent', coche: false, cochePar: '', recettes: [] });
+      n++;
+    }
+    setMessage({ type: 'info', texte: n ? `${n} article${n > 1 ? 's' : ''} récurrent${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}.` : 'Tous vos articles récurrents sont déjà dans la liste.' });
+  };
+  const budget = useMemo(() => budgetListe(restants, parId, convives), [restants, parId, convives]);
   const ajouter = (texte) => {
     const s = analyserSaisie(texte);
     if (!s.nom) return;
@@ -134,12 +153,15 @@ export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, co
           <button type="submit" class="bouton" aria-label="Ajouter" disabled=${!saisie.trim()}>＋</button></form>
         <div class="actions-courses">
           <button type="button" class="bouton secondaire" disabled=${enCours || !catalogue} onClick=${generer}>${enCours ? 'Calcul…' : '✨ Depuis le menu de la semaine'}</button>
+          ${recurrents.length > 0 && html`<button type="button" class="bouton secondaire" onClick=${ajouterRecurrents}>↻ Ajouter mes articles récurrents (${recurrents.length})</button>`}
           ${pris.length > 0 && html`<button type="button" class="bouton" onClick=${terminer}>✓ Terminer les courses (${pris.length})</button>`}
         </div>
         ${deLaListe.length === 0 ? html`<div class="etat"><p>🛒 La liste est vide.</p><p class="sous">Ajoutez des articles, générez-la depuis votre menu, ou scannez un produit.</p></div>` : html`
+          ${restants.length > 0 && html`<p class="budget-ligne">💶 Budget estimé : environ <strong>${budget.total} €</strong> (estimation d'après le coût des recettes${budget.manuels ? ` et ${budget.manuels} article${budget.manuels > 1 ? 's' : ''} à 2 € en moyenne` : ''}).</p>`}
           <div class="progression" aria-label=${`${pris.length} sur ${deLaListe.length} dans le panier`}><span style=${`width:${(pris.length / deLaListe.length) * 100}%`}></span></div>
           ${groupesParRayon(restants).map((g) => html`<section class="rayon" key=${g.rayon.id}><h3 class="petit-titre">${g.rayon.icone} ${g.rayon.nom}</h3>
             <ul class="articles">${g.items.map((a) => html`<${Article} key=${a.id} a=${a} profils=${profils}
+              recurrent=${recurrents.some((r) => r.cle === cleRec(a))} onRecurrent=${() => basculerRecurrent(a)}
               onCoche=${() => ops.ecrireArticle({ ...a, coche: true, cochePar: moi })} onSuppr=${() => ops.supprimerArticle(a)} />`)}</ul></section>`)}
           ${pris.length > 0 && html`<section class="rayon"><h3 class="petit-titre">🧺 Dans le panier (${pris.length})</h3>
             <ul class="articles">${pris.map((a) => html`<${Article} key=${a.id} a=${a} profils=${profils}
@@ -170,10 +192,12 @@ function Stock({ stock, ops }) {
   return html`<div>
     <form class="ligne-saisie" onSubmit=${ajouter}><input type="text" placeholder="Ajouter au stock : 1 kg de riz…" value=${saisie}
       onInput=${(e) => setSaisie(e.target.value)} aria-label="Ajouter au stock" /><button type="submit" class="bouton" disabled=${!saisie.trim()}>＋</button></form>
+    ${aConsommerBientot(stock).length > 0 && html`<${Bandeau} type="avertissement" titre="♻ À consommer bientôt"><p>${aConsommerBientot(stock).map((s) => `${s.nom}${s.perime ? ' (date dépassée)' : ''}`).join(', ')}. <a href="#/frigo">Voir les recettes anti-gaspi</a></p><//>`}
     ${stock.length === 0 ? html`<div class="etat"><p>📦 Le stock est vide.</p><p class="sous">Il se remplit tout seul quand vous terminez vos courses, et se déduit des prochaines listes.</p></div>`
       : groupesParRayon(stock.map((s) => ({ ...s, id: s.cle }))).map((g) => html`<section class="rayon" key=${g.rayon.id}><h3 class="petit-titre">${g.rayon.icone} ${g.rayon.nom}</h3>
         <ul class="articles">${g.items.map((s) => html`<li class="article" key=${s.cle}>
           <span class="article-texte plein"><strong>${s.nom}</strong> <span class="qte">${libelleQuantite(arrondirCourses(s))}</span></span>
+          <label class="stock-date"><span>Péremption</span><input type="date" value=${s.peremption || ''} aria-label=${`Date de péremption de ${s.nom}`} onInput=${(e) => ops.ecrireStock({ ...s, peremption: e.target.value })} /></label>
           <button type="button" class="mini-action" aria-label=${`Moins de ${s.nom}`} onClick=${() => changer(s, -1)}>−</button>
           <button type="button" class="mini-action" aria-label=${`Plus de ${s.nom}`} onClick=${() => changer(s, 1)}>＋</button>
           <button type="button" class="supprimer" aria-label=${`Retirer ${s.nom} du stock`} onClick=${() => ops.supprimerStock(s)}>✕</button></li>`)}</ul></section>`)}
