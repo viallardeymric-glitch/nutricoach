@@ -110,16 +110,15 @@ function SectionPin({ pin }) {
 function SectionPhotos() {
   const [reg, setReg] = useState(chargerReglagesPhotos);
   const maj = (c) => { const s = { ...reg, ...c }; setReg(s); enregistrerReglagesPhotos(s); };
-  const f = FOURNISSEURS[reg.fournisseur];
+  const majCle = (k, v) => maj({ cles: { ...reg.cles, [k]: v.trim() } });
+  const actifs = Object.keys(FOURNISSEURS).filter((k) => reg.cles[k]);
   return html`<div>
-    <${Groupe} titre="Fournisseur"><${Choix}>${Object.entries(FOURNISSEURS).map(([k, x]) => html`<${Puce} key=${k} actif=${reg.fournisseur === k} onClick=${() => maj({ fournisseur: k })}>${x.nom}<//>`)}<//><//>
-    <${Champ} etiquette=${`Clé ${f.nom} (gratuite)`}><input type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé ici" value=${reg.cle}
-      onInput=${(e) => maj({ cle: e.target.value.trim() })} /><//>
-    <${Bandeau} type="info" titre="Obtenir une clé gratuite"><ol class="simple">
-      <li>Allez sur <strong>${f.site}</strong> et créez un compte gratuit.</li>
-      <li>${reg.fournisseur === 'pexels' ? 'Demandez une clé d\'API (instantané, sans carte bancaire).' : 'Créez une « application » (mode Demo) pour obtenir une « Access Key ».'}</li>
-      <li>Collez la clé ci-dessus : les photos apparaissent à l'ouverture des recettes (${f.delai}).</li></ol><//>
-    <p class="note">Chaque photo est cherchée à l'ouverture d'une recette puis gardée sur ce téléphone, avec le nom du photographe. La clé reste sur ce téléphone : elle n'est ni synchronisée ni enregistrée dans le dépôt. Sans clé, les recettes gardent leur pictogramme.</p>
+    <${Groupe} titre="Fournisseur principal" aide="Si le principal est indisponible (quota atteint, aucune photo), l'autre prend le relais quand sa clé est enregistrée.">
+      <${Choix}>${Object.entries(FOURNISSEURS).map(([k, x]) => html`<${Puce} key=${k} actif=${reg.fournisseur === k} onClick=${() => maj({ fournisseur: k })}>${x.nom}<//>`)}<//><//>
+    ${Object.entries(FOURNISSEURS).map(([k, x]) => html`<div key=${k}><${Champ} etiquette=${`Clé ${x.nom} (gratuite)`}><input type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé ici" value=${reg.cles[k]}
+      onInput=${(e) => majCle(k, e.target.value)} /><//>
+      <p class="note">${k === 'pexels' ? 'Sur pexels.com/api : créez un compte gratuit puis demandez une clé (instantané).' : 'Sur unsplash.com/developers : créez un compte, puis une « application » en mode Demo pour obtenir une « Access Key ».'} Limite : ${x.delai}.</p></div>`)}
+    <p class="note">${actifs.length === 2 ? 'Les deux fournisseurs sont activés : 250 photos par heure en tout.' : actifs.length === 1 ? `${FOURNISSEURS[actifs[0]].nom} est activé.` : 'Aucune clé : les recettes gardent leur pictogramme.'} Chaque photo est cherchée à l'ouverture d'une recette puis gardée sur ce téléphone, avec le nom du photographe. Les clés restent sur ce téléphone : elles ne sont ni synchronisées ni enregistrées dans le dépôt.</p>
   </div>`;
 }
 
@@ -261,7 +260,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
       </div>
       <div class="rangs">
         <${Rang} icone="👧" titre=${RUBRIQUES.enfants} href="#/profil/enfants" sous=${enfants.liste.length ? enfants.liste.map((x) => x.prenom).join(', ') : 'Aucun enfant'} />
-        <${Rang} icone="📷" titre=${RUBRIQUES.photos} href="#/profil/photos" sous=${chargerReglagesPhotos().cle ? `${FOURNISSEURS[chargerReglagesPhotos().fournisseur].nom} activé` : 'Pictogrammes seulement'} />
+        <${Rang} icone="📷" titre=${RUBRIQUES.photos} href="#/profil/photos" sous=${(() => { const a = Object.keys(FOURNISSEURS).filter((k) => chargerReglagesPhotos().cles[k]).map((k) => FOURNISSEURS[k].nom); return a.length ? `${a.join(' + ')} activé${a.length > 1 ? 's' : ''}` : 'Pictogrammes seulement'; })()} />
         <${Rang} icone="💬" titre=${RUBRIQUES.coach} href="#/profil/coach" sous=${reglageCoach.cle ? 'Clé enregistrée' : 'À configurer'} />
         <${Rang} icone="🔒" titre=${RUBRIQUES.securite} href="#/profil/securite" sous=${pin.defini ? 'Code actif' : 'Non défini'} />
         <${Rang} icone="☁️" titre=${RUBRIQUES.compte} href="#/profil/compte" sous=${compte.actif ? compte.email : 'Mode local'} />

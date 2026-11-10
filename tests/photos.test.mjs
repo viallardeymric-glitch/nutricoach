@@ -28,3 +28,13 @@ test('lecture des réponses : photo et crédit du photographe', () => {
   assert.deepEqual(Object.keys(FOURNISSEURS), ['pexels', 'unsplash']);
   assert.match(messageErreurPhotos(401), /clé/); assert.match(messageErreurPhotos(429), /Quota/);
 });
+
+import { normaliserReglagesPhotos, ordreFournisseurs } from '../js/core/photos.js';
+test('deux clés : ordre d\'essai, ancien format repris, fournisseur sans clé ignoré', () => {
+  assert.deepEqual(ordreFournisseurs(normaliserReglagesPhotos({ fournisseur: 'pexels', cles: { pexels: 'A', unsplash: 'B' } })), ['pexels', 'unsplash']);
+  assert.deepEqual(ordreFournisseurs(normaliserReglagesPhotos({ fournisseur: 'unsplash', cles: { pexels: 'A', unsplash: 'B' } })), ['unsplash', 'pexels']);
+  assert.deepEqual(ordreFournisseurs(normaliserReglagesPhotos({ fournisseur: 'unsplash', cles: { pexels: 'A' } })), ['pexels'], 'pas de clé Unsplash : on n\'essaie pas');
+  assert.deepEqual(ordreFournisseurs(normaliserReglagesPhotos({})), []);
+  assert.deepEqual(normaliserReglagesPhotos({ fournisseur: 'pexels', cle: 'ANCIENNE' }).cles, { pexels: 'ANCIENNE', unsplash: '' }, 'une seule clé enregistrée avec l\'ancienne version');
+  assert.equal(normaliserReglagesPhotos({ fournisseur: 'inconnu' }).fournisseur, 'pexels');
+});

@@ -20,7 +20,7 @@ Envoyez-lui le lien de l'appli, son adresse et son mot de passe (par un autre ca
 - **Profil** : date de naissance, poids, taille, objectif, régimes, allergies. Les enfants s'ajoutent dans Profil › Enfants.
 - **Planning** : « Générer ma semaine » ; **Courses** : « Depuis le menu de la semaine » ; **Scanner** : bouton central.
 - **Coach IA** (facultatif) : créez une clé gratuite sur aistudio.google.com/apikey et collez-la dans Profil › Coach IA. Votre profil n'est envoyé à Google que si vous le cochez.
-- **Photos des recettes** (facultatif) : Profil › Photos des recettes. Créez une clé gratuite sur pexels.com/api (instantané) ou unsplash.com/developers et collez-la : la photo apparaît à l'ouverture d'une recette, avec le nom du photographe.
+- **Photos des recettes** (facultatif) : Profil › Photos des recettes. Créez une clé gratuite sur pexels.com/api (instantané) et/ou unsplash.com/developers et collez-les (les deux clés peuvent être enregistrées : si le principal est en panne, l'autre prend le relais) : la photo apparaît à l'ouverture d'une recette, avec le nom du photographe.
 - **Code PIN** et **Face ID / Touch ID** : Profil › Code PIN.
 
 ## 5. Mettre à jour l'appli

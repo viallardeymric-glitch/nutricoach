@@ -6,7 +6,17 @@ export const FOURNISSEURS = {
   pexels: { nom: 'Pexels', site: 'pexels.com/api', delai: '200 photos par heure' },
   unsplash: { nom: 'Unsplash', site: 'unsplash.com/developers', delai: '50 photos par heure' },
 };
-export const chargerReglagesPhotos = () => ({ fournisseur: 'pexels', cle: '', ...lire('photos.reglages', {}) });
+/** Réglages : { fournisseur (principal), cles: { pexels, unsplash } }. L'ancien format (une seule clé) est repris tel quel. */
+export function normaliserReglagesPhotos(brut) {
+  const b = brut || {};
+  const fournisseur = FOURNISSEURS[b.fournisseur] ? b.fournisseur : 'pexels';
+  const cles = { pexels: '', unsplash: '', ...(b.cles || {}) };
+  if (b.cle && !cles[fournisseur]) cles[fournisseur] = b.cle;       // ancien format
+  return { fournisseur, cles };
+}
+export const chargerReglagesPhotos = () => normaliserReglagesPhotos(lire('photos.reglages', {}));
+/** Fournisseurs à essayer, dans l'ordre : le principal d'abord, puis l'autre, seulement ceux qui ont une clé. */
+export const ordreFournisseurs = (reg) => [reg.fournisseur, ...Object.keys(FOURNISSEURS).filter((k) => k !== reg.fournisseur)].filter((k) => reg.cles[k]);
 export const enregistrerReglagesPhotos = (r) => ecrire('photos.reglages', r);
 
 const MOTS_VIDES = /\b(au|aux|a|la|le|les|de|du|des|d|l|et|en|avec|sans|sur|façon|facon|maison|petit|petite|petits|petites)\b/gi;
@@ -40,22 +50,36 @@ export const messageErreurPhotos = (statut) => (statut === 401 || statut === 403
 const MAX_CACHE = 150;
 export const photoEnCache = (id) => (lire('photos', {}) || {})[id] || null;
 
-/** Photo d'une recette : cache d'abord, sinon recherche. Retourne la photo, null s'il n'y en a pas ; lève une Error lisible en cas de refus. */
+/**
+ * Photo d'une recette : cache d'abord, sinon recherche chez le fournisseur principal puis, s'il échoue (quota, clé refusée,
+ * aucune photo), chez l'autre. Retourne la photo, null s'il n'y en a pas ; lève une Error lisible si tous ont échoué.
+ */
 export async function photoDeRecette(recette, appeler = fetch) {
   const dejaLa = photoEnCache(recette.id);
   if (dejaLa) return dejaLa.url ? dejaLa : null;                 // « aucune photo » est aussi mémorisé
   const reg = chargerReglagesPhotos();
-  if (!reg.cle) return null;
-  const { url, entetes } = construireRequete(reg.fournisseur, requetePhoto(recette), reg.cle);
-  let rep;
-  try { rep = await appeler(url, { headers: entetes }); } catch { throw new Error(messageErreurPhotos(0)); }
-  if (!rep.ok) throw new Error(messageErreurPhotos(rep.status));
-  const photo = lirePhoto(reg.fournisseur, await rep.json());
+  const ordre = ordreFournisseurs(reg);
+  if (!ordre.length) return null;
+  let derniereErreur = null;
+  let photo = null;
+  let reponduSansPhoto = false;
+  for (const f of ordre) {
+    const { url, entetes } = construireRequete(f, requetePhoto(recette), reg.cles[f]);
+    let rep;
+    try { rep = await appeler(url, { headers: entetes }); } catch { derniereErreur = new Error(messageErreurPhotos(0)); continue; }
+    if (!rep.ok) { derniereErreur = new Error(messageErreurPhotos(rep.status)); continue; }
+    photo = lirePhoto(f, await rep.json());
+    if (photo) {
+      if (photo.telechargement) appeler(photo.telechargement, { headers: entetes }).catch(() => {});   // règle d'Unsplash : signaler l'usage
+      break;
+    }
+    reponduSansPhoto = true;
+  }
+  if (!photo && derniereErreur && !reponduSansPhoto) throw derniereErreur;   // tout a échoué : on réessaiera plus tard (rien en cache)
   const cache = lire('photos', {}) || {};
   cache[recette.id] = photo || { url: null };
   const ids = Object.keys(cache);
   if (ids.length > MAX_CACHE) delete cache[ids[0]];
   ecrire('photos', cache);
-  if (photo && photo.telechargement) appeler(photo.telechargement, { headers: entetes }).catch(() => {});   // règle d'Unsplash : signaler l'usage
   return photo;
 }

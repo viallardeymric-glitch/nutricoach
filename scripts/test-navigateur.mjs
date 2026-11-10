@@ -580,7 +580,7 @@ await ctx.route('https://api.pexels.com/**', async (route) => {
 await p.goto(serveur.url + '/#/recette/' + toutes[20].id); await p.waitForSelector('.fiche h1');
 await p.waitForTimeout(600);
 verif(await p.locator('.fiche-photo').count() === 0 && appelsPhotos === 0, 'photos : sans clé, pictogramme et aucun appel réseau');
-await p.goto(serveur.url + '/#/profil/photos'); await p.waitForSelector('text=Obtenir une clé gratuite');
+await p.goto(serveur.url + '/#/profil/photos'); await p.waitForSelector('text=Fournisseur principal');
 verif((await p.textContent('.contenu')).includes('pexels.com/api'), 'photos : instructions pour obtenir la clé gratuite');
 await p.getByLabel(/Clé Pexels/).fill('CLE-PEXELS-TEST');
 await p.goto(serveur.url + '/#/recette/' + toutes[21].id); await p.waitForSelector('.fiche-photo');
@@ -591,7 +591,22 @@ verif(appelsPhotos === 1, 'photos : photo gardée en cache (aucun nouvel appel)'
 await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill('mauvaise');
 await p.goto(serveur.url + '/#/recette/' + toutes[22].id); await p.waitForSelector('text=clé de photos est refusée');
 verif(await p.locator('.fiche-hero').count() === 1, 'photos : clé refusée, message clair et pictogramme conservé');
-await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill('');
+// Deux clés : Pexels en panne (clé refusée) -> Unsplash prend le relais
+let appelsUnsplash = 0;
+await ctx.route('https://api.unsplash.com/**', async (route) => {
+  if (/\/download/.test(route.request().url())) return route.fulfill({ contentType: 'application/json', body: '{}' });
+  appelsUnsplash++;
+  if (route.request().headers()['authorization'] !== 'Client-ID CLE-UNS-TEST') return route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
+  await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ results: [{ urls: { regular: 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=' }, user: { name: 'Paul Martin', links: { html: 'https://unsplash.com/@paul' } }, links: { download_location: 'https://api.unsplash.com/photos/x/download' } }] }) });
+});
+await p.goto(serveur.url + '/#/profil/photos'); await p.waitForSelector('text=Fournisseur principal');
+await p.getByLabel(/Clé Unsplash/).fill('CLE-UNS-TEST');
+verif((await p.textContent('.contenu')).includes('Pexels + Unsplash') || (await p.textContent('.contenu')).includes('Les deux fournisseurs sont activés'), 'photos : les deux clés peuvent être enregistrées');
+await p.goto(serveur.url + '/#/recette/' + toutes[23].id); await p.waitForSelector('.fiche-photo');
+verif((await p.textContent('.fiche-photo figcaption')).includes('Paul Martin') && (await p.textContent('.fiche-photo figcaption')).includes('Unsplash') && appelsUnsplash === 1, 'photos : Pexels refuse la clé, Unsplash prend le relais avec son crédit');
+await p.goto(serveur.url + '/#/profil'); await p.waitForSelector('.rangs');
+verif((await p.locator('.rang:has-text("Photos des recettes")').textContent()).includes('Unsplash'), 'photos : la rubrique du profil indique les fournisseurs activés');
+await p.goto(serveur.url + '/#/profil/photos'); await p.getByLabel(/Clé Pexels/).fill(''); await p.getByLabel(/Clé Unsplash/).fill('');
 
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
