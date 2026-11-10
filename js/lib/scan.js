@@ -165,9 +165,10 @@ export function alertesProduit(p, profil) {
   // Objectifs et santé : repères sur 100 g
   const n = p.nutrition || {};
   const risques = profilsARisque(profil);
-  const reduitSel = risques.includes('hypertendu') || profil.objectif === 'sel';
+  const sec = profil.secondaires || [];
+  const reduitSel = risques.includes('hypertendu') || sec.includes('sel') || profil.objectif === 'sel';
   if (n.sel != null && n.sel > 1.5 && reduitSel) res.push({ id: 'obj-sel', niveau: 'orange', source: 'PNNS', raison: `Riche en sel (${arr(n.sel, 2)} g pour 100 g) : à limiter pour votre objectif.` });
-  if (n.sucres != null && n.sucres > 15 && (risques.includes('diabetique') || profil.objectif === 'sucre')) res.push({ id: 'obj-sucre', niveau: 'orange', source: 'PNNS', raison: `Riche en sucres (${arr(n.sucres)} g pour 100 g) : à limiter pour votre objectif.` });
+  if (n.sucres != null && n.sucres > 15 && (risques.includes('diabetique') || sec.includes('sucre') || profil.objectif === 'sucre')) res.push({ id: 'obj-sucre', niveau: 'orange', source: 'PNNS', raison: `Riche en sucres (${arr(n.sucres)} g pour 100 g) : à limiter pour votre objectif.` });
   if (n.kcal != null && n.kcal > 400 && (profil.objectif === 'perte' || profil.objectif === 'seche')) res.push({ id: 'obj-kcal', niveau: 'orange', source: 'PNNS', raison: `Très calorique (${Math.round(n.kcal)} kcal pour 100 g) : à surveiller pour votre objectif.` });
   const dur = (p.additifs || []).map(risqueAdditif).filter((x) => x && x.niveau === 'eleve');
   if (dur.length && (risques.includes('femme_enceinte') || risques.includes('allaitante') || risques.includes('enfant') || risques.includes('enfant_moins_de_3_ans'))) {

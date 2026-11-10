@@ -59,3 +59,26 @@ test('chaque règle a un id unique, une source connue, une raison d\'une phrase'
     assert.ok(r.profils.length > 0 && ['rouge', 'orange'].includes(r.niveau));
   }
 });
+
+import { enfantVide, risquesPour } from '../js/lib/profils.js';
+import { contraintesCouple } from '../js/lib/planning.js';
+test('bébé, petit enfant, enfant : règles selon l\'âge', () => {
+  const ref = new Date();
+  const naiss = (mois) => { const d = new Date(ref.getFullYear(), ref.getMonth() - mois, 1); return d.toISOString().slice(0, 10); };
+  const bebe = { ...enfantVide('enfant-b'), prenom: 'Bébé', naissance: naiss(8) };
+  const petit = { ...enfantVide('enfant-p'), prenom: 'Petit', naissance: naiss(24) };
+  const enfant = { ...enfantVide('enfant-e'), prenom: 'Léa', naissance: naiss(60) };
+  assert.ok(ids('Miel d\'acacia', bebe).includes('miel-bebe') && alertesTexte('Miel', bebe)[0].niveau === 'rouge', 'miel avant 1 an');
+  assert.ok(!ids('Miel d\'acacia', petit).includes('miel-bebe'));
+  assert.ok(ids('Cacahuètes grillées', petit).includes('etouffement'));
+  assert.ok(!ids('Cacahuètes grillées', enfant).includes('etouffement'), 'étouffement : avant 3 ans seulement');
+  assert.ok(ids('Lait entier', bebe).includes('lait-vache-bebe'));
+  assert.ok(ids('Bouillon cube', petit).includes('sel-petit'));
+  assert.ok(ids('Soda', enfant).includes('boisson-sucree-enfant'));
+  assert.ok(ids('Camembert au lait cru', enfant).includes('lait-cru') && ids('Vin rouge', enfant).includes('alcool'));
+  assert.deepEqual(ids('Poulet', enfant), []);
+  assert.deepEqual(risquesPour(enfant), ['enfant']);
+  assert.ok(contraintesCouple([enfant, enceinte]).risques.includes('enfant'), 'un enfant dans les menus : ses risques s\'ajoutent');
+  assert.ok(ids('Allergie', { ...enfant, allergenes: ['arachides'] }).length === 0);
+  assert.ok(ids('Beurre de cacahuètes', { ...enfant, allergenes: ['arachides'] }).includes('allergie-arachides'));
+});

@@ -3,8 +3,8 @@ import { html, useState } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { REGIMES, ALLERGENES } from '../data/libelles.js';
 import { REGIMES_AVANCES, FAMILLES_REGIMES, RAPPEL_MEDICAL, nomRegime } from '../data/regimes.js';
-import { ACTIVITES, OBJECTIFS, calculerBesoins } from '../lib/besoins.js';
-import { validerProfil, profilComplet, ageDe, LIMITES, AGE_MIN } from '../lib/profils.js';
+import { ACTIVITES, OBJECTIFS, SECONDAIRES, calculerBesoins } from '../lib/besoins.js';
+import { validerProfil, profilComplet, ageDe, LIMITES, AGE_MIN, groupeAge, GROUPES_AGE, ageEnMois, enfantVide, risquesEnfant } from '../lib/profils.js';
 import { basculer } from '../lib/recettes.js';
 import { pinValide } from '../core/pin.js';
 import { chargerReglagesCoach } from '../core/coach.js';
@@ -17,7 +17,7 @@ const TRIMESTRES = [[0, 'Non'], [1, '1er trimestre'], [2, '2e trimestre'], [3, '
 const REGIMES_DEJA_AILLEURS = ['omnivore', 'enceinte', 'sportif', 'diabetique'];
 const RUBRIQUES = {
   infos: 'Mes informations', objectif: 'Objectif et activité', situation: 'Ma situation',
-  regimes: 'Régimes et allergies', securite: 'Code PIN', coach: 'Coach IA', compte: 'Compte',
+  regimes: 'Régimes et allergies', enfants: 'Enfants', securite: 'Code PIN', coach: 'Coach IA', compte: 'Compte',
 };
 
 export function ChoixPersonne({ onChoisir }) {
@@ -87,6 +87,33 @@ function SectionPin({ pin }) {
   </div>`;
 }
 
+function SectionEnfants({ enfants }) {
+  const [edition, setEdition] = useState(null);   // enfant en cours de saisie
+  const e = edition;
+  const enregistrer = () => {
+    if (!e.prenom.trim() || !e.naissance) return;
+    enfants.ecrire({ ...e, prenom: e.prenom.trim() });
+    setEdition(null);
+  };
+  return html`<div>
+    ${enfants.liste.length === 0 && !e && html`<div class="etat"><p>👧 Aucun enfant enregistré.</p><p class="sous">Ajoutez un enfant : ses portions, ses allergies et les aliments déconseillés à son âge sont pris en compte dans les menus, les courses et le scan.</p></div>`}
+    ${enfants.liste.map((x) => html`<div class="carte-nous" key=${x.id}><h2><${Pastille} qui=${x.id} label=${x.prenom} /> ${x.prenom}</h2>
+      <p>${GROUPES_AGE[groupeAge(x.naissance)] || ''} · ${Math.floor((ageEnMois(x.naissance) || 0) / 12)} an${Math.floor((ageEnMois(x.naissance) || 0) / 12) > 1 ? 's' : ''}${(ageEnMois(x.naissance) || 0) < 36 ? ` (${ageEnMois(x.naissance)} mois)` : ''}</p>
+      ${x.allergenes.length > 0 && html`<div class="etiquettes"><strong>Évite :</strong>${x.allergenes.map((a) => html`<span class="etiquette allergene" key=${a}>${ALLERGENES[a] || a}</span>`)}</div>`}
+      <p class="sous">${x.dansMenus ? 'Compté dans les menus et les courses' : 'Non compté dans les menus'}</p>
+      <div class="puces libres"><${Puce} actif=${false} onClick=${() => setEdition({ ...x })}>Modifier<//><${Puce} actif=${false} onClick=${() => { if (window.confirm(`Supprimer le profil de ${x.prenom} ?`)) enfants.supprimer(x); }}>Supprimer<//></div></div>`)}
+    ${e ? html`<form class="carte-nous" onSubmit=${(ev) => { ev.preventDefault(); enregistrer(); }}>
+      <${Champ} etiquette="Prénom"><input type="text" value=${e.prenom} onInput=${(ev) => setEdition({ ...e, prenom: ev.target.value })} required /><//>
+      <${Champ} etiquette="Date de naissance"><input type="date" value=${e.naissance} min="2005-01-01" max=${new Date().toISOString().slice(0, 10)} onInput=${(ev) => setEdition({ ...e, naissance: ev.target.value })} required /><//>
+      <${Groupe} titre="Allergies"><${Choix}>${Object.entries(ALLERGENES).map(([k, n]) => html`<${Puce} key=${k} exclu=${true} actif=${e.allergenes.includes(k)} onClick=${() => setEdition({ ...e, allergenes: basculer(e.allergenes, k) })}>${n}<//>`)}<//><//>
+      <${Champ} etiquette="Aliments non aimés"><input type="text" value=${e.exclusions} onInput=${(ev) => setEdition({ ...e, exclusions: ev.target.value })} placeholder="ex. oignon, champignons" /><//>
+      <label class="case"><input type="checkbox" checked=${e.dansMenus} onChange=${(ev) => setEdition({ ...e, dansMenus: ev.target.checked })} /><span>Compter cet enfant dans les menus et les courses</span></label>
+      <div class="puces libres"><${Puce} actif=${true} onClick=${enregistrer}>Enregistrer<//><${Puce} actif=${false} onClick=${() => setEdition(null)}>Annuler<//></div></form>`
+      : html`<button type="button" class="bouton secondaire large" onClick=${() => setEdition(enfantVide('enfant-' + Date.now().toString(36)))}>＋ Ajouter un enfant</button>`}
+    <p class="note">Les menus évitent les recettes déconseillées aux enfants (alcool, cru à risque…) et les courses prévoient des portions adaptées à l'âge. Avant 1 an, suivez les conseils de votre pédiatre.</p>
+  </div>`;
+}
+
 function resumeSituation(p) {
   const s = [];
   if (p.grossesse > 0) s.push(`Enceinte (${p.grossesse === 1 ? '1er' : p.grossesse + 'e'} trim.)`);
@@ -97,7 +124,7 @@ function resumeSituation(p) {
   return s.length ? s.join(', ') : 'Aucune particularité';
 }
 
-export function Profil({ moi, profil, onMoi, onChange, compte, pin, section }) {
+export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enfants }) {
   const p = profil;
   const maj = (changes) => onChange({ ...p, ...changes });
   const erreurs = validerProfil(p);
@@ -127,6 +154,14 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section }) {
       ${section === 'objectif' && html`
         <${Groupe} titre="Mon objectif"><${Choix}>${Object.entries(OBJECTIFS).map(([k, n]) => html`<${Puce} key=${k} actif=${p.objectif === k}
           onClick=${() => maj({ objectif: k })}>${n}<//>`)}<//><//>
+        ${p.objectif === 'date' && html`<div class="grille deux"><${Champ} etiquette="Poids visé (kg)"><input type="text" inputmode="decimal" value=${p.objectifDate ? p.objectifDate.kg : ''} placeholder="ex. 60"
+            onInput=${(e) => maj({ objectifDate: { kg: Number(e.target.value.replace(',', '.')) || '', date: p.objectifDate ? p.objectifDate.date : '' } })} /><//>
+          <${Champ} etiquette="Avant le"><input type="date" value=${p.objectifDate ? p.objectifDate.date : ''} min=${new Date().toISOString().slice(0, 10)}
+            onInput=${(e) => maj({ objectifDate: { kg: p.objectifDate ? p.objectifDate.kg : '', date: e.target.value } })} /><//></div>
+          <p class="note">Le rythme est plafonné (0,8 kg par semaine au plus) : si la date est trop proche, l'appli vous propose une date réaliste.</p>`}
+        ${p.objectif === 'sport' && html`<${Bandeau} type="info"><p>Réglez votre objectif de course dans <a href="#/sport">Sport</a> : date, distance et plan nutritionnel par phases.</p><//>`}
+        <${Groupe} titre="Objectifs complémentaires" aide="Cumulables avec votre objectif. Ils déclenchent des alertes sur les produits et les articles."><${Choix}>${Object.entries(SECONDAIRES).map(([k, n]) => html`<${Puce} key=${k}
+          actif=${(p.secondaires || []).includes(k)} onClick=${() => maj({ secondaires: basculer(p.secondaires || [], k) })}>${n}<//>`)}<//><//>
         <${Groupe} titre="Activité physique" aide=${ACTIVITES[p.activite]?.aide}>
           <${Choix}>${Object.entries(ACTIVITES).map(([k, a]) => html`<${Puce} key=${k} actif=${p.activite === k}
             onClick=${() => maj({ activite: k })}>${a.nom}<//>`)}<//><//>
@@ -155,6 +190,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section }) {
           actif=${p.allergenes.includes(k)} onClick=${() => maj({ allergenes: basculer(p.allergenes, k) })}>${n}<//>`)}<//><//>
         <${Champ} etiquette="Aliments que je n'aime pas (séparés par des virgules)">
           <input type="text" value=${p.exclusions} placeholder="ex. coriandre, olives" onInput=${(e) => maj({ exclusions: e.target.value })} /><//>`}
+      ${section === 'enfants' && html`<${SectionEnfants} enfants=${enfants} />`}
       ${section === 'securite' && html`<${SectionPin} pin=${pin} />`}
       ${section === 'coach' && html`<${ReglagesCoach} />`}
       ${section === 'compte' && html`
@@ -187,6 +223,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section }) {
           sous=${p.regimes.length + p.allergenes.length + (p.exclusions ? 1 : 0) ? `${p.regimes.length} régime${p.regimes.length > 1 ? 's' : ''} · ${p.allergenes.length} allergie${p.allergenes.length > 1 ? 's' : ''}` : 'Aucune restriction'} />
       </div>
       <div class="rangs">
+        <${Rang} icone="👧" titre=${RUBRIQUES.enfants} href="#/profil/enfants" sous=${enfants.liste.length ? enfants.liste.map((x) => x.prenom).join(', ') : 'Aucun enfant'} />
         <${Rang} icone="💬" titre=${RUBRIQUES.coach} href="#/profil/coach" sous=${reglageCoach.cle ? 'Clé enregistrée' : 'À configurer'} />
         <${Rang} icone="🔒" titre=${RUBRIQUES.securite} href="#/profil/securite" sous=${pin.defini ? 'Code actif' : 'Non défini'} />
         <${Rang} icone="☁️" titre=${RUBRIQUES.compte} href="#/profil/compte" sous=${compte.actif ? compte.email : 'Mode local'} />

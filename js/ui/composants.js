@@ -30,8 +30,9 @@ export function BarreOnglets({ onglets, actif }) {
 }
 
 /** Pastille « E » (bleu) ou « M » (rose) : qui a fait quoi. */
-export function Pastille({ qui }) {
-  return html`<span class=${'pastille ' + qui} aria-label=${qui === 'E' ? 'Eymric' : 'Marie'}>${qui}</span>`;
+export function Pastille({ qui, label }) {
+  const enfant = String(qui).startsWith('enfant');
+  return html`<span class=${'pastille ' + (enfant ? 'enfant' : qui)} aria-label=${enfant ? (label || 'Enfant') : (qui === 'E' ? 'Eymric' : 'Marie')}>${enfant ? String(label || '?').charAt(0).toUpperCase() : qui}</span>`;
 }
 
 /** En-tête coloré d'un écran. `retour` : { href, nom } pour un lien « ← … ». */

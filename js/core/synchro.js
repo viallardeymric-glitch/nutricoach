@@ -27,7 +27,7 @@ export function favorisParRecette(favoris) {
 }
 
 const CHAMPS_PROFIL = ['sexe', 'naissance', 'age', 'poids_kg', 'taille_cm', 'activite', 'objectif', 'grossesse', 'allaitement',
-  'sportif', 'convalescence', 'conditions', 'regimes', 'allergenes', 'exclusions', 'appliquer', 'modifie'];
+  'sportif', 'convalescence', 'conditions', 'regimes', 'allergenes', 'exclusions', 'appliquer', 'modifie', 'secondaires', 'objectifDate', 'sport'];
 
 /** Profil → document Firestore : seuls les champs connus, jamais de valeur undefined. */
 export function profilVersDoc(p) {
@@ -139,3 +139,13 @@ export function docsVersPoids(docs) {
 }
 /** Ce que `qui` a le droit de voir : tout, sauf les données marquées « privé » de l'autre personne (affichage seulement). */
 export const visiblePour = (items, qui) => items.filter((x) => !x.prive || x.par === qui);
+
+// ---------- Enfants du foyer : documents profiles/enfant-xxx ----------
+export function enfantVersDoc(e) {
+  return { prenom: String(e.prenom).slice(0, 30), naissance: e.naissance || '', allergenes: e.allergenes || [], regimes: e.regimes || [], exclusions: String(e.exclusions || '').slice(0, 200),
+    appliquer: e.appliquer !== false, dansMenus: e.dansMenus !== false, modifie: Date.now() };
+}
+export function docsVersEnfants(docs) {
+  return docs.filter((d) => /^enfant-/.test(String(d.id)) && d.prenom && /^\d{4}-\d{2}-\d{2}$/.test(d.naissance || ''))
+    .map((d) => ({ id: d.id, prenom: d.prenom, naissance: d.naissance, allergenes: d.allergenes || [], regimes: d.regimes || [], exclusions: d.exclusions || '', appliquer: d.appliquer !== false, dansMenus: d.dansMenus !== false, modifie: d.modifie || 0 }));
+}

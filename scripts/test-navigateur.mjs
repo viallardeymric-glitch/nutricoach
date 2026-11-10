@@ -96,7 +96,7 @@ verif(await p.locator('.liste .carte').count() === 0 && (await p.textContent('.e
 // Profil : accueil de profil, pages courtes, date de naissance, besoins, garde-fou grossesse
 await p.goto(serveur.url + '/#/profil');
 await p.waitForSelector('.rangs');
-verif(await p.locator('.rang').count() === 7, 'profil : accueil avec 7 rubriques courtes');
+verif(await p.locator('.rang').count() === 8, 'profil : accueil avec 8 rubriques courtes');
 await p.goto(serveur.url + '/#/profil/infos');
 await p.waitForSelector('input[type=date]');
 await p.click('.puce:text-is("Femme")');
@@ -234,7 +234,7 @@ verif((await p.textContent('.etat')).includes('La liste est vide'), 'courses : �
 await p.click('text=Depuis le menu de la semaine'); await p.waitForSelector('.article');
 const nbArticles = await p.locator('.article').count();
 verif(nbArticles > 30, `courses : ${nbArticles} articles générés depuis le menu`);
-verif((await p.locator('.page-courses .bandeau').first().textContent()).includes('pour 2 personnes'), 'courses : calculées pour 2 personnes');
+verif((await p.locator('.page-courses .bandeau').first().textContent()).includes('pour 2 portions adultes'), 'courses : calculées pour 2 personnes');
 verif((await p.textContent('.rayon .petit-titre >> nth=0')).includes('Fruits et légumes'), 'courses : groupées par rayon (fruits et légumes en premier)');
 verif(await p.locator('.rayon .petit-titre').count() >= 4, 'courses : plusieurs rayons');
 const nom0 = (await p.textContent('.article >> nth=0 >> strong')).trim();
@@ -364,6 +364,33 @@ await p.waitForSelector('.stats');
 verif((await p.textContent('.stats')).includes('1/7'), 'bilan hebdomadaire : 1 jour suivi sur 7');
 verif(!/raté|honte|coupable|interdit/i.test(await p.textContent('.contenu')), 'bilan : ton sans culpabilisation');
 if (captures) await p.screenshot({ path: `${captures}/suivi.png`, fullPage: true });
+
+// Enfants : profil, portions conseillées, menus et courses adaptés
+await p.goto(serveur.url + '/#/profil/enfants'); await p.waitForSelector('text=Aucun enfant enregistré');
+await p.click('text=Ajouter un enfant');
+await p.getByLabel('Prénom').fill('Léa');
+const naiss5 = new Date(); naiss5.setFullYear(naiss5.getFullYear() - 5); naiss5.setMonth(naiss5.getMonth() - 1);
+await p.getByLabel('Date de naissance').fill(naiss5.toISOString().slice(0, 10));
+await p.click('.puce.exclu:text-is("Arachides")');
+await p.click('role=button[name="Enregistrer"]');
+await p.waitForSelector('.carte-nous >> text=Léa');
+verif((await p.textContent('.carte-nous')).includes('Évite :') && (await p.textContent('.carte-nous')).includes('Enfant'), 'enfants : profil de Léa (5 ans, évite les arachides)');
+await p.goto(serveur.url + '/#/profil'); await p.waitForSelector('.rangs');
+verif((await p.locator('.rang:has-text("Enfants")').textContent()).includes('Léa'), 'enfants : rubrique « Enfants » du profil');
+await p.goto(serveur.url + '/#/recette/' + toutes[5].id); await p.waitForSelector('text=Portions conseillées pour chacun');
+verif((await p.textContent('.fiche')).includes('Portions conseillées pour chacun') && (await p.textContent('.fiche')).includes('Léa'), 'fiche : portions conseillées pour Marie et Léa');
+await p.goto(serveur.url + '/#/semaine'); await p.waitForSelector('.actions-semaine');
+verif((await p.textContent('.contenu')).includes('Marie et Léa'), 'semaine : menus pensés pour Marie et Léa');
+p.once('dialog', (d) => d.accept());
+await p.click('text=Tout refaire'); await p.waitForTimeout(500);
+const menuLea = await idsSemaine();
+verif(menuLea.length === 14 && menuLea.every((id) => { const r = parId.get(id); return !r.allergenes.includes('arachides') && !r.allergenes.includes('lait') && !r.deconseille_a.some((d) => ['enfant', 'femme_enceinte'].includes(d.profil)); }),
+  'SÉCURITÉ : menu sans arachides (Léa), sans lait ni avertissement grossesse (Marie), sans avertissement enfant');
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+await p.click('text=Depuis le menu de la semaine'); await p.waitForTimeout(600);
+verif((await p.locator('.page-courses .bandeau').first().textContent()).includes('2,6 portions adultes'), 'courses : 2 adultes + Léa = 2,6 portions adultes');
+await p.fill('input[aria-label="Ajouter un article"]', 'cacahuètes'); await p.press('input[aria-label="Ajouter un article"]', 'Enter');
+verif(await p.locator('.article', { hasText: 'Cacahuètes' }).locator('.alerte-article.rouge .pastille.enfant').count() === 1, 'courses : cacahuètes signalées pour Léa (allergie), pastille enfant');
 
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');

@@ -7,12 +7,12 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
 import { calculerBesoins } from './lib/besoins.js';
-import { profilComplet } from './lib/profils.js';
+import { profilComplet, nombreConvives, kcalRepereEnfant } from './lib/profils.js';
 import { contraintesCouple, semaineDe, nomJour, REPAS, saisonDe } from './lib/planning.js';
 import { cleArticle, ajouterAuStock } from './lib/courses.js';
 import { entreeDepuisRecette, entreeDepuisProduit, repasSelonHeure, bilanJour, objectifEau, serieDePoids } from './lib/suivi.js';
@@ -202,11 +202,25 @@ function App() {
   // Les menus respectent les contraintes des DEUX personnes quand le profil de l'autre est connu.
   const autre = moi === 'E' ? 'M' : 'E';
   const profilAutre = connecte && session.profils ? session.profils[autre] : null;
-  const contraintes = useMemo(() => contraintesCouple([profil, profilAutre]), [profil, profilAutre]);
+  const colProfils = useCollection('profiles', session.docsProfils, connecte);
+  const enfantsListe = useMemo(() => docsVersEnfants(colProfils.items), [colProfils.items]);
+  const enfantsOps = {
+    liste: enfantsListe,
+    ecrire: (e) => colProfils.ecrire(e.id, enfantVersDoc(e)),
+    supprimer: (e) => colProfils.supprimer(e.id),
+  };
+  const enfantsMenus = useMemo(() => enfantsListe.filter((e) => e.dansMenus), [enfantsListe]);
+  const convives = useMemo(() => nombreConvives(2, enfantsListe), [enfantsListe]);
+  const contraintes = useMemo(() => contraintesCouple([profil, profilAutre, ...enfantsMenus]), [profil, profilAutre, enfantsMenus]);
   const besoins = profil && profilComplet(profil) ? calculerBesoins(profil) : null;
   const besoinsAutre = profilAutre && profilComplet(profilAutre) ? calculerBesoins(profilAutre) : null;
   const cibleKcal = besoins && besoinsAutre ? Math.round((besoins.cible + besoinsAutre.cible) / 2) : (besoins || besoinsAutre || { cible: 2000 }).cible;
   const recettes = index ? index.recettes : null;
+  const portionsChacun = useMemo(() => [
+    ...(besoins ? [{ id: moi, label: PERSONNES[moi].prenom, cible: besoins.cible }] : []),
+    ...(besoinsAutre ? [{ id: autre, label: PERSONNES[autre].prenom, cible: besoinsAutre.cible }] : []),
+    ...enfantsMenus.map((e) => ({ id: e.id, label: e.prenom, cible: kcalRepereEnfant(e.naissance) })),
+  ], [besoins, besoinsAutre, enfantsMenus, moi]);
   const repasSemaine = useMemo(() => {
     if (!recettes) return [];
     const parId = new Map(recettes.map((r) => [r.id, r.titre]));
@@ -243,9 +257,9 @@ function App() {
     ${route.ecran === 'accueil' && html`<${Accueil} moi=${moi} profil=${profil} besoins=${besoins} index=${recettes} plan=${plan}
       contraintes=${contraintes} cibleKcal=${cibleKcal} changerJour=${(d, r) => ecrireJours({ [d]: r })} nuage=${session.actif} nbFavoris=${favorisTous.size} onMange=${mangerRecette} />`}
     ${route.ecran === 'semaine' && html`<${Semaine} index=${recettes} plan=${plan} contraintes=${contraintes} cibleKcal=${cibleKcal}
-      ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} />`}
+      ecrireJours=${ecrireJours} profil=${profil} personnes=${personnes} enfants=${enfantsMenus} />`}
     ${route.ecran === 'courses' && html`<${Courses} donnees=${donneesCourses} stock=${stock} ops=${opsCourses} moi=${moi}
-      profils=${{ [moi]: profil, [autre]: profilAutre }} plan=${plan} catalogue=${index} />`}
+      profils=${{ [moi]: profil, [autre]: profilAutre, ...Object.fromEntries(enfantsListe.map((e) => [e.id, e])) }} plan=${plan} catalogue=${index} convives=${convives} />`}
     ${route.ecran === 'suivi' && html`<${Suivi} moi=${moi} profil=${profil} besoins=${besoins} journal=${journal} poids=${poids} ops=${opsSuivi}
       index=${recettes || []} plan=${plan} scans=${scans} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
@@ -257,12 +271,12 @@ function App() {
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'nous' && html`<${NousDeux} moi=${moi} profils=${session.profils} favorisNuage=${session.favorisNuage}
       erreurSynchro=${session.erreurSynchro} journal=${journal} poids=${poids} />`}
-    ${route.ecran === 'profil' && html`<${Profil} moi=${moi} profil=${profil} onMoi=${changerMoi} onChange=${changerProfil} section=${route.section}
+    ${route.ecran === 'profil' && html`<${Profil} moi=${moi} profil=${profil} onMoi=${changerMoi} onChange=${changerProfil} section=${route.section} enfants=${enfantsOps}
       compte=${{ actif: session.actif, email: session.email, onDeconnecter: () => deconnecter() }}
       pin=${{ defini: Boolean(pin), onDefinir: async (code) => { const e = await creerPin(code); enregistrerPin(e); setPin(e); },
         onRetirer: () => { retirerPin(); setPin(null); setVerrouille(false); } }} />`}
     ${route.ecran === 'fiche' && html`<${Fiche} id=${route.id} index=${index} favori=${favorisMiens.has(route.id)}
-      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} />`}
+      onFavori=${() => onFavori(route.id)} moi=${moi} profil=${profil} onMange=${(portions) => mangerRecette(route.id, null, portions)} portionsChacun=${portionsChacun} />`}
     ${route.ecran === 'cuisine' && html`<${Cuisine} id=${route.id} index=${index} portions=${route.portions} />`}
     ${!plein && html`<${BarreOnglets} onglets=${ONGLETS} actif=${ONGLET_DE[route.ecran]} />`}`;
 }

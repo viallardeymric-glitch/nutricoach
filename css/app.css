@@ -399,3 +399,5 @@ p { margin: 0 0 .5rem; }
 .ligne-journal { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; flex-wrap: wrap; }
 .ligne-journal button:not(.bouton) { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--accent); background: var(--carte); color: var(--accent); font-size: 1.3rem; }
 .ligne-journal .bouton { min-height: 44px; margin-left: auto; }
+
+.pastille.enfant { background: #f5a623; }

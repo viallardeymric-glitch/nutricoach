@@ -1,7 +1,7 @@
 // Alertes de profil sur un aliment (courses, journal, scan) : allergies, aliments évités, aliments déconseillés.
 import { normaliser } from './texte.js';
 import { REGLES_ALERTE, MOTS_ALLERGENES } from '../data/deconseilles.js';
-import { profilsARisque, listeExclusions } from './profils.js';
+import { risquesPour, listeExclusions } from './profils.js';
 import { ALLERGENES, lib } from '../data/libelles.js';
 
 /**
@@ -11,7 +11,7 @@ import { ALLERGENES, lib } from '../data/libelles.js';
 export function alertesTexte(texte, profil) {
   if (!profil || profil.appliquer === false) return [];
   const t = ` ${normaliser(texte)} `;
-  const risques = profilsARisque(profil);
+  const risques = risquesPour(profil);
   const res = [];
   for (const a of profil.allergenes || []) {
     if (MOTS_ALLERGENES[a] && MOTS_ALLERGENES[a].test(t)) {
@@ -25,6 +25,10 @@ export function alertesTexte(texte, profil) {
     if (!r.profils.some((p) => risques.includes(p))) continue;
     if (r.exclure && r.exclure.test(t)) continue;
     if (r.motif.test(t)) res.push({ id: r.id, niveau: r.niveau, source: r.source, raison: r.raison });
+  }
+  const alcool = REGLES_ALERTE.find((r) => r.id === 'alcool');
+  if ((profil.secondaires || []).includes('alcool') && !res.some((x) => x.id === 'alcool') && alcool.motif.test(t) && !alcool.exclure.test(t)) {
+    res.push({ id: 'obj-alcool', niveau: 'orange', source: 'profil', raison: 'Alcool : vous avez choisi d\'en réduire la consommation.' });
   }
   return res.sort((a, b) => (a.niveau === b.niveau ? 0 : a.niveau === 'rouge' ? -1 : 1));
 }

@@ -13,7 +13,7 @@ function resumeContraintes(c) {
   return t.length ? t.join(', ') : 'aucune contrainte particulière';
 }
 
-export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, profil, personnes }) {
+export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, profil, personnes, enfants = [] }) {
   const [decalage, setDecalage] = useState(0);
   const maintenant = new Date();
   const lundi = ajouterJours(lundiDe(maintenant), decalage * 7);
@@ -58,7 +58,7 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
       </div>
     <//>
     <div class="contenu">
-      <p class="note">Menus pensés pour ${personnes.map((id) => PERSONNES[id].prenom).join(' et ')} : ${resumeContraintes(contraintes)}.</p>
+      <p class="note">Menus pensés pour ${[...personnes.map((id) => PERSONNES[id].prenom), ...enfants.map((e) => e.prenom)].join(', ').replace(/, ([^,]*)$/, ' et $1')} : ${resumeContraintes(contraintes)}.</p>
       <div class="actions-semaine">
         <button type="button" class="bouton" disabled=${!index} onClick=${() => completer(plan)}>✨ ${nbRepas ? 'Compléter la semaine' : 'Générer ma semaine'}</button>
         ${nbRepas > 0 && html`<button type="button" class="bouton secondaire" onClick=${toutRefaire}>Tout refaire</button>`}

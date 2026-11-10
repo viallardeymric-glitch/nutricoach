@@ -5,7 +5,7 @@ import { chargerFiche } from '../core/catalogue.js';
 import { lire, ecrire } from '../core/stockage.js';
 import { REGIMES, ALLERGENES, PROFILS, NUTRITION, REGLAGES, DIFFICULTES, COUTS, lib, libSousCategorie } from '../data/libelles.js';
 import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
-import { conflitsProfil } from '../lib/profils.js';
+import { conflitsProfil, portionConseillee } from '../lib/profils.js';
 import { nomRegime } from '../data/regimes.js';
 import { PERSONNES } from '../core/config.js';
 import { Pictogramme, Coeur, Bandeau, Pastille } from '../ui/composants.js';
@@ -51,7 +51,16 @@ function Ingredients({ liste, facteur }) {
 }
 
 /** Contenu d'une fiche déjà chargée (composant pur : utilisé aussi par scripts/verifier-affichage.mjs). */
-export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil, onMange }) {
+/** Portion conseillée à chacun d'après sa cible calorique (un repas ≈ 35 % de la journée). */
+function PortionsChacun({ r, personnes }) {
+  if (!personnes || !personnes.length) return null;
+  const kcal = r.nutrition_par_portion.calories_kcal;
+  return html`<${Bandeau} type="info" titre="Portions conseillées pour chacun">
+    <ul>${personnes.map((x) => { const p = portionConseillee(kcal, x.cible * 0.35); return html`<li key=${x.id}><${Pastille} qui=${x.id} label=${x.label} /> <strong>${x.label}</strong> : ${String(p).replace('.', ',')} portion${p > 1 ? 's' : ''} <span class="sous">(≈ ${Math.round(kcal * p)} kcal)</span></li>`; })}</ul>
+    <p class="note">Repère d'après les besoins de chacun (un repas ≈ 35 % de la journée). Pour un enfant, c'est un ordre de grandeur.</p><//>`;
+}
+
+export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, profil, onMange, portionsChacun }) {
   const facteur = portions / r.portions_base;
   const t = r.temps;
   const c = r.conservation;
@@ -73,6 +82,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
       <p class="desc">${r.description}</p>
       <${AlerteProfil} r=${r} moi=${moi} profil=${profil} />
       <${Avertissements} liste=${r.deconseille_a} />
+      <${PortionsChacun} r=${r} personnes=${portionsChacun} />
       <a class="bouton cuisiner" href=${`#/cuisine/${r.id}?p=${portions}`}>👩‍🍳 Cuisiner pas à pas</a>
       ${onMange && html`<button type="button" class="bouton secondaire large" onClick=${() => onMange(1)}>📓 Je l'ai mangé (1 portion au journal)</button>`}
       ${r.allergenes.length > 0 && html`<div class="etiquettes" aria-label="Allergènes">
@@ -123,7 +133,7 @@ export function FicheRecette({ r, portions, setPortions, favori, onFavori, moi, 
 }
 
 /** Charge la fiche complète puis l'affiche. */
-export function Fiche({ id, index, favori, onFavori, moi, profil, onMange }) {
+export function Fiche({ id, index, favori, onFavori, moi, profil, onMange, portionsChacun }) {
   const [r, setR] = useState(null);
   const [erreur, setErreur] = useState(false);
   const [portions, setPortions] = useState(1);
@@ -157,5 +167,5 @@ export function Fiche({ id, index, favori, onFavori, moi, profil, onMange }) {
   }
   const choisir = (f) => setPortions((p) => { const v = typeof f === 'function' ? f(p) : f; ecrire('portionsDefaut', v); return v; });
   return html`<div>${barre}<${FicheRecette} r=${r} portions=${portions} setPortions=${choisir}
-    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} /></div>`;
+    favori=${favori} onFavori=${onFavori} moi=${moi} profil=${profil} onMange=${onMange} portionsChacun=${portionsChacun} /></div>`;
 }

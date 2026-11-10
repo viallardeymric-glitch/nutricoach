@@ -81,3 +81,54 @@ test('âge calculé depuis la date de naissance', () => {
   assert.equal(ageDepuis('', ref), null);
   assert.equal(ageDepuis('1990-13-01', ref), null);
 });
+
+import { ageEnMois, groupeAge, risquesEnfant, nombreConvives, portionConseillee, enfantVide, FACTEUR_PORTION } from '../js/lib/profils.js';
+import { SECONDAIRES, OBJECTIFS } from '../js/lib/besoins.js';
+
+test('objectif à date : rythme raisonnable plafonné, avec message clair', () => {
+  const ref = new Date(2026, 10, 10);
+  const p = { ...femme, poids_kg: 70, objectif: 'date', objectifDate: { kg: 66, date: '2027-02-10' } };   // 4 kg en ~13 semaines
+  const b = calculerBesoins(p, ref);
+  assert.ok(b.rythme > 0.25 && b.rythme < 0.4, `rythme ${b.rythme}`);
+  assert.equal(b.messages.length, 0, 'objectif réaliste : aucun avertissement');
+  assert.ok(b.cible < b.tdee);
+  const trop = calculerBesoins({ ...p, objectifDate: { kg: 60, date: '2026-12-10' } }, ref);   // 10 kg en 1 mois
+  assert.ok(trop.rythme <= 0.7 + 1e-9, `plafonné : ${trop.rythme}`);
+  assert.match(trop.messages[0], /trop rapide/);
+  assert.ok(trop.dateAtteinte > '2026-12-10');
+  assert.ok(trop.cible >= Math.max(trop.bmr, 1200) && trop.cible >= Math.round(trop.tdee * 0.8) - 10, 'déficit limité à 20 %');
+  const prise = calculerBesoins({ ...p, objectifDate: { kg: 73, date: '2027-03-10' } }, ref);
+  assert.ok(prise.cible > prise.tdee && prise.rythme < 0);
+  assert.match(calculerBesoins({ ...p, objectifDate: null }, ref).messages[0], /Indiquez le poids visé/);
+  assert.equal(calculerBesoins({ ...p, grossesse: 2 }, ref).objectif, 'maintien', 'jamais de régime amincissant pendant la grossesse, même avec une date');
+});
+
+test('objectifs complémentaires et énergie / digestion sans effet calorique', () => {
+  assert.ok(OBJECTIFS.date && OBJECTIFS.energie && OBJECTIFS.digestion && OBJECTIFS.sport);
+  assert.deepEqual(Object.keys(SECONDAIRES), ['sel', 'sucre', 'alcool', 'budget']);
+  assert.equal(calculerBesoins({ ...femme, objectif: 'energie' }).cible, calculerBesoins({ ...femme, objectif: 'maintien' }).cible);
+});
+
+test('enfants : âge en mois, groupes d\'âge, risques, portions', () => {
+  const ref = new Date(2026, 10, 10);
+  assert.equal(ageEnMois('2021-11-09', ref), 60);
+  assert.equal(ageEnMois('2026-06-15', ref), 4);
+  assert.equal(groupeAge('2026-06-15', ref), 'bebe');
+  assert.equal(groupeAge('2025-02-01', ref), 'petit');
+  assert.equal(groupeAge('2021-03-01', ref), 'enfant');
+  assert.equal(groupeAge('2012-01-01', ref), 'ado');
+  assert.equal(groupeAge('2000-01-01', ref), 'adulte');
+  assert.deepEqual(risquesEnfant({ naissance: '2021-03-01' }, ref), ['enfant']);
+  assert.ok(risquesEnfant({ naissance: '2025-02-01' }, ref).includes('enfant_moins_de_3_ans'));
+  assert.ok(risquesEnfant({ naissance: '2026-06-15' }, ref).includes('bebe'));
+  assert.deepEqual(risquesEnfant({ naissance: '2010-01-01' }, ref), []);
+  assert.equal(nombreConvives(2, [{ naissance: '2021-03-01' }], ref), 2.6);
+  assert.equal(nombreConvives(2, [{ naissance: '2021-03-01', dansMenus: false }], ref), 2);
+  assert.equal(nombreConvives(2, [], ref), 2);
+  assert.equal(FACTEUR_PORTION.enfant, 0.6);
+  assert.equal(portionConseillee(600, 700), 1.25);
+  assert.equal(portionConseillee(600, 300), 0.5);
+  assert.equal(portionConseillee(100, 900), 2);
+  assert.equal(portionConseillee(0, 700), 1);
+  assert.equal(enfantVide('enfant-1').dansMenus, true);
+});

@@ -1,5 +1,5 @@
 // Menus de la semaine : dates, contraintes du couple, choix des recettes. Fonctions pures, sans DOM.
-import { filtresDuProfil, profilsARisque } from './profils.js';
+import { filtresDuProfil, risquesPour } from './profils.js';
 import { contientAllergene } from './recettes.js';
 import { respecteRegime } from '../data/regimes.js';
 
@@ -51,7 +51,7 @@ export function contraintesCouple(profils) {
     f.regimes.forEach((x) => c.regimes.add(x));
     f.allergenes.forEach((x) => c.allergenes.add(x));
     f.exclusions.forEach((x) => c.exclusions.add(x));
-    profilsARisque(p).forEach((x) => c.risques.add(x));
+    risquesPour(p).forEach((x) => c.risques.add(x));
   }
   return { regimes: [...c.regimes], allergenes: [...c.allergenes], exclusions: [...c.exclusions], risques: [...c.risques] };
 }

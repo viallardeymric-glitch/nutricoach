@@ -94,6 +94,59 @@ export function profilVide(id) {
   return {
     id, sexe: '', naissance: '', age: null, poids_kg: '', taille_cm: '', activite: 'legere', objectif: 'equilibre',
     grossesse: 0, allaitement: false, sportif: false, convalescence: false,
-    conditions: [], regimes: [], allergenes: [], exclusions: '', appliquer: true, modifie: 0,
+    conditions: [], regimes: [], allergenes: [], exclusions: '', appliquer: true, modifie: 0, secondaires: [], objectifDate: null, sport: null,
   };
+}
+
+// ---------- Enfants du foyer (profils sans compte) ----------
+/** Âge en mois d'une date « AAAA-MM-JJ » (null si absente ou invalide). */
+export function ageEnMois(naissance, ref = new Date()) {
+  const a = ageDepuis(naissance, ref);
+  if (a === null) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(naissance);
+  let mois = (ref.getFullYear() - Number(m[1])) * 12 + (ref.getMonth() - (Number(m[2]) - 1));
+  if (ref.getDate() < Number(m[3])) mois--;
+  return Math.max(0, mois);
+}
+/** Groupe d'âge : bebe (< 1 an), petit (1 à 2 ans), enfant (3 à 12 ans), ado (13 à 17 ans), adulte. */
+export function groupeAge(naissance, ref = new Date()) {
+  const mois = ageEnMois(naissance, ref);
+  if (mois === null) return null;
+  return mois < 12 ? 'bebe' : mois < 36 ? 'petit' : mois < 156 ? 'enfant' : mois < 216 ? 'ado' : 'adulte';
+}
+export const GROUPES_AGE = { bebe: 'Bébé', petit: 'Petit enfant', enfant: 'Enfant', ado: 'Adolescent', adulte: 'Adulte' };
+/** Part d'une portion adulte mangée par un enfant (pour les quantités des courses). */
+export const FACTEUR_PORTION = { bebe: 0.25, petit: 0.4, enfant: 0.6, ado: 1, adulte: 1 };
+
+/** Profils à risque d'un enfant (mêmes clés que le catalogue + « bebe » pour les règles propres aux moins d'un an). */
+export function risquesEnfant(e, ref = new Date()) {
+  const g = groupeAge(e.naissance, ref);
+  const r = new Set();
+  if (g === 'bebe') { r.add('bebe'); r.add('enfant_moins_de_3_ans'); r.add('enfant'); }
+  else if (g === 'petit') { r.add('enfant_moins_de_3_ans'); r.add('enfant'); }
+  else if (g === 'enfant') r.add('enfant');
+  return [...r];
+}
+export function enfantVide(id) { return { id, prenom: '', naissance: '', allergenes: [], regimes: [], exclusions: '', appliquer: true, dansMenus: true, modifie: 0 }; }
+
+/** Nombre de convives d'un repas : les adultes comptent 1, les enfants une fraction (voir FACTEUR_PORTION). */
+export function nombreConvives(adultes, enfants, ref = new Date()) {
+  const n = adultes + enfants.filter((e) => e.dansMenus !== false).reduce((s, e) => s + (FACTEUR_PORTION[groupeAge(e.naissance, ref)] ?? 0.6), 0);
+  return Math.round(n * 10) / 10;
+}
+/** Portion conseillée d'une recette pour une cible de repas (kcal), par pas de 0,25, entre 0,25 et 2. */
+export function portionConseillee(kcalParPortion, cibleRepas) {
+  if (!(kcalParPortion > 0) || !(cibleRepas > 0)) return 1;
+  return Math.max(0.25, Math.min(2, Math.round((cibleRepas / kcalParPortion) * 4) / 4));
+}
+
+/** Profils à risque d'une personne : adulte (profilsARisque) ou enfant du foyer (risquesEnfant). */
+export const risquesPour = (p) => (p && p.prenom !== undefined ? risquesEnfant(p) : profilsARisque(p));
+
+/** Repère de besoin énergétique d'un enfant (kcal par jour) selon l'âge : ordre de grandeur, pas une prescription. */
+export function kcalRepereEnfant(naissance, ref = new Date()) {
+  const m = ageEnMois(naissance, ref);
+  if (m === null) return 1500;
+  const a = m / 12;
+  return a < 1 ? 800 : a < 3 ? 1100 : a < 6 ? 1400 : a < 10 ? 1700 : a < 13 ? 2000 : 2400;
 }

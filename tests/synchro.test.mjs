@@ -103,3 +103,12 @@ test('journal et poids : documents valides, privé masqué à l\'autre', () => {
   assert.deepEqual(visiblePour(items, 'M').map((x) => x.kg), [1, 2]);
   assert.deepEqual(visiblePour(items, 'E').map((x) => x.kg), [2, 3]);
 });
+
+import { enfantVersDoc, docsVersEnfants } from '../js/core/synchro.js';
+test('enfants du foyer : documents valides, seuls les enfants sont retenus', () => {
+  const d = enfantVersDoc({ prenom: 'Léa', naissance: '2021-03-01', allergenes: ['arachides'] });
+  assert.ok(Object.values(d).every((v) => v !== undefined));
+  const l = docsVersEnfants([{ ...d, id: 'enfant-1' }, { ...d, id: 'E' }, { ...d, id: 'enfant-2', naissance: 'bientôt' }, { ...d, id: 'enfant-3', prenom: '' }]);
+  assert.deepEqual(l.map((x) => x.id), ['enfant-1']);
+  assert.deepEqual(l[0].allergenes, ['arachides']);
+});

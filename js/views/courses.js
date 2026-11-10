@@ -1,6 +1,6 @@
 // Courses et stock : liste commune au foyer, cochage en direct, rayons, génération depuis le menu, alertes de profil.
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
-import { PERSONNES, NB_CONVIVES } from '../core/config.js';
+import { PERSONNES } from '../core/config.js';
 import { chargerFiche } from '../core/catalogue.js';
 import { RAYONS } from '../data/rayons.js';
 import { lire } from '../core/stockage.js';
@@ -27,7 +27,7 @@ function Article({ a, profils, onCoche, onSuppr }) {
     <button type="button" class="case-article" role="checkbox" aria-checked=${a.coche} aria-label=${`${a.coche ? 'Décocher' : 'Cocher'} ${a.nom}`} onClick=${onCoche}>
       <span class="boite">${a.coche ? '✓' : ''}</span>
       <span class="article-texte"><strong>${a.nom}</strong> <span class="qte">${libelleQuantite(a)}</span>
-        ${alertes.map((x) => html`<span class=${'alerte-article ' + x.niveau} key=${x.id + x.qui}><${Pastille} qui=${x.qui} /> ${x.niveau === 'rouge' ? '⛔' : '⚠'} ${x.raison}</span>`)}</span>
+        ${alertes.map((x) => html`<span class=${'alerte-article ' + x.niveau} key=${x.id + x.qui}><${Pastille} qui=${x.qui} label=${(profils[x.qui] || {}).prenom} /> ${x.niveau === 'rouge' ? '⛔' : '⚠'} ${x.raison}</span>`)}</span>
     </button>
     <span class="article-qui" title=${a.coche && a.cochePar ? 'Coché par' : 'Ajouté par'}>${(a.coche && a.cochePar) || a.par ? html`<${Pastille} qui=${(a.coche && a.cochePar) || a.par} />` : ''}</span>
     <button type="button" class="supprimer" aria-label=${`Retirer ${a.nom}`} onClick=${onSuppr}>✕</button>
@@ -44,7 +44,7 @@ function texteListe(nom, articles) {
   return lignes.join('\n');
 }
 
-export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue }) {
+export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue, convives = 2 }) {
   const { listes, articles } = donnees;
   const [vue, setVue] = useState('liste');
   const [courant, setCourant] = useState('semaine');
@@ -82,11 +82,11 @@ export function Courses({ donnees, stock, ops, moi, profils, plan, catalogue }) 
     try {
       const recettes = new Map();
       for (const id of ids) { const f = await chargerFiche(catalogue, id); if (f) recettes.set(id, f); }
-      const { articles: reste, enStock } = deduireStock(articlesDepuisPlan(plan, jours, recettes, NB_CONVIVES), stock);
+      const { articles: reste, enStock } = deduireStock(articlesDepuisPlan(plan, jours, recettes, convives), stock);
       const { ecrire, supprimer } = planifierMiseAJour(deLaListe, reste);
       for (const g of ecrire) ops.ecrireArticle({ ...g, liste: liste.id, par: g.par || moi });
       for (const id of supprimer) ops.supprimerArticle(deLaListe.find((a) => a.id === id));
-      setMessage({ type: 'info', texte: `${ids.length} recette${ids.length > 1 ? 's' : ''} du menu, ${reste.length} article${reste.length > 1 ? 's' : ''} pour ${NB_CONVIVES} personnes.${enStock.length ? ` Déjà en stock : ${enStock.slice(0, 6).join(', ')}${enStock.length > 6 ? '…' : ''}.` : ''}` });
+      setMessage({ type: 'info', texte: `${ids.length} recette${ids.length > 1 ? 's' : ''} du menu, ${reste.length} article${reste.length > 1 ? 's' : ''} pour ${String(convives).replace('.', ',')} portions adultes.${enStock.length ? ` Déjà en stock : ${enStock.slice(0, 6).join(', ')}${enStock.length > 6 ? '…' : ''}.` : ''}` });
     } catch { setMessage({ type: 'alerte', texte: 'Impossible de charger les recettes du menu. Réessayez avec du réseau (elles seront ensuite disponibles hors ligne).' }); }
     setEnCours(false);
   };
