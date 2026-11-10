@@ -501,6 +501,28 @@ await p.waitForSelector('text=Choisissez où placer ce repas');
 await p.locator('.mini-action:has-text("⇄ Ici")').nth(2).click();
 const idsApres = await idsSemaine();
 verif(JSON.stringify(idsApres) !== JSON.stringify(idsAvant) && [...idsApres].sort().join() === [...idsAvant].sort().join(), 'semaine : deux repas échangés (mêmes recettes, autres places)');
+// Glisser-déposer avec la poignée (pointer events : doigt ou souris)
+{
+  const avantGlisse = await idsSemaine();
+  const poignees = p.locator('.poignee');
+  await poignees.nth(0).scrollIntoViewIfNeeded();
+  const cibleEl = p.locator('.repas-jour:has(.poignee)').nth(1);
+  const s1 = await poignees.nth(0).boundingBox(); const c1 = await cibleEl.boundingBox();
+  await p.mouse.move(s1.x + s1.width / 2, s1.y + s1.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(s1.x + s1.width / 2 + 12, s1.y + s1.height / 2 + 12, { steps: 3 });
+  await p.mouse.move(c1.x + c1.width / 2, c1.y + c1.height / 2, { steps: 6 });
+  verif(await p.locator('.glisser-fantome').count() === 1 && await p.locator('.repas-jour.depot').count() === 1, 'semaine : glisser — un fantôme suit le doigt et la zone visée est surlignée');
+  await p.mouse.up();
+  await p.waitForTimeout(300);
+  const apresGlisse = await idsSemaine();
+  verif(JSON.stringify(apresGlisse) !== JSON.stringify(avantGlisse) && [...apresGlisse].sort().join() === [...avantGlisse].sort().join(), 'semaine : glisser-déposer au doigt — deux repas échangés');
+  verif(await p.locator('.glisser-fantome').count() === 0, 'semaine : le fantôme disparaît au dépôt');
+  const avant2 = await idsSemaine();
+  const h = await p.locator('.poignee').nth(0).boundingBox();
+  await p.mouse.move(h.x + 5, h.y + 5); await p.mouse.down(); await p.mouse.move(h.x + 40, h.y + 5, { steps: 4 }); await p.mouse.move(2, 2); await p.mouse.up();
+  verif(JSON.stringify(await idsSemaine()) === JSON.stringify(avant2), 'semaine : lâcher en dehors d\'un repas n\'change rien');
+}
 await p.click('.puce:has-text("Petit-déjeuners et collations")');
 await p.click('text=Compléter la semaine'); await p.waitForTimeout(600);
 const nbSlots = await p.locator('.jour .repas-jour').count();

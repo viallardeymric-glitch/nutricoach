@@ -7,6 +7,7 @@ import { REPAS_COMPLETS, repasActifs, ajouterJours, cleDate, dateDepuisCle, lund
 import { risquesPour } from '../lib/profils.js';
 import { budgetMenu } from '../lib/budget.js';
 import { lire, ecrire } from '../core/stockage.js';
+import { demarrerGlisser } from '../core/glisser.js';
 import { Entete, MiniRecette, Bandeau, Puce } from '../ui/composants.js';
 
 function resumeContraintes(c) {
@@ -50,11 +51,12 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
   };
   const retirer = (j, repas) => { const { [repas]: _, ...reste } = plan[j] || {}; ecrireJours({ [j]: reste }); };
   // Déplacer ou échanger deux repas (touche ⇅ puis « ici », ou glisser-déposer sur ordinateur).
+  const [survol, setSurvol] = useState(null);
   const deplacer = (src, dst) => {
     if (!src || (src.j === dst.j && src.repas === dst.repas)) { setSelection(null); return; }
     const a = (plan[src.j] || {})[src.repas]; const b = (plan[dst.j] || {})[dst.repas];
-    const jours2 = { [src.j]: { ...(plan[src.j] || {}) }, [dst.j]: src.j === dst.j ? undefined : { ...(plan[dst.j] || {}) } };
-    jours2[dst.j] = jours2[dst.j] || jours2[src.j];
+    const jours2 = { [src.j]: { ...(plan[src.j] || {}) } };
+    if (dst.j !== src.j) jours2[dst.j] = { ...(plan[dst.j] || {}) };
     if (b) jours2[src.j][src.repas] = b; else delete jours2[src.j][src.repas];
     jours2[dst.j][dst.repas] = a;
     ecrireJours(jours2);
@@ -97,13 +99,12 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
           ${slots.map((rp) => {
             const r = parId.get(repas[rp.id]);
             const cible = selection && !(selection.j === j && selection.repas === rp.id);
-            return html`<div class=${'repas-jour' + (cible ? ' depl' : '')} key=${rp.id} draggable=${Boolean(r)}
-              onDragStart=${(e) => { if (r) { e.dataTransfer.setData('text/plain', JSON.stringify({ j, repas: rp.id })); e.dataTransfer.effectAllowed = 'move'; } }}
-              onDragOver=${(e) => e.preventDefault()}
-              onDrop=${(e) => { e.preventDefault(); try { deplacer(JSON.parse(e.dataTransfer.getData('text/plain')), { j, repas: rp.id }); } catch { /* pas un de nos repas */ } }}>
+            const survole = survol && survol.j === j && survol.repas === rp.id;
+            return html`<div class=${'repas-jour' + (cible ? ' depl' : '') + (survole ? ' depot' : '')} key=${rp.id} data-glisser-j=${j} data-glisser-repas=${rp.id}>
               <span class="repas-nom">${rp.icone} ${rp.nom}</span>
               ${r ? html`<${MiniRecette} r=${r} risques=${risques(r)}>
                   ${cible ? html`<button type="button" class="mini-action" onClick=${() => deplacer(selection, { j, repas: rp.id })}>⇄ Ici</button>` : html`
+                    <button type="button" class="mini-action poignee" aria-label=${`Glisser le ${rp.nom.toLowerCase()} du ${nomJour(d)} pour le déplacer`} onPointerDown=${(e) => demarrerGlisser(e, { source: { j, repas: rp.id }, fantome: `${rp.icone} ${r.titre}`, onSurvol: setSurvol, onDepot: deplacer })}>⠿</button>
                     <button type="button" class="mini-action" aria-label=${`Déplacer le ${rp.nom.toLowerCase()} du ${nomJour(d)}`} onClick=${() => setSelection({ j, repas: rp.id })}>⇅</button>
                     <button type="button" class="mini-action" aria-label=${`Changer le ${rp.nom.toLowerCase()} du ${nomJour(d)}`} onClick=${() => autreRepas(j, rp.id)}>🔄</button>
                     <button type="button" class="mini-action" aria-label=${`Retirer le ${rp.nom.toLowerCase()} du ${nomJour(d)}`} onClick=${() => retirer(j, rp.id)}>✕</button>`}<//>`
@@ -113,6 +114,6 @@ export function Semaine({ index, plan, contraintes, cibleKcal, ecrireJours, prof
           })}
         </section>`;
       })}
-      <p class="note">Les calories sont celles d'une portion par repas. Les menus évitent poisson et plats déconseillés selon vos profils, et visent au moins 2 repas de poisson et 2 végétariens par semaine. Sur ordinateur, vous pouvez aussi glisser un repas sur un autre. Le budget est une estimation.</p>
+      <p class="note">Les calories sont celles d'une portion par repas. Les menus évitent poisson et plats déconseillés selon vos profils, et visent au moins 2 repas de poisson et 2 végétariens par semaine. Vous pouvez aussi glisser un repas avec la poignée ⠿ (au doigt ou à la souris) sur un autre. Le budget est une estimation.</p>
     </div></div>`;
 }

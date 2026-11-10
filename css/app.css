@@ -464,3 +464,9 @@ p { margin: 0 0 .5rem; }
 
 .vignette-zone { flex: none; display: flex; }
 .vignette-photo { object-fit: cover; padding: 0; background: var(--accent-clair); }
+
+/* Glisser-déposer des repas (doigt ou souris) */
+.poignee { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; font-weight: 700; }
+.glisser-fantome { position: fixed; z-index: 1000; transform: translate(-50%, -120%); max-width: 70vw; padding: .45rem .8rem; border-radius: var(--rayon); background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.3); pointer-events: none; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.glisse { user-select: none; -webkit-user-select: none; overscroll-behavior: contain; }
+.repas-jour.depot { outline: 3px solid var(--accent); background: var(--accent-clair); border-radius: var(--rayon); }

@@ -40,3 +40,6 @@ Dans la fiche d'un produit inconnu, touchez « 📷 Photographier le tableau nut
 
 ## Partager un produit avec Open Food Facts
 Un produit saisi à la main (ou lu par photo) peut être envoyé à Open Food Facts : dans sa fiche, « Partager ce produit avec Open Food Facts ». Il faut un compte gratuit sur openfoodfacts.org. Vos identifiants restent sur le téléphone et ne sont pas synchronisés.
+
+## Déplacer un repas au doigt
+Dans « Ma semaine », posez le doigt sur la poignée ⠿ d'un repas, glissez-le sur un autre repas et lâchez : les deux se remplacent. La page défile toute seule près des bords. Lâcher ailleurs ne change rien.

@@ -27,7 +27,7 @@ Version Thermomix TM6 / TM5 / TM31 (pastilles, 100 °C max sur TM31), capacité 
 ## 5.6 Adaptation — ✅
 1 à 12 personnes avec arrondis, conseils moule et temps, substitutions selon allergies, régimes et situation avec nutrition recalculée (estimation), variantes pour chaque personne du foyer. 🟡 Recalcul par CIQUAL non implémenté.
 ## 5.7 Planning — ✅
-Petit-déjeuner, déjeuner, dîner, collations ; menus du couple et des enfants (contraintes de tous), séances et charge de sport, budget, stock et anti-gaspi ; échange / déplacement de repas (touche ⇅ ou glisser-déposer sur ordinateur) ; « ce soir » (3 idées, rapide ≤ 20 min) ; frigo magique et anti-gaspi. 🟡 Pas de glisser-déposer tactile (on touche ⇅ puis « Ici »).
+Petit-déjeuner, déjeuner, dîner, collations ; menus du couple et des enfants (contraintes de tous), séances et charge de sport, budget, stock et anti-gaspi ; échange / déplacement de repas (poignée ⠿ glissée au doigt ou à la souris, ou touche ⇅) ; « ce soir » (3 idées, rapide ≤ 20 min) ; frigo magique et anti-gaspi. ✅ Glisser-déposer au doigt ou à la souris avec la poignée ⠿ (ou ⇅ puis « Ici »).
 ## 5.8 Batch cooking — ✅
 Session depuis le menu, quantités fusionnées, planning chronométré avec tâches en parallèle (plaques, four, Thermomix), boîtes, étiquettes imprimables, conservation, stock de plats « à manger en premier », liste de courses dédiée.
 ## 5.9 Courses et stock — ✅
