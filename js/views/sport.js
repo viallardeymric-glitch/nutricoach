@@ -1,6 +1,6 @@
-// Mode sportif : objectif de course, plan nutritionnel par phases, stratégie de course, séances (saisie et import).
+// Mode sportif : objectif de course, plan nutritionnel par phases, stratégie de course, séances (saisie à la main).
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
-import { EPREUVES, PHASES, TYPES_JOUR, MENTION_SPORT, RAPPEL_JOUR_J, planNutritionnel, ravitaillement, repasPreCourse, recuperation, analyserGPX, analyserCSV, analyserJSON, FILTRES_SPORT } from '../lib/sport.js';
+import { EPREUVES, PHASES, TYPES_JOUR, MENTION_SPORT, RAPPEL_JOUR_J, planNutritionnel, ravitaillement, repasPreCourse, recuperation, FILTRES_SPORT } from '../lib/sport.js';
 import { cleDate, dateDepuisCle, nomJour, nomMois, saisonDe, proposer, graine } from '../lib/planning.js';
 import { Entete, Section, Bandeau, Puce, MiniRecette } from '../ui/composants.js';
 
@@ -28,33 +28,14 @@ function FormulaireObjectif({ sport, onEnregistrer, onAnnuler }) {
   </form>`;
 }
 
-function ImportSeances({ moi, ops }) {
-  const [msg, setMsg] = useState(null);
+function AjoutSeance({ moi, ops }) {
   const [form, setForm] = useState({ date: cleDate(new Date()), type: 'courte', duree_min: '', distance_km: '' });
   const ajouter = (liste) => {
     let n = 0;
     for (const s of liste) { if (s.duree_min > 0) { ops.ecrireSeance({ ...s, par: moi }); n++; } }
     return n;
   };
-  const lire = async (e) => {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
-    try {
-      const texte = await f.text();
-      const nom = f.name.toLowerCase();
-      let liste = [];
-      if (nom.endsWith('.gpx') || /<gpx/i.test(texte.slice(0, 500))) { const s = analyserGPX(texte); liste = s ? [s] : []; }
-      else if (nom.endsWith('.json')) liste = analyserJSON(JSON.parse(texte));
-      else liste = analyserCSV(texte);
-      const n = ajouter(liste);
-      setMsg(n ? { type: 'info', texte: `${n} séance${n > 1 ? 's' : ''} importée${n > 1 ? 's' : ''}.` } : { type: 'alerte', texte: 'Aucune séance reconnue dans ce fichier (formats : GPX, CSV avec colonnes date / durée / distance, JSON).' });
-    } catch { setMsg({ type: 'alerte', texte: 'Fichier illisible.' }); }
-    e.target.value = '';
-  };
   return html`<div>
-    ${msg && html`<${Bandeau} type=${msg.type}><p>${msg.texte}</p><//>`}
-    <label class="bouton secondaire large fichier">📥 Importer un fichier (GPX, CSV, JSON)<input type="file" accept=".gpx,.csv,.json,.txt,application/json,application/gpx+xml,text/csv" onChange=${lire} aria-label="Importer des séances" /></label>
-    <p class="note">Un plan d'entraînement exporté en JSON (par exemple depuis votre appli de course) est reconnu s'il contient des dates, durées ou distances. Strava et Apple Santé ne sont pas connectés : exportez vos séances en GPX ou CSV.</p>
     <details class="repli"><summary>Ajouter une séance à la main</summary>
       <form onSubmit=${(e) => { e.preventDefault(); if (ajouter([{ date: form.date, type: form.type, duree_min: Number(form.duree_min), distance_km: Number(String(form.distance_km).replace(',', '.')) || 0, source: 'manuel' }])) setForm({ ...form, duree_min: '', distance_km: '' }); }}>
         <label class="champ"><span>Date</span><input type="date" value=${form.date} onInput=${(e) => setForm({ ...form, date: e.target.value })} /></label>
@@ -99,7 +80,7 @@ export function Sport({ profil, besoins, seances, ops, index, moi, contraintes, 
     <div class="contenu">
       <${Bandeau} type="info" titre="Rappel"><p>${RAPPEL_JOUR_J}</p><//>
       ${auj && html`<${Section} titre="Aujourd'hui">
-        <div class="bilan-jour"><p><strong>${TYPES_JOUR[auj.charge.type]}</strong>${auj.charge.duree_min ? ` · ${auj.charge.duree_min} min` : ''}${auj.charge.source === 'seance' ? ' (séance importée)' : ''}</p>
+        <div class="bilan-jour"><p><strong>${TYPES_JOUR[auj.charge.type]}</strong>${auj.charge.duree_min ? ` · ${auj.charge.duree_min} min` : ''}${auj.charge.source === 'seance' ? ' (séance saisie)' : ''}</p>
           <div class="stats"><div><strong>${auj.besoins.kcal}</strong><span class="sous">kcal</span></div><div><strong>${auj.besoins.glucides_g}</strong><span class="sous">g glucides</span></div>
             <div><strong>${auj.besoins.proteines_g}</strong><span class="sous">g protéines</span></div><div><strong>${nf(Math.round(auj.besoins.eau_ml / 100) / 10)}</strong><span class="sous">L d'eau</span></div></div>
           ${auj.notes.map((n) => html`<p key=${n} class="note">${n}</p>`)}</div>
@@ -121,11 +102,11 @@ export function Sport({ profil, besoins, seances, ops, index, moi, contraintes, 
         <p class="note">${RAPPEL_JOUR_J}</p>
       <//>
       <${Section} titre="Mes séances">
-        <${ImportSeances} moi=${moi} ops=${ops} />
+        <${AjoutSeance} moi=${moi} ops=${ops} />
         ${mes.length > 0 && html`<ul class="articles">${mes.slice(0, 15).map((s) => html`<li class="article" key=${s.id}><span class="article-texte plein"><strong>${s.date}</strong>
           <span class="sous">${TYPES_JOUR[s.type] || s.type} · ${s.duree_min} min${s.distance_km ? ` · ${nf(s.distance_km)} km` : ''}${s.denivele_m ? ` · D+ ${s.denivele_m} m` : ''} · ${s.source}</span></span>
           <button type="button" class="supprimer" aria-label=${`Supprimer la séance du ${s.date}`} onClick=${() => ops.supprimerSeance(s.id)}>✕</button></li>`)}</ul>`}
-        <p class="note">Le plan s'ajuste automatiquement aux séances saisies ou importées.</p>
+        <p class="note">Le plan s'ajuste automatiquement aux séances saisies.</p>
       <//>
       <button type="button" class="bouton secondaire large" onClick=${() => setEdition(true)}>Modifier mon objectif</button>
       <button type="button" class="lien" onClick=${() => { if (window.confirm('Supprimer cet objectif sportif ?')) onChangeProfil({ ...profil, sport: null, objectif: profil.objectif === 'sport' ? 'equilibre' : profil.objectif }); }}>Supprimer l'objectif</button>

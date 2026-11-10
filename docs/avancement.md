@@ -12,7 +12,7 @@ La suite de contrôles : 135 tests unitaires, vérification des 1 610 recettes e
 - **Règles d'alerte, régimes médicaux, apports du sport, substitutions** : repères généraux **à faire relire par un professionnel de santé** (`docs/sources.md`).
 - **« Privé »** (pesées, poids) masque la donnée dans l'appli de l'autre ; ce n'est pas un chiffrement.
 - **Face ID / Touch ID** : porte d'entrée de l'appli (WebAuthn local), pas un chiffrement des données.
-- **Strava / Apple Santé** : non connectés (export GPX, CSV ou JSON à importer).
+- **Séances** : saisie à la main uniquement (l’import de fichiers GPX, CSV, JSON a été retiré à la demande d’Eymric).
 
 ## 5.1 Comptes et couple — ✅
 Connexion email, choix E/M, PIN (PBKDF2) + Face ID / Touch ID, synchro < 2 s de tout (favoris, profils, enfants, menus, courses, stock, scans, journal, poids, séances, batch), cache hors ligne, vue « Nous deux » (situation, journal du jour, poids, favoris), fil d'activité, option « privé ». 🟡 Pas de lien d'invitation « magique » (on envoie le lien du site + le compte).

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { phaseDuJour, chargeDuJour, depenseEffort, besoinsJourSport, ravitaillement, repasPreCourse, recuperation, planNutritionnel, analyserGPX, analyserCSV, analyserJSON, FILTRES_SPORT, EPREUVES, RAPPEL_JOUR_J } from '../js/lib/sport.js';
+import { phaseDuJour, chargeDuJour, depenseEffort, besoinsJourSport, ravitaillement, repasPreCourse, recuperation, planNutritionnel, FILTRES_SPORT, EPREUVES, RAPPEL_JOUR_J } from '../js/lib/sport.js';
 import { calculerBesoins } from '../js/lib/besoins.js';
 import { preparerRecettes } from '../js/lib/recettes.js';
 import { readFileSync } from 'node:fs';
@@ -79,34 +79,6 @@ test('plan de compétition : généré depuis la date et la distance, charge en 
   assert.ok(avecSeances.find((p) => p.date === '2027-04-03').besoins.kcal > plan.find((p) => p.date === '2027-04-03').besoins.kcal);
 });
 
-test('import GPX : distance, durée, dénivelé', () => {
-  const gpx = `<?xml version="1.0"?><gpx><trk><trkseg>
-    <trkpt lat="48.8566" lon="2.3522"><ele>35</ele><time>2026-11-08T08:00:00Z</time></trkpt>
-    <trkpt lat="48.8666" lon="2.3522"><ele>45</ele><time>2026-11-08T08:30:00Z</time></trkpt>
-    <trkpt lat="48.8766" lon="2.3522"><ele>40</ele><time>2026-11-08T09:00:00Z</time></trkpt></trkseg></trk></gpx>`;
-  const s = analyserGPX(gpx);
-  assert.equal(s.date, '2026-11-08');
-  assert.equal(s.duree_min, 60);
-  assert.ok(s.distance_km > 2.1 && s.distance_km < 2.3, `distance ${s.distance_km}`);
-  assert.equal(s.denivele_m, 10);
-  assert.equal(analyserGPX('pas du gpx'), null);
-  assert.equal(analyserGPX('<gpx><trkpt lat="1" lon="1"></trkpt><trkpt lat="1" lon="2"></trkpt></gpx>'), null, 'sans dates : refusé');
-});
-
-test('import CSV et JSON', () => {
-  const csv = 'Date;Type;Durée (min);Distance (km)\n2026-11-09;Fractionné VMA;55;9,5\n10/11/2026;Footing;45;7\nhier;Footing;30;5\n2026-11-11;Repos;;';
-  const s = analyserCSV(csv);
-  assert.equal(s.length, 2);
-  assert.deepEqual([s[0].type, s[0].duree_min, s[0].distance_km], ['fractionne', 55, 9.5]);
-  assert.equal(s[1].date, '2026-11-10');
-  assert.deepEqual(analyserCSV('juste un titre'), []);
-  const j = analyserJSON({ plan: [{ date: '2026-11-12', type: 'Sortie longue', duree: 100, distance: 16 }, { jour: '2026-11-13', name: 'Fractionné 10x400', duration_min: 50 }, { date: 'bientôt' }] });
-  assert.equal(j.length, 2);
-  assert.equal(j[0].type, 'longue'); assert.equal(j[1].type, 'fractionne');
-  assert.deepEqual(analyserJSON([{ date: '2026-11-12T08:00:00', distance_km: 10 }]).map((x) => x.duree_min), [60]);
-  assert.deepEqual(analyserJSON({ n: 1 }), []);
-  assert.deepEqual(analyserJSON(null), []);
-});
 
 test('recettes pour le sport : sélections non vides dans le catalogue', () => {
   const index = preparerRecettes(JSON.parse(readFileSync(new URL('../data/index.json', import.meta.url), 'utf8')).recettes);
