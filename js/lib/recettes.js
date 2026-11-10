@@ -1,5 +1,6 @@
 // Recherche et filtres sur l'index léger. Fonctions pures, sans DOM.
 import { normaliser } from './texte.js';
+import { respecteRegime } from '../data/regimes.js';
 
 export const FILTRES_VIDES = Object.freeze({
   q: '', categories: [], regimes: [], allergenes: [], tempsMax: null,
@@ -49,7 +50,7 @@ export function filtrerRecettes(recettes, f, favoris = new Set()) {
   const resultats = recettes.filter((r) =>
     !contientAllergene(r, f.allergenes)
     && (!f.categories.length || f.categories.includes(r.categorie))
-    && f.regimes.every((g) => r.regimes.includes(g))
+    && f.regimes.every((g) => respecteRegime(r, g))
     && (!f.tempsMax || r.temps <= f.tempsMax)
     && (!f.difficultes.length || f.difficultes.includes(r.difficulte))
     && (!f.saisons.length || f.saisons.some((s) => r.saisons.includes(s) || r.saisons.includes('toute_annee')))

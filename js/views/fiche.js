@@ -6,6 +6,7 @@ import { lire, ecrire } from '../core/stockage.js';
 import { REGIMES, ALLERGENES, PROFILS, NUTRITION, REGLAGES, DIFFICULTES, COUTS, lib, libSousCategorie } from '../data/libelles.js';
 import { ligneIngredient, conseilsAdaptation } from '../lib/adaptation.js';
 import { conflitsProfil } from '../lib/profils.js';
+import { nomRegime } from '../data/regimes.js';
 import { PERSONNES } from '../core/config.js';
 import { Pictogramme, Coeur, Bandeau, Pastille } from '../ui/composants.js';
 
@@ -26,7 +27,7 @@ function AlerteProfil({ r, moi, profil }) {
     <ul>
       ${c.alertes.map((d) => html`<li><strong>${lib(PROFILS, d.profil)}</strong> : ${d.raison}</li>`)}
       ${c.allergenes.length > 0 && html`<li>Contient ${c.allergenes.map((a) => lib(ALLERGENES, a).toLowerCase()).join(', ')} : à éviter selon votre profil.</li>`}
-      ${c.regimes.length > 0 && html`<li>Ne respecte pas votre régime : ${c.regimes.map((g) => lib(REGIMES, g).toLowerCase()).join(', ')}.</li>`}
+      ${c.regimes.length > 0 && html`<li>Ne respecte pas votre régime : ${c.regimes.map((g) => nomRegime(g).toLowerCase()).join(', ')}.</li>`}
       ${c.exclusions.length > 0 && html`<li>Contient un aliment que vous évitez (${c.exclusions.join(', ')}).</li>`}
     </ul><//>`;
 }

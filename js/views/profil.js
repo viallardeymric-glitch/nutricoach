@@ -2,6 +2,7 @@
 import { html, useState } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
 import { REGIMES, ALLERGENES } from '../data/libelles.js';
+import { REGIMES_AVANCES, FAMILLES_REGIMES, RAPPEL_MEDICAL, nomRegime } from '../data/regimes.js';
 import { ACTIVITES, OBJECTIFS, calculerBesoins } from '../lib/besoins.js';
 import { validerProfil, profilComplet, ageDe, LIMITES, AGE_MIN } from '../lib/profils.js';
 import { basculer } from '../lib/recettes.js';
@@ -142,8 +143,14 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section }) {
           actif=${p.conditions.includes(k)} onClick=${() => maj({ conditions: basculer(p.conditions, k) })}>${n}<//>`)}<//><//>
         ${(p.grossesse > 0 || p.allaitement) && html`<${Bandeau} type="info" titre="À savoir"><p>Pendant la grossesse et l'allaitement, les repères de l'appli sont généraux : votre sage-femme ou votre médecin les ajuste pour vous.</p><//>`}`}
       ${section === 'regimes' && html`
-        <${Groupe} titre="Mes régimes"><${Choix}>${Object.keys(REGIMES).filter((k) => !REGIMES_DEJA_AILLEURS.includes(k)).map((k) => html`<${Puce} key=${k}
+        <${Groupe} titre="Régimes du catalogue" aide="Cumulables : les recettes affichées respectent tous vos choix."><${Choix}>${Object.keys(REGIMES).filter((k) => !REGIMES_DEJA_AILLEURS.includes(k)).map((k) => html`<${Puce} key=${k}
           actif=${p.regimes.includes(k)} onClick=${() => maj({ regimes: basculer(p.regimes, k) })}>${REGIMES[k]}<//>`)}<//><//>
+        ${['mode', 'populaire', 'exclusion', 'medical'].map((fam) => html`<${Groupe} key=${fam} titre=${FAMILLES_REGIMES[fam]} aide=${fam === 'medical' ? RAPPEL_MEDICAL : null}>
+          <${Choix}>${Object.entries(REGIMES_AVANCES).filter(([, r]) => r.famille === fam).map(([k, r]) => html`<${Puce} key=${k} actif=${p.regimes.includes(k)}
+            onClick=${() => maj({ regimes: basculer(p.regimes, k) })}>${r.nom}<//>`)}<//><//>`)}
+        ${p.regimes.some((k) => REGIMES_AVANCES[k]) && html`<${Bandeau} type="info" titre="Vos régimes">
+          <ul>${p.regimes.filter((k) => REGIMES_AVANCES[k]).map((k) => html`<li key=${k}><strong>${nomRegime(k)}</strong> : ${REGIMES_AVANCES[k].aide}</li>`)}</ul>
+          ${p.regimes.some((k) => REGIMES_AVANCES[k] && REGIMES_AVANCES[k].medical) && html`<p class="note">${RAPPEL_MEDICAL}</p>`}<//>`}
         <${Groupe} titre="Allergies et intolérances" aide="Les recettes concernées sont masquées partout."><${Choix}>${Object.entries(ALLERGENES).map(([k, n]) => html`<${Puce} key=${k} exclu=${true}
           actif=${p.allergenes.includes(k)} onClick=${() => maj({ allergenes: basculer(p.allergenes, k) })}>${n}<//>`)}<//><//>
         <${Champ} etiquette="Aliments que je n'aime pas (séparés par des virgules)">

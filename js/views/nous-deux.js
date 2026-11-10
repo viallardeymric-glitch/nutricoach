@@ -1,7 +1,8 @@
 // Vue « Nous deux » : la situation de chacun et les favoris du couple (tout est partagé par défaut).
 import { html } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
-import { REGIMES, ALLERGENES } from '../data/libelles.js';
+import { ALLERGENES } from '../data/libelles.js';
+import { nomRegime } from '../data/regimes.js';
 import { OBJECTIFS, calculerBesoins } from '../lib/besoins.js';
 import { profilComplet } from '../lib/profils.js';
 import { Pastille, Bandeau, Entete } from '../ui/composants.js';
@@ -22,7 +23,7 @@ function Carte({ id, profil, nbFavoris, moi }) {
       <p class="note">Pas encore de profil enregistré.</p></section>`;
   }
   const b = profilComplet(profil) ? calculerBesoins(profil) : null;
-  const etiquettes = [...situation(profil), ...profil.regimes.map((g) => REGIMES[g] || g)];
+  const etiquettes = [...situation(profil), ...profil.regimes.map((g) => nomRegime(g))];
   return html`<section class="carte-nous">
     <h2><${Pastille} qui=${id} /> ${prenom}${id === moi ? ' (moi)' : ''}</h2>
     <p>${OBJECTIFS[profil.objectif] || OBJECTIFS.equilibre}</p>

@@ -1,13 +1,14 @@
 // Semaine : menus du déjeuner et du dîner pour le couple, générés puis modifiables repas par repas.
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
 import { PERSONNES } from '../core/config.js';
-import { PROFILS, REGIMES, ALLERGENES, lib } from '../data/libelles.js';
+import { PROFILS, ALLERGENES, lib } from '../data/libelles.js';
+import { nomRegime } from '../data/regimes.js';
 import { REPAS, ajouterJours, cleDate, dateDepuisCle, lundiDe, nomJour, nomMois, saisonDe, semaineDe, proposer, genererSemaine, graine } from '../lib/planning.js';
 import { profilsARisque } from '../lib/profils.js';
 import { Entete, MiniRecette, Bandeau } from '../ui/composants.js';
 
 function resumeContraintes(c) {
-  const t = [...c.allergenes.map((a) => 'sans ' + lib(ALLERGENES, a).toLowerCase()), ...c.regimes.map((g) => lib(REGIMES, g).toLowerCase()),
+  const t = [...c.allergenes.map((a) => 'sans ' + lib(ALLERGENES, a).toLowerCase()), ...c.regimes.map((g) => nomRegime(g).toLowerCase()),
     ...c.exclusions.map((x) => 'sans ' + x)];
   return t.length ? t.join(', ') : 'aucune contrainte particulière';
 }

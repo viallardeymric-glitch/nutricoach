@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { entreeIndex } from '../js/lib/index-entree.js';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dossierData = join(racine, 'data');
@@ -22,23 +23,7 @@ export function construireIndex(parFichier) {
     for (const r of parFichier[fichier]) {
       if (vus.has(r.id)) throw new Error(`Identifiant en double : ${r.id}`);
       vus.add(r.id);
-      recettes.push({
-        id: r.id,
-        titre: r.titre,
-        categorie: r.categorie,
-        sous_categorie: r.sous_categorie,
-        regimes: r.regimes_compatibles,
-        allergenes: r.allergenes,
-        temps: r.temps.total_min,
-        kcal: Math.round(r.nutrition_par_portion.calories_kcal),
-        difficulte: r.difficulte,
-        saisons: r.saisons,
-        appareils: r.appareils_possibles,
-        tags: r.tags,
-        risques: [...new Set(r.deconseille_a.map((d) => d.profil))],
-        ingredients: [...new Set(r.ingredients.map((i) => i.aliment))],
-        f,
-      });
+      recettes.push({ ...entreeIndex(r), f });
     }
   });
   return { version: 1, fichiers, recettes };

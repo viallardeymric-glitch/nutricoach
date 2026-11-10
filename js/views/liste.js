@@ -3,6 +3,7 @@ import { html, useMemo } from '../../vendor/preact-htm.js';
 import { TAILLE_PAGE } from '../core/config.js';
 import { CATEGORIES, REGIMES, ALLERGENES, SAISONS, APPAREILS, DIFFICULTES, TEMPS_MAX, PROFILS, lib, libSousCategorie } from '../data/libelles.js';
 import { filtrerRecettes, nombreFiltres, basculer, FILTRES_VIDES } from '../lib/recettes.js';
+import { REGIMES_AVANCES, nomRegime } from '../data/regimes.js';
 import { filtresDuProfil, profilsARisque } from '../lib/profils.js';
 import { PERSONNES } from '../core/config.js';
 import { Puce, Pictogramme, Coeur, Bandeau, Pastille } from '../ui/composants.js';
@@ -18,6 +19,10 @@ function Filtres({ f, setF, regimesDispo, effacer }) {
   return html`<section class="filtres" aria-label="Filtres">
     <${Groupe} titre="Catégorie">${liste('categories', {}, CATEGORIES)}<//>
     <${Groupe} titre="Régime (tous ceux choisis)">${liste('regimes', REGIMES, regimesDispo)}<//>
+    <${Groupe} titre="Autres régimes (sélection indicative)">${f.regimes.length >= 0 && Object.entries(REGIMES_AVANCES).filter(([, r]) => r.famille !== 'medical' && !r.fenetre && !r.points).map(([k, r]) => html`<${Puce} key=${k}
+      actif=${f.regimes.includes(k)} onClick=${maj('regimes')(k)}>${r.nom}<//>`)}<//>
+    <${Groupe} titre="Médicaux (avis médical)">${Object.entries(REGIMES_AVANCES).filter(([, r]) => r.famille === 'medical').map(([k, r]) => html`<${Puce} key=${k}
+      actif=${f.regimes.includes(k)} onClick=${maj('regimes')(k)}>${r.nom}<//>`)}<//>
     <${Groupe} titre="Allergènes à exclure">${liste('allergenes', ALLERGENES, Object.keys(ALLERGENES), true)}<//>
     <${Groupe} titre="Temps maximum">
       ${TEMPS_MAX.map((t) => html`<${Puce} key=${t} actif=${f.tempsMax === t}
@@ -49,7 +54,7 @@ function Carte({ r, favori, onFavori, onOuvrir, risques, par }) {
 /** Résumé court de ce que le profil impose : « : sans lait, sans coriandre, végan ». */
 function resume(profil, fp) {
   const morceaux = [...fp.allergenes.map((a) => 'sans ' + lib(ALLERGENES, a).toLowerCase()),
-    ...fp.regimes.map((g) => lib(REGIMES, g).toLowerCase()),
+    ...fp.regimes.map((g) => nomRegime(g).toLowerCase()),
     ...String(profil.exclusions || '').split(/[,;\n]/).map((x) => x.trim()).filter(Boolean).map((x) => 'sans ' + x)];
   const risques = profilsARisque(profil);
   if (risques.length) morceaux.push('alertes : ' + risques.map((x) => lib(PROFILS, x).toLowerCase()).join(', '));

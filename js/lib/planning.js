@@ -1,6 +1,7 @@
 // Menus de la semaine : dates, contraintes du couple, choix des recettes. Fonctions pures, sans DOM.
 import { filtresDuProfil, profilsARisque } from './profils.js';
 import { contientAllergene } from './recettes.js';
+import { respecteRegime } from '../data/regimes.js';
 
 export const REPAS = [
   { id: 'dejeuner', nom: 'Déjeuner', icone: '☀️' },
@@ -58,7 +59,7 @@ export function contraintesCouple(profils) {
 /** Une recette de l'index (avec _titre et _ingr) convient-elle aux contraintes ? */
 export function convient(r, c) {
   return !contientAllergene(r, c.allergenes)
-    && c.regimes.every((g) => r.regimes.includes(g))
+    && c.regimes.every((g) => respecteRegime(r, g))
     && !c.exclusions.some((x) => (r._ingr || '').includes(x) || r._titre.includes(x))
     && !(r.risques || []).some((x) => c.risques.includes(x));
 }

@@ -16,6 +16,8 @@ const FICHIERS = [
   'js/views/accueil.js', 'js/views/coach.js', 'js/views/connexion.js', 'js/views/courses.js', 'js/views/cuisine.js', 'js/views/fiche.js', 'js/views/liste.js',
   'js/views/nous-deux.js', 'js/views/plus.js', 'js/views/profil.js', 'js/views/scanner.js', 'js/views/semaine.js', 'js/views/verrou.js',
   'vendor/preact-htm.js', 'vendor/firebase.js', 'vendor/zxing.js', 'vendor/LISEZMOI.txt',
+  'js/data/regimes.js',
+  'js/lib/index-entree.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

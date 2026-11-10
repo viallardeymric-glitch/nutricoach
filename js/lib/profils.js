@@ -1,5 +1,8 @@
 // Profil d'une personne : validation, profils à risque, filtres et alertes pour les recettes.
 import { normaliser } from './texte.js';
+import { respecteRegime } from '../data/regimes.js';
+import { entreeIndex } from './index-entree.js';
+import { preparerRecettes } from './recettes.js';
 
 export const LIMITES = { poids_kg: [35, 250], taille_cm: [120, 230] };
 const ETIQUETTES = { poids_kg: 'Le poids', taille_cm: 'La taille' };
@@ -45,8 +48,9 @@ export function profilsARisque(p) {
   if (p.sexe === 'femme' && p.allaitement) r.add('allaitante');
   if (ageDe(p) >= 65) r.add('senior');
   const c = p.conditions || [];
-  if (c.includes('diabete') || (p.regimes || []).includes('diabetique')) r.add('diabetique');
-  if (c.includes('hypertension')) r.add('hypertendu');
+  const rg = p.regimes || [];
+  if (c.includes('diabete') || rg.includes('diabetique') || rg.includes('diabete_ig')) r.add('diabetique');
+  if (c.includes('hypertension') || rg.includes('hypertension')) r.add('hypertendu');
   if (c.includes('immunodeprime')) r.add('immunodeprime');
   return [...r];
 }
@@ -76,11 +80,12 @@ export function alertesProfil(recette, p) {
  */
 export function conflitsProfil(recette, p) {
   const f = filtresDuProfil(p);
+  const entree = preparerRecettes([entreeIndex(recette)])[0];
   const ingr = normaliser(recette.ingredients.map((i) => i.aliment).join(' | ') + ' | ' + recette.titre);
   return {
     alertes: alertesProfil(recette, p),
     allergenes: f.allergenes.filter((a) => (recette.allergenes || []).includes(a)),
-    regimes: f.regimes.filter((g) => !(recette.regimes_compatibles || []).includes(g)),
+    regimes: f.regimes.filter((g) => !respecteRegime(entree, g)),
     exclusions: f.exclusions.filter((x) => ingr.includes(x)),
   };
 }
