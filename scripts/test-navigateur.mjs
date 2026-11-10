@@ -223,6 +223,8 @@ await p.fill('.coach-saisie textarea', 'Et pour demain ?'); await p.click('.coac
 await p.waitForFunction(() => document.querySelectorAll('.bulle.coach:not(.attente)').length >= 2);
 verif(requetes.length === 2 && requetes[1].corps.includes('ALLERGIES') && requetes[1].corps.includes('lait'), 'coach : profil envoyé seulement après accord (allergie au lait incluse)');
 verif(requetes[1].corps.includes('Que cuisiner ce soir'), 'coach : l\'historique est transmis');
+verif(requetes[1].corps.includes('INTERDIT') && requetes[1].corps.includes('ne poses JAMAIS de diagnostic'), 'coach : base médicale et repères grossesse transmis');
+verif(await p.locator('.avertissement-sante:has-text("sage-femme")').count() >= 1, 'coach : « je ne suis pas médecin » affiché sous la réponse (grossesse)');
 await p.reload(); await p.waitForSelector('.bulle.coach');
 const nbBulles = await p.locator('.bulle').count(); verif(nbBulles === 4, 'coach : conversation conservée (' + nbBulles + ' bulles)');
 await p.click('text=Effacer la conversation');

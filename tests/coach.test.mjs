@@ -125,3 +125,28 @@ test('Gemini 2.5 flash : mode « réflexion » coupé pour répondre plus vite',
   await demanderAuCoach({ cle: 'k', modele: 'gemini-3-flash', historique: histo, contexte: '' }, async (u, o) => { corps = JSON.parse(o.body); return reponseGemini('ok'); });
   assert.equal(corps.generationConfig.thinkingConfig, undefined);
 });
+
+import { avertissementSante, reperesGrossesse, decrireProfil } from '../js/core/coach.js';
+test('contexte complet : conjoint(e), enfants, sport, frigo, courses, poids, repères grossesse', () => {
+  const marie = { sexe: 'femme', grossesse: 2, allergenes: ['lait'] };
+  const c = construireContexte({
+    profil: { sexe: 'homme', sportif: true }, prenom: 'Eymric', saison: 'hiver',
+    partenaire: { profil: marie, prenom: 'Marie', besoins: { cible: 2200, proteines_g: 90, glucides_g: 250, lipides_g: 70 } },
+    enfants: [{ prenom: 'Léa', naissance: '2020-01-01', allergenes: ['arachides'], exclusions: '' }],
+    sport: { epreuve: 'Marathon', date: '2027-04-04', reste: 60, phase: 'Développement', charge: 'Sortie longue 120 min', kcal: 3100, glucides_g: 480 },
+    stock: ['lait', 'oeufs'], aConsommer: ['yaourts'], courses: ['pommes'], poids: [{ date: '2026-11-01', kg: 80 }, { date: '2026-11-08', kg: 79.5 }],
+  });
+  for (const t of ['Conjoint(e) : Marie', 'enceinte (2e trimestre)', 'Léa', 'arachides', 'Marathon', 'J-60', 'Développement', 'Sortie longue 120 min', 'lait, oeufs', 'À consommer vite : yaourts', 'pommes', '79.5 kg', 'INTERDIT']) assert.ok(c.includes(t), t);
+  assert.ok(!construireContexte({ profil: { sexe: 'homme' }, prenom: 'E' }).includes('INTERDIT'), 'repères grossesse seulement si concerné');
+  assert.ok(reperesGrossesse()[0].includes('Alcool'));
+  assert.ok(decrireProfil({ profil: marie, prenom: 'Marie' })[0].includes('enceinte'));
+});
+test('consignes du coach : base médicale, jamais de diagnostic, « pas médecin » et grossesse/allaitement', () => {
+  for (const t of ['ne poses JAMAIS de diagnostic', 'pas un médecin', 'grossesse', 'allaitement', 'le 15', 'sage-femme']) assert.ok(CONSIGNES.includes(t), t);
+});
+test('avertissement « je ne suis pas médecin » : toujours en grossesse/allaitement, sinon si la question touche à la santé', () => {
+  assert.match(avertissementSante({ profil: { grossesse: 1 }, question: 'Une idée de dessert ?' }), /sage-femme/);
+  assert.match(avertissementSante({ profil: { allaitement: true }, question: 'salut' }), /pas médecin/);
+  assert.match(avertissementSante({ profil: {}, question: 'J\'ai de la fièvre, que manger ?' }), /pas médecin/);
+  assert.equal(avertissementSante({ profil: {}, question: 'Une idée de dessert ?' }), null);
+});

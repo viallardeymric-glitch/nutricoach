@@ -40,7 +40,7 @@ import { evenements } from './lib/activite.js';
 import { articlesDuFrigo, bonusStock, aConsommerBientot } from './lib/frigo.js';
 import { chargerAppareils } from './core/appareils.js';
 import { definirPartage, photoEnCache, photoPartagee, photoDeRecette, peutChercherMiniature } from './core/photos.js';
-import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
+import { planNutritionnel, FILTRES_SPORT, EPREUVES, PHASES, TYPES_JOUR } from './lib/sport.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
 import { Plus, appliquerTheme, themeParDefaut } from './views/plus.js';
 
@@ -320,6 +320,18 @@ function App() {
     if (s.length) l.push(`Dernier poids : ${s[s.length - 1].kg} kg (${s[s.length - 1].date}).`);
     return l;
   }, [journal, poids, besoins, moi, profil]);
+  // Tout ce que l'appli sait, pour le coach (envoyé seulement si la personne a coché « personnaliser »).
+  const contexteCoach = useMemo(() => ({
+    partenaire: profilAutre ? { profil: profilAutre, besoins: besoinsAutre, prenom: PERSONNES[autre].prenom } : null,
+    enfants: enfantsListe,
+    sport: profil && profil.sport && profil.sport.date && jourSport ? {
+      epreuve: (EPREUVES[profil.sport.type] || {}).nom || 'épreuve', date: profil.sport.date, reste: jourSport.reste, phase: PHASES[jourSport.phase] || jourSport.phase,
+      charge: jourSport.charge ? `${TYPES_JOUR[jourSport.charge.type] || jourSport.charge.type}${jourSport.charge.duree_min ? ` ${jourSport.charge.duree_min} min` : ''}` : '',
+      kcal: jourSport.besoins && jourSport.besoins.kcal, glucides_g: jourSport.besoins && jourSport.besoins.glucides_g } : null,
+    stock: stock.map((x) => x.nom), aConsommer: urgentsStock.map((x) => x.nom),
+    courses: donneesCourses.articles.filter((a) => !a.coche).map((a) => a.nom),
+    poids: serieDePoids(poids, moi),
+  }), [profilAutre, besoinsAutre, autre, enfantsListe, profil, jourSport, stock, urgentsStock, donneesCourses, poids, moi]);
   // --- Écrans qui remplacent l'appli : verrou, chargement, connexion, choix de la personne.
   if (verrouille && pin) return html`<${Verrou} enreg=${pin} biometrie=${biometrieActive()} onDeverrouiller=${() => setVerrouille(false)} />`;
   if (session.statut === 'chargement') return html`<p class="etat">Chargement…</p>`;
@@ -357,7 +369,7 @@ function App() {
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
     ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
     ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} moi=${moi} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
-    ${route.ecran === 'coach' && html`<${Coach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
+    ${route.ecran === 'coach' && html`<${Coach} extra=${contexteCoach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'grossesse' && html`<${Grossesse} profil=${profil} />`}
     ${route.ecran === 'nous' && html`<${NousDeux} moi=${moi} profils=${session.profils} favorisNuage=${session.favorisNuage}

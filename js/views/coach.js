@@ -4,7 +4,7 @@ import { Entete, Bandeau } from '../ui/composants.js';
 import { preparerPiece, texteAvecPieces, MAX_PIECES } from '../core/pieces.js';
 import { blocs } from '../lib/texte-riche.js';
 import { chargerReglagesCoach, enregistrerReglagesCoach, chargerConversation, enregistrerConversation,
-  repondre, construireContexte, MODELE_PAR_DEFAUT, MODELE_GROQ_PAR_DEFAUT } from '../core/coach.js';
+  repondre, construireContexte, avertissementSante, MODELE_PAR_DEFAUT, MODELE_GROQ_PAR_DEFAUT } from '../core/coach.js';
 
 const SUGGESTIONS_GROSSESSE = ['Puis-je manger du saumon fumé ?', 'Idées de repas pour le premier trimestre', 'Que faire contre les nausées ?', 'Quels aliments riches en fer ?'];
 const SUGGESTIONS = ['Que cuisiner ce soir ?', 'Comment équilibrer ma semaine ?', 'Idées de petits-déjeuners riches en protéines', 'Que faire avec des restes de poulet ?'];
@@ -19,7 +19,7 @@ export function ReglagesCoach({ onChange }) {
     <p class="note">Créez-la gratuitement sur <strong>aistudio.google.com/apikey</strong> (compte Google). Elle reste sur ce téléphone : elle n'est ni envoyée à l'autre téléphone, ni enregistrée dans le dépôt.</p>
     <label class="case"><input type="checkbox" checked=${reg.partagerProfil} onChange=${(e) => maj({ partagerProfil: e.target.checked })} />
       <span>Personnaliser les réponses avec mon profil et mon menu de la semaine</span></label>
-    <p class="note">Si coché, votre profil (âge, objectifs, allergies, situation) et vos menus sont envoyés à Google (Gemini) et/ou Groq avec chaque question. Décochez pour ne rien partager. Le coach s'adapte au profil de la personne connectée sur ce téléphone (grossesse, allaitement, allergies… : Profil → Ma situation). La clé ne se synchronise pas : saisissez la même sur chaque téléphone.</p>
+    <p class="note">Si coché, votre profil (âge, objectifs, allergies, situation) et vos menus sont envoyés à Google (Gemini) et/ou Groq avec chaque question, avec ce que l'appli sait de vous : conjoint(e) et enfants, grossesse, sport et phase d'entraînement, menu, courses, frigo, poids et journal du jour. Décochez pour ne rien partager. Le coach s'adapte au profil de la personne connectée sur ce téléphone (grossesse, allaitement, allergies… : Profil → Ma situation). La clé ne se synchronise pas : saisissez la même sur chaque téléphone.</p>
     <label class="champ"><span>Modèle Gemini</span>
       <input type="text" value=${reg.modele} onInput=${(e) => maj({ modele: e.target.value.trim() || MODELE_PAR_DEFAUT })} /></label>
     <h3 class="petit-titre">Deuxième IA : Groq (gratuite, très rapide)</h3>
@@ -43,11 +43,12 @@ function Message({ m }) {
     ${blocs(m.texte).map((b) => b.type === 'ul'
       ? html`<ul>${b.items.map((it) => html`<li>${it.map((s) => (s.gras ? html`<strong>${s.texte}</strong>` : s.texte))}</li>`)}</ul>`
       : html`<p>${b.segments.map((s) => (s.gras ? html`<strong>${s.texte}</strong>` : s.texte))}</p>`)}
+    ${m.avertir && html`<p class="avertissement-sante">${m.avertir}</p>`}
     ${m.role !== 'user' && html`<button type="button" class="lien copier" onClick=${copier}>${copie ? '✓ Copié' : '⧉ Copier'}</button>${m.via ? html` <span class="sous">· ${m.via}</span>` : ''}`}
   </div>`;
 }
 
-export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi, enceinte = false }) {
+export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi, enceinte = false, extra = {} }) {
   const [reg, setReg] = useState(chargerReglagesCoach);
   const [messages, setMessages] = useState(chargerConversation);
   const [saisie, setSaisie] = useState('');
@@ -74,10 +75,10 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSui
     const jointes = pieces;
     setMessages(suite); setSaisie(''); setPieces([]); setErreur(''); setEnCours(true);
     try {
-      const contexte = reg.partagerProfil ? construireContexte({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi }) : construireContexte({ saison });
+      const contexte = reg.partagerProfil ? construireContexte({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi, ...extra }) : construireContexte({ saison });
       const reponse = await repondre({ reg, historique: suite.slice(-20), contexte, pieces: jointes });
-      const final = [...suite, { role: 'coach', texte: reponse.texte, via: reponse.via }];
-      setMessages(final); enregistrerConversation(final.map(({ texte, role, pieces: ps, via }) => ({ texte, role, pieces: ps, via }))); setReg(chargerReglagesCoach());
+      const final = [...suite, { role: 'coach', texte: reponse.texte, via: reponse.via, avertir: avertissementSante({ profil, question: t }) }];
+      setMessages(final); enregistrerConversation(final.map(({ texte, role, pieces: ps, via, avertir }) => ({ texte, role, pieces: ps, via, avertir }))); setReg(chargerReglagesCoach());
     } catch (e) { setErreur(e.message); enregistrerConversation(suite); }
     setEnCours(false);
   };

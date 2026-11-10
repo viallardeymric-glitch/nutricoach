@@ -1,6 +1,7 @@
 // Coach IA (Gemini par défaut). La clé est saisie dans les réglages et reste sur ce téléphone :
 // jamais dans le dépôt, jamais synchronisée. Fonctions de construction/lecture pures, testées.
 import { lire, ecrire } from './stockage.js';
+import { ALIMENTS_GROSSESSE } from '../data/grossesse.js';
 
 export const MODELE_PAR_DEFAUT = 'gemini-2.5-flash';
 const URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
@@ -13,38 +14,68 @@ export const enregistrerReglagesCoach = (r) => ecrire('coach.reglages', r);
 export const chargerConversation = () => { const c = lire('coach.conversation', []); return Array.isArray(c) ? c : []; };
 export const enregistrerConversation = (c) => ecrire('coach.conversation', c.slice(-MAX_HISTORIQUE));
 
-export const CONSIGNES = `Tu es le coach alimentaire de l'application NutriCoach, pour un couple (Eymric et Marie).
-Réponds en français, avec un ton simple, chaleureux et concret, en quelques phrases courtes (listes si utile).
+export const CONSIGNES = `Tu es le coach de l'application NutriCoach, pour un couple (Eymric et Marie) : nutrition, cuisine, sport, bien-être et santé au quotidien.
+Réponds en français, avec un ton simple, chaleureux et concret, en quelques phrases courtes (listes si utile). Appuie-toi sur le contexte fourni : profil, situation (grossesse, allaitement, enfants), objectif sportif et phase d'entraînement, menu de la semaine, courses, frigo, poids et journal du jour. Cite ces éléments quand ils aident (« d'après votre menu de mardi… »).
+
+Base médicale (tu connais les repères de santé publique français : Santé publique France / Manger Bouger, ANSES, HAS, Assurance maladie) :
+- Tu peux expliquer, informer et rassurer : alimentation selon l'âge et la situation, équilibre, hydratation, sommeil, activité physique, hygiène alimentaire, interactions simples aliments/situations, signes à surveiller.
+- Tu ne poses JAMAIS de diagnostic, tu ne prescris ni ne modifies de médicament, de dose ou de traitement, et tu n'interprètes pas un résultat d'analyse comme un médecin : tu l'expliques en termes généraux puis tu renvoies vers un professionnel.
+- Rappelle clairement, avec tes mots, que tu n'es pas un médecin chaque fois que la question touche à la santé, à un symptôme, à un médicament, à la grossesse ou à l'allaitement. C'est IMPORTANT pour la grossesse et l'allaitement : termine alors toujours par une phrase du type « Je ne suis pas médecin : validez avec votre sage-femme ou votre médecin ».
+- Urgence : fièvre, saignements, douleurs fortes ou inhabituelles, contractions, baisse des mouvements du bébé, malaise, difficulté à respirer, réaction allergique, symptômes graves chez un enfant → dis d'appeler immédiatement le 15 (ou le 112), sans attendre.
+- Grossesse : alcool zéro ; pas de viande, poisson ou œuf crus ou peu cuits ; pas de charcuterie crue, poisson fumé, fromage au lait cru, graines germées crues ; limiter la caféine (200 mg/jour) ; limiter les gros poissons prédateurs ; laver fruits et légumes ; pas de compléments ni de plantes sans avis médical. Les folates (B9) et la vitamine D se discutent avec le médecin ou la sage-femme.
+- Allaitement : zéro alcool (ou attendre plusieurs heures), caféine modérée, bien s'hydrater, manger varié et suffisamment ; pas de régime restrictif ; attention aux plantes et compléments (avis du professionnel). Les besoins en énergie sont plus élevés.
+- Enfants : repères d'âge (pas de miel avant 1 an, pas de cru à risque, textures adaptées, allergies : avis du pédiatre). Seniors, diabète, hypertension, insuffisance rénale, etc. : donne des repères généraux et renvoie vers l'équipe soignante.
+- Sport : appuie-toi sur la phase d'entraînement indiquée (glucides, protéines, hydratation, récupération) ; pas de programme d'entraînement médical ; douleur thoracique, malaise ou blessure → avis médical.
+
 Règles de sécurité :
-- Tu ne remplaces ni un médecin, ni une sage-femme, ni un diététicien : pour toute question médicale, renvoie vers un professionnel.
 - Respecte STRICTEMENT les allergies, intolérances, régimes et aliments évités indiqués dans le contexte.
-- Grossesse, allaitement, enfants, personnes âgées : prudence (pas de cru à risque, pas d'alcool, pas de régime restrictif).
-- Ne propose jamais de régime extrême ni de perte de poids rapide ; pas de jeûne prolongé.
-- Si tu n'es pas sûr, dis-le.
-Tu peux proposer des idées de repas, équilibrer la semaine, expliquer une recette ou conseiller des substitutions.
-Si une photo ou un document est joint (étiquette, menu, ordonnance, bilan, recette), explique-le simplement ; ne pose jamais de diagnostic et renvoie vers un professionnel pour toute interprétation médicale.`;
+- Ne propose jamais de régime extrême ni de perte de poids rapide ; pas de jeûne prolongé, surtout pendant la grossesse, l'allaitement, chez l'enfant ou avec un diabète.
+- Si tu n'es pas sûr, dis-le et renvoie vers un professionnel.
+Tu peux proposer des idées de repas, équilibrer la semaine, expliquer une recette, conseiller des substitutions, adapter les repas à l'entraînement.
+Si une photo ou un document est joint (étiquette, menu, ordonnance, bilan, recette), explique-le simplement ; ne pose jamais de diagnostic.`;
 
 /** Texte de contexte (profil et menu) envoyé au coach, uniquement si la personne l'a accepté. */
-export function construireContexte({ profil, besoins, prenom, repasSemaine = [], saison, lignesSuivi = [] }) {
+const ageEn = (naissance) => { const d = new Date(naissance); if (Number.isNaN(d.getTime())) return null; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--; return a; };
+
+/** Une personne en une phrase : sexe, situation, objectif, besoins, régimes, allergies, conditions. */
+export function decrireProfil({ profil, besoins, prenom }, role = 'Personne') {
+  const l = [`${role} : ${prenom || 'utilisateur'}`];
+  if (profil.sexe) l.push(profil.sexe === 'femme' ? 'femme' : 'homme');
+  if (profil.grossesse > 0) l.push(`enceinte (${profil.grossesse}e trimestre)`);
+  if (profil.allaitement) l.push('allaitement');
+  if (profil.sportif) l.push('sportif');
+  if (profil.convalescence) l.push('en convalescence');
+  const lignes = [l.join(', ') + '.'];
+  if (profil.objectif) lignes.push(`Objectif : ${profil.objectif}.`);
+  if (besoins) lignes.push(`Besoins estimés : ${besoins.cible} kcal par jour (protéines ${besoins.proteines_g} g, glucides ${besoins.glucides_g} g, lipides ${besoins.lipides_g} g).`);
+  if (profil.regimes && profil.regimes.length) lignes.push(`Régimes : ${profil.regimes.join(', ')}.`);
+  if (profil.allergenes && profil.allergenes.length) lignes.push(`ALLERGIES / à exclure absolument : ${profil.allergenes.join(', ')}.`);
+  if (profil.exclusions) lignes.push(`Aliments évités : ${profil.exclusions}.`);
+  if (profil.conditions && profil.conditions.length) lignes.push(`Conditions : ${profil.conditions.join(', ')}.`);
+  return lignes;
+}
+
+/** Repères « grossesse / allaitement » de l'appli (les mêmes que le guide), en une ligne par niveau. */
+export function reperesGrossesse() {
+  const par = (st) => ALIMENTS_GROSSESSE.filter((a) => a.statut === st).map((a) => a.nom.replace(/\s*\(.*$/, '')).join(' ; ');
+  return [`Repères de l'appli pour la grossesse. INTERDIT : ${par('interdit')}. À ÉVITER : ${par('eviter')}. À LIMITER : ${par('limiter')}.`];
+}
+
+/** Texte de contexte envoyé au coach, uniquement si la personne l'a accepté : tout ce que l'appli sait, de façon concise. */
+export function construireContexte({ profil, besoins, prenom, repasSemaine = [], saison, lignesSuivi = [], sport = null, partenaire = null, enfants = [], stock = [], aConsommer = [], courses = [], poids = [] }) {
   const lignes = [];
   if (saison) lignes.push(`Saison : ${saison}.`);
-  if (profil) {
-    const l = [`Personne : ${prenom || 'utilisateur'}`];
-    if (profil.sexe) l.push(profil.sexe === 'femme' ? 'femme' : 'homme');
-    if (profil.grossesse > 0) l.push(`enceinte (${profil.grossesse}e trimestre)`);
-    if (profil.allaitement) l.push('allaitement');
-    if (profil.sportif) l.push('sportif');
-    if (profil.convalescence) l.push('en convalescence');
-    lignes.push(l.join(', ') + '.');
-    if (profil.objectif) lignes.push(`Objectif : ${profil.objectif}.`);
-    if (besoins) lignes.push(`Besoins estimés : ${besoins.cible} kcal par jour (protéines ${besoins.proteines_g} g, glucides ${besoins.glucides_g} g, lipides ${besoins.lipides_g} g).`);
-    if (profil.regimes && profil.regimes.length) lignes.push(`Régimes : ${profil.regimes.join(', ')}.`);
-    if (profil.allergenes && profil.allergenes.length) lignes.push(`ALLERGIES / à exclure absolument : ${profil.allergenes.join(', ')}.`);
-    if (profil.exclusions) lignes.push(`Aliments évités : ${profil.exclusions}.`);
-    if (profil.conditions && profil.conditions.length) lignes.push(`Conditions : ${profil.conditions.join(', ')}.`);
-  }
+  if (profil) lignes.push(...decrireProfil({ profil, besoins, prenom }));
+  if (partenaire && partenaire.profil) lignes.push(...decrireProfil(partenaire, 'Conjoint(e)'));
+  if (enfants.length) lignes.push('Enfants : ' + enfants.map((e) => { const a = ageEn(e.naissance); return `${e.prenom}${a != null ? ` (${a} an${a > 1 ? 's' : ''}` : ' ('}${e.allergenes && e.allergenes.length ? `, allergies : ${e.allergenes.join(', ')}` : ''}${e.exclusions ? `, évite : ${e.exclusions}` : ''})`; }).join(' ; ') + '.');
+  if ((profil && (profil.grossesse > 0 || profil.allaitement)) || (partenaire && partenaire.profil && (partenaire.profil.grossesse > 0 || partenaire.profil.allaitement))) lignes.push(...reperesGrossesse());
+  if (sport) lignes.push(`Sport : ${sport.epreuve}${sport.date ? ` le ${sport.date}` : ''}${sport.reste != null ? ` (${sport.reste > 0 ? `J-${sport.reste}` : sport.reste === 0 ? 'jour J' : `J+${-sport.reste}`})` : ''}, phase « ${sport.phase} »${sport.charge ? `, aujourd'hui : ${sport.charge}` : ''}${sport.kcal ? `, besoins du jour ${sport.kcal} kcal dont glucides ${sport.glucides_g} g` : ''}.`);
   if (repasSemaine.length) lignes.push('Menu de la semaine : ' + repasSemaine.join(' ; ') + '.');
   for (const l of lignesSuivi) lignes.push(l);
+  if (poids.length > 1) lignes.push(`Évolution du poids : ${poids.slice(-6).map((x) => `${x.kg} kg (${x.date})`).join(', ')}.`);
+  if (stock.length) lignes.push(`Dans le frigo et le placard : ${stock.slice(0, 40).join(', ')}.`);
+  if (aConsommer.length) lignes.push(`À consommer vite : ${aConsommer.slice(0, 10).join(', ')}.`);
+  if (courses.length) lignes.push(`Liste de courses en cours : ${courses.slice(0, 30).join(', ')}.`);
   return lignes.join('\n');
 }
 
@@ -197,4 +228,13 @@ export async function demanderSurImage({ cle, modele = MODELE_PAR_DEFAUT, system
         generationConfig: { temperature: 0, maxOutputTokens: 1200, responseMimeType: 'application/json' } } }, appeler));
   if (!texte) throw new Error('L\'IA n\'a rien pu lire sur cette photo. Reprenez-la de plus près, bien nette.');
   return texte;
+}
+
+/** Faut-il rappeler « je ne suis pas médecin » sous la réponse ? Toujours pour la grossesse et l'allaitement, et pour toute question de santé. */
+export function avertissementSante({ profil, question = '', partenaire = null }) {
+  const enceinte = Boolean(profil && (profil.grossesse > 0 || profil.allaitement));
+  const sante = /(sant[ée]|m[ée]dica|m[ée]decin|douleur|sympt[oô]m|fi[eè]vre|saign|diab[eè]t|tension|enceinte|grossesse|allait|b[ée]b[ée]|nourrisson|malad|infection|vitamine|compl[eé]ment|carence|an[eé]mie|allerg|naus[ée]e|vomi|r[eé]gime|maigr|grossir|poids|b[ée]b[eé]|ordonnance|analyse|prise de sang)/i.test(question);
+  if (enceinte) return 'ℹ️ Je ne suis pas médecin. Pour la grossesse et l\'allaitement, validez toujours avec votre sage-femme ou votre médecin. En cas de saignements, fièvre, douleurs fortes ou baisse des mouvements du bébé : appelez le 15.';
+  if (sante) return 'ℹ️ Je ne suis pas médecin : ces informations sont générales. Pour un symptôme, un traitement ou un doute, demandez l\'avis d\'un professionnel de santé (urgence : 15).';
+  return null;
 }

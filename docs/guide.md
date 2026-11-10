@@ -61,3 +61,6 @@ Dans Profil → Coach IA, ajoutez aussi une clé Groq (gratuite, console.groq.co
 
 ## Barre du bas simplifiée
 5 entrées : Accueil, Planning, 📷 Scanner, Coach, Plus (quand une grossesse est déclarée : Accueil, Scanner, Grossesse, Coach, Plus). Recettes, Planning, Courses et Suivi sont aussi sur l'Accueil et dans « Plus ». Marie a le thème rose par défaut (changeable dans Plus).
+
+## Un coach qui connaît toute l'appli
+Si « Personnaliser les réponses » est coché, le coach reçoit : votre profil et celui de votre conjoint(e) (grossesse, allaitement, allergies, régimes), vos enfants, votre objectif sportif et la phase du jour, votre menu, vos courses, votre frigo (et ce qu'il faut consommer vite), votre poids et votre journal du jour. Il a des bases de santé publique (grossesse, allaitement, enfants, sport) mais **n'est pas un médecin** : il ne fait pas de diagnostic, ne touche à aucun traitement, renvoie vers un professionnel et vers le 15 en cas d'urgence. En grossesse et allaitement, chaque réponse est suivie d'un rappel « je ne suis pas médecin ».

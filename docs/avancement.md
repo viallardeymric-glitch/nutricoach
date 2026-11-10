@@ -54,3 +54,6 @@ Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Th
 ## Rapidité, Groq, ergonomie
 - ✅ Second fournisseur d'IA Groq ; Gemini et Groq interrogés en même temps (première réponse affichée) ; mode « réflexion » de Gemini 2.5 coupé ; modèle détecté automatiquement s'il est retiré. Non testé avec les vrais serveurs Groq / Gemini.
 - ✅ Barre du bas à 5 entrées ; zone de saisie du coach corrigée ; thème rose (fond rose) par défaut pour Marie.
+
+## Coach complet
+- ✅ Le coach reçoit tout le contexte de l'appli (conjoint(e), enfants, sport, menu, courses, frigo, poids, journal) et des consignes médicales prudentes ; rappel « je ne suis pas médecin » systématique en grossesse/allaitement et sur les questions de santé. 🟡 Consignes et rappels à faire relire par un professionnel de santé.

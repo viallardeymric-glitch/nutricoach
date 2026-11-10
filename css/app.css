@@ -507,3 +507,5 @@ input, select, textarea { font-size: 16px; }
 .coach-saisie { align-items: flex-end; }
 .coach-saisie textarea { flex: 1; min-width: 0; height: 50px; min-height: 50px; max-height: 140px; padding: 13px 1rem; line-height: 24px; border: 1px solid var(--bord); border-radius: 25px; background: var(--carte); color: var(--texte); font: inherit; font-size: 16px; resize: none; overflow-y: auto; user-select: text; -webkit-user-select: text; }
 .coach-saisie .joindre { width: 50px; min-height: 50px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+.avertissement-sante { margin-top: .5rem; padding: .5rem .7rem; border-radius: 12px; background: var(--info-fond); border: 1px solid var(--info-bord); font-size: .85rem; }
