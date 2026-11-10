@@ -1,4 +1,4 @@
-// Mode sportif : objectif de course, plan nutritionnel par phases, stratégie de course, séances (saisie à la main).
+// Mode sportif : objectif de course, plan nutritionnel par phases, stratégie de course, .
 import { html, useState, useMemo } from '../../vendor/preact-htm.js';
 import { EPREUVES, PHASES, TYPES_JOUR, MENTION_SPORT, RAPPEL_JOUR_J, planNutritionnel, ravitaillement, repasPreCourse, recuperation, FILTRES_SPORT } from '../lib/sport.js';
 import { cleDate, dateDepuisCle, nomJour, nomMois, saisonDe, proposer, graine } from '../lib/planning.js';
@@ -28,30 +28,12 @@ function FormulaireObjectif({ sport, onEnregistrer, onAnnuler }) {
   </form>`;
 }
 
-function AjoutSeance({ moi, ops }) {
-  const [form, setForm] = useState({ date: cleDate(new Date()), type: 'courte', duree_min: '', distance_km: '' });
-  const ajouter = (liste) => {
-    let n = 0;
-    for (const s of liste) { if (s.duree_min > 0) { ops.ecrireSeance({ ...s, par: moi }); n++; } }
-    return n;
-  };
-  return html`<div>
-    <details class="repli"><summary>Ajouter une séance à la main</summary>
-      <form onSubmit=${(e) => { e.preventDefault(); if (ajouter([{ date: form.date, type: form.type, duree_min: Number(form.duree_min), distance_km: Number(String(form.distance_km).replace(',', '.')) || 0, source: 'manuel' }])) setForm({ ...form, duree_min: '', distance_km: '' }); }}>
-        <label class="champ"><span>Date</span><input type="date" value=${form.date} onInput=${(e) => setForm({ ...form, date: e.target.value })} /></label>
-        <div class="puces libres">${[['courte', 'Sortie courte'], ['longue', 'Sortie longue'], ['fractionne', 'Fractionné']].map(([k, n]) => html`<${Puce} key=${k} actif=${form.type === k} onClick=${() => setForm({ ...form, type: k })}>${n}<//>`)}</div>
-        <div class="grille deux"><label class="champ"><span>Durée (min)</span><input type="text" inputmode="numeric" value=${form.duree_min} onInput=${(e) => setForm({ ...form, duree_min: e.target.value })} /></label>
-          <label class="champ"><span>Distance (km)</span><input type="text" inputmode="decimal" value=${form.distance_km} onInput=${(e) => setForm({ ...form, distance_km: e.target.value })} /></label></div>
-        <button type="submit" class="bouton" disabled=${!Number(form.duree_min)}>Ajouter la séance</button></form></details>
-  </div>`;
-}
 
 export function Sport({ profil, besoins, seances, ops, index, moi, contraintes, onChangeProfil }) {
   const [edition, setEdition] = useState(false);
   const sport = profil.sport && profil.sport.date ? profil.sport : null;
   const aujourdhui = cleDate(new Date());
-  const mes = useMemo(() => seances.filter((s) => s.par === moi), [seances, moi]);
-  const plan = useMemo(() => (sport && besoins ? planNutritionnel(profil, besoins, sport, aujourdhui, mes) : []), [sport, besoins, profil, mes, aujourdhui]);
+  const plan = useMemo(() => (sport && besoins ? planNutritionnel(profil, besoins, sport, aujourdhui, []) : []), [sport, besoins, profil, aujourdhui]);
   const retour = { href: '#/plus', nom: 'Plus' };
   const enregistrer = (s) => { onChangeProfil({ ...profil, sport: s, sportif: true, objectif: 'sport' }); setEdition(false); };
   if (!besoins) return html`<div><${Entete} titre="Sport" retour=${retour} /><div class="contenu"><${Bandeau} type="info"><p>Complétez d'abord votre profil (<a href="#/profil/infos">informations</a>) pour calculer vos besoins.</p><//></div></div>`;
@@ -100,13 +82,6 @@ export function Sport({ profil, besoins, seances, ops, index, moi, contraintes, 
           <li><strong>Avant :</strong> repas 3 à 4 heures avant, environ ${pre.glucides_g} g de glucides, peu de graisses et de fibres.</li>
           <li><strong>Après :</strong> dans l'heure, environ ${rec.glucides_g} g de glucides et ${rec.proteines_g} g de protéines. Idées : ${rec.idees.join(' ; ')}.</li></ul>
         <p class="note">${RAPPEL_JOUR_J}</p>
-      <//>
-      <${Section} titre="Mes séances">
-        <${AjoutSeance} moi=${moi} ops=${ops} />
-        ${mes.length > 0 && html`<ul class="articles">${mes.slice(0, 15).map((s) => html`<li class="article" key=${s.id}><span class="article-texte plein"><strong>${s.date}</strong>
-          <span class="sous">${TYPES_JOUR[s.type] || s.type} · ${s.duree_min} min${s.distance_km ? ` · ${nf(s.distance_km)} km` : ''}${s.denivele_m ? ` · D+ ${s.denivele_m} m` : ''} · ${s.source}</span></span>
-          <button type="button" class="supprimer" aria-label=${`Supprimer la séance du ${s.date}`} onClick=${() => ops.supprimerSeance(s.id)}>✕</button></li>`)}</ul>`}
-        <p class="note">Le plan s'ajuste automatiquement aux séances saisies.</p>
       <//>
       <button type="button" class="bouton secondaire large" onClick=${() => setEdition(true)}>Modifier mon objectif</button>
       <button type="button" class="lien" onClick=${() => { if (window.confirm('Supprimer cet objectif sportif ?')) onChangeProfil({ ...profil, sport: null, objectif: profil.objectif === 'sport' ? 'equilibre' : profil.objectif }); }}>Supprimer l'objectif</button>

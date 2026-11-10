@@ -32,7 +32,7 @@ Plus › « Sauvegarder les données de ce téléphone » (fichier JSON, sans co
 ## 7. Limites à connaître
 - Pas de notification quand l'appli est fermée (il faudrait un serveur d'envoi) : un fil « Depuis votre dernière visite » apparaît sur l'accueil.
 - Les alertes de santé sont générales et à faire relire par un professionnel (`docs/sources.md`).
-- Les séances se saisissent à la main (date, type, durée, distance) ; il n’y a pas d’import de fichiers.
+- Il n’y a plus de saisie de séances : le plan suit une semaine type adaptée à la phase de préparation.
 - Le catalogue compte 1 610 recettes originales. Les photos nécessitent une clé gratuite (Pexels ou Unsplash) et sont limitées par heure.
 
 ## Produit inconnu : photo du tableau nutritionnel

@@ -80,7 +80,7 @@ Tu es un développeur senior web, un designer UI/UX mobile, un expert en nutriti
 ### 5.3 Mode sportif et préparation de compétition
 - Objectif sportif : course officielle (5 km, 10 km, semi, marathon, trail, ultra), triathlon, vélo, musculation, autre, avec date, distance, objectif de temps.
 - Plan nutritionnel par phases (base, développement, affûtage, semaine de course, jour J, récupération) : calories et glucides modulés selon la charge du jour (repos, sortie courte, sortie longue, fractionné) ; charge en glucides sur les 2 à 3 jours avant (au choix) avec menus dédiés et pauvres en fibres la veille ; repas pré-course ; stratégie de ravitaillement (g de glucides/h, hydratation, sodium) ; repas et boisson de récupération ; rappel de ne rien tester le jour J.
-- Séances : saisie manuelle (l’import de fichiers a été abandonné).
+- Séances : saisie et import abandonnés ; semaine type selon la phase.
 - Recettes taguées sport (pré-effort, pendant, récupération, riches en glucides, hyperprotéinées, boissons et barres maison). Chacun peut avoir un objectif sportif différent avec des repas communs adaptés.
 - Rappel : l'app ne remplace pas un avis médical ou diététique.
 

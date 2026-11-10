@@ -428,16 +428,7 @@ verif((await p.textContent('.contenu')).includes('Ne testez rien de nouveau'), '
 if (captures) await p.screenshot({ path: `${captures}/sport.png`, fullPage: true });
 verif(await p.locator('.jour-sport').count() === 14, 'sport : plan des 14 prochains jours');
 verif((await p.textContent('.contenu')).includes('g par heure'), 'sport : stratégie de ravitaillement (glucides par heure)');
-const kcalAvant = parseInt((await p.locator('.bilan-jour .stats strong').first().textContent()), 10);
-await p.click('text=Ajouter une séance à la main');
-await p.click('.contenu >> text=Sortie longue');
-await p.fill('input[inputmode="numeric"]', '180');
-await p.click('text=Ajouter la séance');
-await p.waitForSelector('.contenu .articles .article');
-verif((await p.textContent('.contenu')).includes('180 min'), 'sport : séance saisie à la main (sortie longue de 3 h)');
-const kcalApres = parseInt((await p.locator('.bilan-jour .stats strong').first().textContent()), 10);
-verif(kcalApres > kcalAvant, `sport : le plan s'ajuste à la séance saisie (${kcalAvant} → ${kcalApres} kcal aujourd'hui)`);
-verif(await p.locator('input[type=file]').count() === 0, 'sport : plus d\'import de fichiers');
+verif(await p.locator('input[type=file]').count() === 0 && await p.getByText('Ajouter une séance').count() === 0, 'sport : plus d\'import ni de saisie de séances');
 await p.click('text=Modifier mon objectif');
 await p.getByLabel('Date de l\'épreuve').fill(plusJours(2));
 await p.click('role=button[name="Générer mon plan nutritionnel"]');
