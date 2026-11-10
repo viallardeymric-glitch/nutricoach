@@ -160,3 +160,13 @@ export function docsVersSeances(docs) {
     .map((d) => ({ id: d.id, date: d.date, par: d.par, type: d.type, duree_min: d.duree_min, distance_km: d.distance_km || 0, denivele_m: d.denivele_m || 0, source: d.source || 'manuel' }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }
+
+// ---------- Sessions de batch cooking (batchSessions) : une session = les plats préparés avec leurs dates limites ----------
+export function sessionBatchVersDoc(s) {
+  return { date: s.date, par: s.par, t: s.t || Date.now(), plats: (s.plats || []).slice(0, 12).map((p) => ({ recette: p.recette, titre: String(p.titre).slice(0, 80), portions: p.portions, restant: p.restant,
+    limiteFrigo: p.limiteFrigo, limiteCongelation: p.limiteCongelation || '', congele: Boolean(p.congele) })) };
+}
+export function docsVersSessionsBatch(docs) {
+  return docs.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') && Array.isArray(d.plats))
+    .map((d) => ({ id: d.id, date: d.date, par: d.par, plats: d.plats.filter((p) => /^REC-\d+$/.test(p.recette || '') && /^\d{4}-\d{2}-\d{2}$/.test(p.limiteFrigo || '')).map((p) => ({ ...p, limiteCongelation: p.limiteCongelation || null })) }));
+}

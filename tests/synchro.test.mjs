@@ -121,3 +121,13 @@ test('séances de sport : documents valides', () => {
   assert.equal(seanceVersDoc({ date: 'x', par: 'E', type: 'bizarre', duree_min: 5 }).type, 'courte');
   assert.deepEqual(docsVersSeances([{ ...d, id: 'a' }, { ...d, id: 'b', par: 'Z' }, { ...d, id: 'c', duree_min: 0 }, { ...d, id: 'd', date: '2026-11-10' }]).map((x) => x.id), ['d', 'a']);
 });
+
+import { sessionBatchVersDoc, docsVersSessionsBatch } from '../js/core/synchro.js';
+test('sessions de batch : documents valides', () => {
+  const d = sessionBatchVersDoc({ date: '2026-11-10', par: 'E', plats: [{ recette: 'REC-000001', titre: 'Poulet', portions: 4, restant: 4, limiteFrigo: '2026-11-13', limiteCongelation: null, congele: false }] });
+  assert.ok(JSON.stringify(d).indexOf('undefined') === -1);
+  const l = docsVersSessionsBatch([{ ...d, id: 'a' }, { id: 'b', date: 'x', plats: [] }, { id: 'c', date: '2026-11-10', plats: [{ recette: 'n\'importe quoi', limiteFrigo: '2026-11-13' }] }]);
+  assert.equal(l.length, 2);
+  assert.equal(l[0].plats.length, 1);
+  assert.equal(l[1].plats.length, 0);
+});

@@ -7,6 +7,7 @@ import { REGLES_ALERTE } from '../data/deconseilles.js';
 import { VERSION_ADDITIFS } from '../data/additifs.js';
 import { PROFILS, lib } from '../data/libelles.js';
 import { Entete, Rang, Puce } from '../ui/composants.js';
+import { chargerAppareils, enregistrerAppareils, MODELES_THERMOMIX } from '../core/appareils.js';
 
 export const THEMES = { lagon: 'Lagon', rose: 'Rose', soleil: 'Soleil', marine: 'Marine' };
 export const appliquerTheme = (t) => { document.documentElement.dataset.theme = THEMES[t] ? t : 'lagon'; };
@@ -17,6 +18,21 @@ function OrdreRayons() {
   return html`<ol class="ordre-rayons">${ordre.map((id, i) => { const r = RAYONS.find((x) => x.id === id); return html`<li key=${id}>
     <span>${r.icone} ${r.nom}</span><span><button type="button" aria-label=${`Monter ${r.nom}`} onClick=${() => deplacer(i, -1)} disabled=${i === 0}>↑</button>
     <button type="button" aria-label=${`Descendre ${r.nom}`} onClick=${() => deplacer(i, 1)} disabled=${i === ordre.length - 1}>↓</button></span></li>`; })}</ol>`;
+}
+
+function Appareils() {
+  const [a, setA] = useState(chargerAppareils);
+  const maj = (c) => { const s = { ...a, ...c }; setA(s); enregistrerAppareils(s); };
+  return html`<div>
+    <div class="puces sans-marge">
+      <${Puce} actif=${a.four} onClick=${() => maj({ four: !a.four })}>Four<//>
+      <${Puce} actif=${a.thermomix} onClick=${() => maj({ thermomix: !a.thermomix })}>Thermomix<//>
+      <${Puce} actif=${a.cookeo} onClick=${() => maj({ cookeo: !a.cookeo })}>Cookeo<//>
+      <${Puce} actif=${a.airfryer} onClick=${() => maj({ airfryer: !a.airfryer })}>Airfryer<//>
+      <${Puce} actif=${a.multicuiseur} onClick=${() => maj({ multicuiseur: !a.multicuiseur })}>Multicuiseur<//></div>
+    ${a.thermomix && html`<div class="puces sans-marge">${MODELES_THERMOMIX.map((m) => html`<${Puce} key=${m} actif=${a.modele === m} onClick=${() => maj({ modele: m })}>${m}<//>`)}</div>`}
+    <div class="puces sans-marge">${[1, 2, 3, 4].map((n) => html`<${Puce} key=${n} actif=${a.plaques === n} onClick=${() => maj({ plaques: n })}>${n} plaque${n > 1 ? 's' : ''}<//>`)}</div>
+    <p class="note">Utilisés pour le batch cooking, la version Thermomix et les autres méthodes de cuisson.</p></div>`;
 }
 
 function sauvegarder() {
@@ -52,6 +68,7 @@ export function Plus({ nuage, section }) {
         <${Rang} icone="💬" titre="Coach IA" sous="Posez vos questions" href="#/coach" />
         <${Rang} icone="♥" titre="Mes favoris" sous="Recettes préférées" href="#/favoris" />
         ${nuage && html`<${Rang} icone="👫" titre="Nous deux" sous="Votre situation à tous les deux" href="#/nous" />`}
+        <${Rang} icone="🍱" titre="Batch cooking" sous="Une session, toute la semaine" href="#/batch" />
         <${Rang} icone="🏃" titre="Sport et compétition" sous="Plan nutritionnel, séances, ravitaillement" href="#/sport" />
         <${Rang} icone="🕘" titre="Historique des scans" sous="Produits scannés, partagés" href="#/scans" />
         <${Rang} icone="👤" titre="Profil" sous="Informations, objectifs, régimes, sécurité" href="#/profil" />
@@ -60,6 +77,8 @@ export function Plus({ nuage, section }) {
       <h2 class="petit-titre">Thème de couleur</h2>
       <div class="puces sans-marge">${Object.entries(THEMES).map(([k, n]) => html`<${Puce} key=${k} actif=${theme === k} onClick=${() => { setTheme(k); ecrire('theme', k); appliquerTheme(k); }}>${n}<//>`)}</div>
       <p class="note">Le mode sombre suit automatiquement celui de votre téléphone.</p>
+      <h2 class="petit-titre">Appareils de cuisine</h2>
+      <${Appareils} />
       <h2 class="petit-titre">Ordre des rayons (courses)</h2>
       <details class="repli"><summary>Adapter à votre supermarché</summary><${OrdreRayons} /></details>
       <h2 class="petit-titre">Mes données</h2>

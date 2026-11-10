@@ -22,6 +22,9 @@ const FICHIERS = [
   'js/views/suivi.js',
   'js/lib/sport.js',
   'js/views/sport.js',
+  'js/lib/batch.js',
+  'js/views/batch.js',
+  'js/core/appareils.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'data/index.json',
 ];

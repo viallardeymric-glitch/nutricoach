@@ -437,6 +437,39 @@ await p.click('text=Supprimer l\'objectif');
 await p.waitForSelector('text=Objectif sportif');
 verif(true, 'sport : objectif supprimé');
 
+// Batch cooking : sélection depuis le menu, planning chronométré, boîtes et étiquettes, courses dédiées, stock de plats
+await p.goto(serveur.url + '/#/batch'); await p.waitForSelector('.page-batch');
+verif(await p.locator('.ligne-batch').count() >= 3, 'batch : recettes du menu proposées');
+await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click(); await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click();
+await p.locator('.ligne-batch').nth(1).locator('button').nth(1).click(); await p.locator('.ligne-batch').nth(1).locator('button').nth(1).click();
+await p.locator('.ligne-batch').nth(2).locator('button').nth(1).click();
+await p.click('role=button[name="✨ Préparer la session"]');
+await p.waitForSelector('.chrono');
+const gain = parseInt(await p.locator('.stats >> nth=0').locator('div').nth(1).locator('strong').textContent(), 10);
+verif(gain > 0, `batch : planning chronométré, ${gain} min gagnées en travaillant en parallèle`);
+verif(await p.locator('.chrono li.passif').count() > 0 && await p.locator('.chrono li.actif').count() > 0, 'batch : tâches à faire soi-même et tâches passives (four, mijotage)');
+verif(/^\d{2}:\d{2}$/.test((await p.locator('.chrono .heure').first().textContent()).trim()), 'batch : heures de la session');
+const nbBoites = (await p.locator('.etiquette-carte').allTextContents()).map((t) => parseInt(/(\d+) boîte/.exec(t)[1], 10)).reduce((a, b) => a + b, 0);
+verif(nbBoites > 0 && await p.locator('.etiquette-imprimee').count() === nbBoites, `batch : ${nbBoites} boîtes, une étiquette imprimable par boîte`);
+verif((await p.textContent('.zone-etiquettes')).includes('Préparé le') && (await p.textContent('.zone-etiquettes')).includes('À consommer avant le'), 'batch : étiquettes avec date de préparation et date limite');
+verif((await p.textContent('.page-batch')).includes('Décongeler la veille'), 'batch : conseils de décongélation et de réchauffage');
+await p.click('text=Créer la liste de courses de la session');
+await p.waitForSelector('text=Liste « Batch cooking du');
+await p.goto(serveur.url + '/#/courses'); await p.waitForSelector('.page-courses');
+await p.click('.selecteur-listes .puce:has-text("Batch cooking")');
+verif(await p.locator('.article').count() > 5, 'batch : liste de courses dédiée à la session');
+await p.goto(serveur.url + '/#/batch'); await p.waitForSelector('.page-batch');
+await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click();
+await p.locator('.ligne-batch').nth(0).locator('button').nth(1).click();
+await p.click('role=button[name="✨ Préparer la session"]'); await p.waitForSelector('.chrono');
+await p.click('text=Session terminée');
+await p.waitForSelector('.plat-stock');
+const portionsAvant = parseInt(/(\d+) portion/.exec(await p.locator('.plat-stock').first().textContent())[1], 10);
+verif(portionsAvant > 0, 'batch : plats préparés ajoutés au stock avec leur date limite');
+await p.locator('.plat-stock').first().locator('button:has-text("Mangé 1")').click();
+verif(parseInt(/(\d+) portion/.exec(await p.locator('.plat-stock').first().textContent())[1], 10) === portionsAvant - 1, 'batch : « Mangé 1 » retire une portion');
+verif((await p.textContent('.plat-stock')).includes('avant le'), 'batch : date limite affichée');
+
 // Plus : sources, thème
 await p.goto(serveur.url + '/#/plus'); await p.waitForSelector('.rangs');
 await p.click('.puce:text-is("Rose")');

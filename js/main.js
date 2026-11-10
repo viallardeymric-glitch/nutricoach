@@ -7,7 +7,7 @@ import { lire, ecrire } from './core/stockage.js';
 import { chargerMoi, enregistrerMoi, chargerProfil, enregistrerProfil } from './core/profil.js';
 import { useSession } from './core/session.js';
 import { ecrireDoc, supprimerDoc, deconnecter } from './core/nuage.js';
-import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, seanceVersDoc, docsVersSeances, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
+import { idFavori, donneesFavori, favorisParRecette, profilVersDoc, choisirVersion, jourVersDoc, articleVersDoc, listeVersDoc, docsVersCourses, idDocArticle, idDocStock, stockVersDoc, docsVersStock, scanVersDoc, docsVersScans, sessionBatchVersDoc, docsVersSessionsBatch, seanceVersDoc, docsVersSeances, journalVersDoc, docsVersJournal, poidsVersDoc, docsVersPoids, idDocPoids, visiblePour, enfantVersDoc, docsVersEnfants } from './core/synchro.js';
 import { useCollection } from './core/collection.js';
 import { chargerPin, enregistrerPin, retirerPin, creerPin, doitVerrouiller } from './core/pin.js';
 import { FILTRES_VIDES } from './lib/recettes.js';
@@ -32,13 +32,15 @@ import { NousDeux } from './views/nous-deux.js';
 import { Courses } from './views/courses.js';
 import { Suivi } from './views/suivi.js';
 import { Sport } from './views/sport.js';
+import { Batch } from './views/batch.js';
+import { chargerAppareils } from './core/appareils.js';
 import { planNutritionnel, FILTRES_SPORT } from './lib/sport.js';
 import { Scanner, Produit, Historique } from './views/scanner.js';
 import { Plus, appliquerTheme } from './views/plus.js';
 
 /**
  * Écran courant d'après l'ancre. Retourne { ecran, id?, portions?, section? } avec ecran parmi
- * accueil, recettes, favoris, semaine, courses, suivi, sport, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
+ * accueil, recettes, favoris, semaine, courses, suivi, sport, batch, scan, produit, scans, plus, sources, coach, nous, profil, fiche, cuisine.
  */
 export function lireRoute(hash) {
   const [chemin, requete = ''] = hash.split('?');
@@ -50,10 +52,10 @@ export function lireRoute(hash) {
   if (m) return { ecran: 'produit', code: m[1] };
   m = chemin.match(/^#\/profil(?:\/([a-z]+))?$/);
   if (m) return { ecran: 'profil', section: m[1] || null };
-  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
+  const simples = { '#/recettes': 'recettes', '#/favoris': 'favoris', '#/semaine': 'semaine', '#/courses': 'courses', '#/suivi': 'suivi', '#/sport': 'sport', '#/batch': 'batch', '#/scan': 'scan', '#/scans': 'scans', '#/plus': 'plus', '#/sources': 'sources', '#/coach': 'coach', '#/nous': 'nous' };
   return { ecran: simples[chemin] || 'accueil' };
 }
-const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
+const ONGLET_DE = { accueil: 'accueil', recettes: 'recettes', favoris: 'recettes', semaine: 'semaine', courses: 'courses', suivi: 'suivi', sport: 'plus', batch: 'plus', scan: 'scan', produit: 'scan', scans: 'scan',
   plus: 'plus', sources: 'plus', coach: 'plus', nous: 'plus', profil: 'plus' };
 
 function useRoute() {
@@ -190,6 +192,9 @@ function App() {
     ecrireSeance: (s) => colSeances.ecrire(`${s.date}-${s.par}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`, seanceVersDoc(s)),
     supprimerSeance: (id) => colSeances.supprimer(id),
   };
+  const colBatch = useCollection('batchSessions', session.docsBatch, connecte);
+  const sessionsBatch = useMemo(() => docsVersSessionsBatch(colBatch.items), [colBatch.items]);
+  const opsBatch = { ...opsCourses, ecrireSession: (s) => colBatch.ecrire(s.id, sessionBatchVersDoc(s)) };
   const opsSuivi = {
     ecrireJournal: (e) => colJournal.ecrire(e.id, journalVersDoc(e)),
     supprimerJournal: (id) => colJournal.supprimer(id),
@@ -281,6 +286,8 @@ function App() {
     ${route.ecran === 'suivi' && html`<${Suivi} moi=${moi} profil=${profil} besoins=${besoinsDuJour} journal=${journal} poids=${poids} ops=${opsSuivi}
       index=${recettes || []} plan=${plan} scans=${scans} />`}
     ${route.ecran === 'sport' && html`<${Sport} profil=${profil} besoins=${besoins} seances=${seances} ops=${opsSport} index=${recettes} moi=${moi} contraintes=${contraintes} onChangeProfil=${changerProfil} />`}
+    ${route.ecran === 'batch' && html`<${Batch} plan=${plan} catalogue=${index} index=${recettes} sessions=${sessionsBatch} ops=${opsBatch} stock=${stock} moi=${moi}
+      convives=${convives} appareils=${chargerAppareils()} />`}
     ${route.ecran === 'scan' && html`<${Scanner} />`}
     ${route.ecran === 'produit' && html`<${Produit} key=${route.code} code=${route.code} scans=${scans} moi=${moi} profil=${profil} ops=${{ ...opsScan }}
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
