@@ -17,7 +17,7 @@ export function ReglagesCoach({ onChange }) {
     <p class="note">Créez-la gratuitement sur <strong>aistudio.google.com/apikey</strong> (compte Google). Elle reste sur ce téléphone : elle n'est ni envoyée à l'autre téléphone, ni enregistrée dans le dépôt.</p>
     <label class="case"><input type="checkbox" checked=${reg.partagerProfil} onChange=${(e) => maj({ partagerProfil: e.target.checked })} />
       <span>Personnaliser les réponses avec mon profil et mon menu de la semaine</span></label>
-    <p class="note">Si coché, votre profil (âge, objectifs, allergies, situation) et vos menus sont envoyés à Google (Gemini) avec chaque question. Décochez pour ne rien partager.</p>
+    <p class="note">Si coché, votre profil (âge, objectifs, allergies, situation) et vos menus sont envoyés à Google (Gemini) avec chaque question. Décochez pour ne rien partager. Le coach s'adapte au profil de la personne connectée sur ce téléphone (grossesse, allaitement, allergies… : Profil → Ma situation). La clé ne se synchronise pas : saisissez la même sur chaque téléphone.</p>
     <label class="champ"><span>Modèle</span>
       <input type="text" value=${reg.modele} onInput=${(e) => maj({ modele: e.target.value.trim() || MODELE_PAR_DEFAUT })} /></label>
   </div>`;
@@ -49,7 +49,7 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSui
       const contexte = reg.partagerProfil ? construireContexte({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi }) : construireContexte({ saison });
       const reponse = await demanderAuCoach({ cle: reg.cle, modele: reg.modele, historique: suite.slice(-20), contexte });
       const final = [...suite, { role: 'coach', texte: reponse }];
-      setMessages(final); enregistrerConversation(final);
+      setMessages(final); enregistrerConversation(final); setReg(chargerReglagesCoach());
     } catch (e) { setErreur(e.message); enregistrerConversation(suite); }
     setEnCours(false);
   };

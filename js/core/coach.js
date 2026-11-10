@@ -70,19 +70,44 @@ export function messageErreurCoach(statut) {
   return 'Le coach est indisponible pour le moment. Réessayez.';
 }
 
+
+/** Choisit le meilleur modèle « flash » texte dans la liste renvoyée par Gemini ([{ name, supportedGenerationMethods }]). */
+export function choisirModeleFlash(modeles) {
+  const ok = (modeles || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent') && /^models\/gemini-[\d.]+-flash$/.test(m.name || ''));
+  const version = (m) => Number((/gemini-([\d.]+)-flash/.exec(m.name) || [])[1]) || 0;
+  ok.sort((a, b) => version(b) - version(a));
+  return ok.length ? ok[0].name.replace(/^models\//, '') : null;
+}
+
+/** Demande à Gemini la liste des modèles disponibles pour cette clé et retourne le meilleur modèle flash (ou null). */
+export async function detecterModele(cle, appeler = fetch) {
+  try {
+    const rep = await appeler(`${URL_BASE.replace(/\/$/, "")}?pageSize=200`, { headers: { 'x-goog-api-key': cle } });
+    if (!rep.ok) return null;
+    return choisirModeleFlash((await rep.json()).models);
+  } catch { return null; }
+}
+
+/** POST generateContent ; si le modèle n'existe plus (404), détecte un modèle disponible, le mémorise et réessaie une fois. */
+async function posterGemini({ cle, modele, corps }, appeler) {
+  const poster = (m) => appeler(`${URL_BASE}${encodeURIComponent(m)}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle }, body: JSON.stringify(corps) });
+  let rep;
+  try { rep = await poster(modele); } catch { throw new Error(messageErreurCoach(0)); }
+  if (rep.status === 404) {
+    const autre = await detecterModele(cle, appeler);
+    if (autre && autre !== modele) {
+      try { rep = await poster(autre); } catch { throw new Error(messageErreurCoach(0)); }
+      if (rep.ok) enregistrerReglagesCoach({ ...chargerReglagesCoach(), modele: autre });
+    }
+  }
+  if (!rep.ok) throw new Error(messageErreurCoach(rep.status));
+  return rep.json();
+}
+
 /** Appelle Gemini ; retourne le texte ou lève une Error au message lisible. `appeler` est injectable pour les tests. */
 export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, historique, contexte }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
-  let rep;
-  try {
-    rep = await appeler(`${URL_BASE}${encodeURIComponent(modele)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle },
-      body: JSON.stringify(construireRequete({ historique, contexte })),
-    });
-  } catch { throw new Error(messageErreurCoach(0)); }
-  if (!rep.ok) throw new Error(messageErreurCoach(rep.status));
-  const texte = extraireTexte(await rep.json());
+  const texte = extraireTexte(await posterGemini({ cle, modele, corps: construireRequete({ historique, contexte }) }, appeler));
   if (!texte) throw new Error('Le coach n\'a pas pu répondre à cette question. Reformulez-la.');
   return texte;
 }
@@ -90,17 +115,8 @@ export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, histori
 /** Appel Gemini avec une consigne propre (réécriture de recette…) : retourne le texte de la réponse (JSON demandé). */
 export async function demanderJSON({ cle, modele = MODELE_PAR_DEFAUT, systeme, message }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
-  let rep;
-  try {
-    rep = await appeler(`${URL_BASE}${encodeURIComponent(modele)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: systeme }] }, contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2000, responseMimeType: 'application/json' } }),
-    });
-  } catch { throw new Error(messageErreurCoach(0)); }
-  if (!rep.ok) throw new Error(messageErreurCoach(rep.status));
-  const texte = extraireTexte(await rep.json());
+  const texte = extraireTexte(await posterGemini({ cle, modele, corps: { systemInstruction: { parts: [{ text: systeme }] }, contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2000, responseMimeType: 'application/json' } } }, appeler));
   if (!texte) throw new Error('L\'IA n\'a pas pu répondre. Réessayez.');
   return texte;
 }
@@ -108,18 +124,9 @@ export async function demanderJSON({ cle, modele = MODELE_PAR_DEFAUT, systeme, m
 /** Envoie une photo (base64) à Gemini avec une consigne ; retourne le texte (JSON). */
 export async function demanderSurImage({ cle, modele = MODELE_PAR_DEFAUT, systeme, imageBase64, mime = 'image/jpeg' }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
-  let rep;
-  try {
-    rep = await appeler(`${URL_BASE}${encodeURIComponent(modele)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: systeme }] },
+  const texte = extraireTexte(await posterGemini({ cle, modele, corps: { systemInstruction: { parts: [{ text: systeme }] },
         contents: [{ role: 'user', parts: [{ text: 'Lis cette photo.' }, { inlineData: { mimeType: mime, data: imageBase64 } }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 1200, responseMimeType: 'application/json' } }),
-    });
-  } catch { throw new Error(messageErreurCoach(0)); }
-  if (!rep.ok) throw new Error(messageErreurCoach(rep.status));
-  const texte = extraireTexte(await rep.json());
+        generationConfig: { temperature: 0, maxOutputTokens: 1200, responseMimeType: 'application/json' } } }, appeler));
   if (!texte) throw new Error('L\'IA n\'a rien pu lire sur cette photo. Reprenez-la de plus près, bien nette.');
   return texte;
 }

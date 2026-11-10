@@ -44,3 +44,29 @@ test('appel : clé dans l\'en-tête (pas dans l\'URL), erreurs lisibles', async 
   await assert.rejects(demanderAuCoach({ cle: 'x', historique: [] }, async () => ({ ok: true, json: async () => ({}) })), /pas pu répondre/);
   assert.match(messageErreurCoach(404), /modèle/);
 });
+
+import { choisirModeleFlash } from '../js/core/coach.js';
+test('modèle disparu (404) : le coach détecte un modèle flash disponible et réessaie', async () => {
+  const liste = [
+    { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3-flash', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3-flash-lite', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3-pro', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/embedding-001', supportedGenerationMethods: ['embedContent'] },
+  ];
+  assert.equal(choisirModeleFlash(liste), 'gemini-3-flash');
+  assert.equal(choisirModeleFlash([]), null);
+  const appels = [];
+  const appeler = async (url, o) => {
+    appels.push(url);
+    if (url.includes('gemini-2.5-flash:generateContent')) return { ok: false, status: 404, json: async () => ({}) };
+    if (/\/models\?/.test(url)) return { ok: true, status: 200, json: async () => ({ models: liste }) };
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'Bonjour' }] } }] }) };
+  };
+  const t = await demanderAuCoach({ cle: 'k', modele: 'gemini-2.5-flash', historique: [{ role: 'user', texte: 'salut' }], contexte: '' }, appeler);
+  assert.equal(t, 'Bonjour');
+  assert.ok(appels.some((u) => u.includes('gemini-3-flash:generateContent')));
+  // si aucun modèle n'est disponible : message clair
+  const sans = async (url) => (/\/models\?/.test(url) ? { ok: true, status: 200, json: async () => ({ models: [] }) } : { ok: false, status: 404, json: async () => ({}) });
+  await assert.rejects(demanderAuCoach({ cle: 'k', historique: [{ role: 'user', texte: 'a' }], contexte: '' }, sans), /modèle/);
+});

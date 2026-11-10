@@ -178,6 +178,7 @@ export function Profil({ moi, profil, onMoi, onChange, compte, pin, section, enf
           <${Choix}>${[['femme', 'Femme'], ['homme', 'Homme']].map(([v, n]) => html`<${Puce} key=${v} actif=${p.sexe === v}
             onClick=${() => maj({ sexe: v, ...(v === 'homme' ? { grossesse: 0, allaitement: false } : {}) })}>${n}<//>`)}<//>
         <//>
+        ${femme && html`<p class="note">Grossesse, allaitement : rubrique « Ma situation » du profil.</p>`}
         <${Champ} etiquette="Date de naissance" erreur=${p.naissance && erreurs.naissance}>
           <input type="date" value=${p.naissance} min="1900-01-01" max=${new Date().toISOString().slice(0, 10)}
             onInput=${(e) => maj({ naissance: e.target.value, age: null })} /><//>
