@@ -732,6 +732,19 @@ verif((await p.locator('.resultat-frigo >> nth=0').textContent()).includes('♻'
 const manquant = p.locator('.resultat-frigo .lien:has-text("Ajouter aux courses")').first();
 if (await manquant.count()) { await manquant.click(); await p.waitForSelector('text=ajouté'); verif(true, 'frigo magique : ingrédients manquants ajoutés aux courses'); }
 
+// Frigo magique : retirer un produit du stock (✕), vider le stock avec confirmation
+await p.goto(serveur.url + '/#/frigo'); await p.waitForSelector('.puce-stock');
+{
+  const avant = await p.locator('.puce-stock').count();
+  const nom = (await p.locator('.puce-stock .puce').first().textContent()).trim();
+  await p.locator('.retirer-stock').first().click();
+  await p.waitForSelector(`text=${nom} retiré du stock`);
+  verif(await p.locator('.puce-stock').count() === avant - 1, `frigo : « ${nom} » retiré du stock avec ✕ (${avant} → ${avant - 1} produits)`);
+  p.once('dialog', (d) => d.dismiss());
+  await p.click('text=Vider tout le stock');
+  verif(await p.locator('.puce-stock').count() === avant - 1, 'frigo : « Vider tout le stock » annulé = rien ne change');
+}
+
 // Variantes (substitutions), Thermomix, réécriture par l'IA, lecture à voix haute
 const avecLait = toutes.find((r) => r.allergenes.includes('lait') && r.ingredients.some((i) => /^(beurre|lait|crème)/i.test(i.aliment)) && r.portions_base !== 2);
 await p.goto(serveur.url + '/#/recette/' + avecLait.id); await p.waitForSelector('text=Variantes pour chacun');

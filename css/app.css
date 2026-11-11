@@ -548,3 +548,9 @@ input, select, textarea { font-size: 16px; }
 /* Audit : les champs d'une grille peuvent rétrécir (formulaire de recette, nutrition) */
 .grille > *, .champ { min-width: 0; }
 .champ input, .champ textarea, .champ select { max-width: 100%; }
+
+/* Frigo : retirer un produit du stock */
+.puces-stock { flex-wrap: wrap; }
+.puce-stock { display: inline-flex; align-items: center; gap: .15rem; }
+.retirer-stock { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--gris); font-size: 1rem; }
+.retirer-stock:active { background: var(--alerte-fond); color: var(--alerte); }

@@ -28,6 +28,12 @@ export function Frigo({ index, stock, contraintes, ops, moi }) {
     ops.ecrireStock(ex ? { ...ex, quantite: ex.quantite + a.quantite } : a);
     setSaisie('');
   };
+  const retirer = (s) => { ops.supprimerStock(s); const n = new Set(exclus); n.delete(s.cle); setExclus(n); setMessage({ type: 'info', texte: `${s.nom} retiré du stock.` }); };
+  const toutRetirer = () => {
+    if (!window.confirm(`Vider tout le stock (${stock.length} produit${stock.length > 1 ? 's' : ''}) ?`)) return;
+    for (const s of stock) ops.supprimerStock(s);
+    setExclus(new Set()); setMessage({ type: 'info', texte: 'Stock vidé.' });
+  };
   const ajouterManquants = (res) => {
     for (const nom of res.manquants) ops.ecrireArticle({ id: nouvelId(), liste: 'semaine', nom: nom.charAt(0).toUpperCase() + nom.slice(1), quantite: 1, unite: 'pièce', cle: cleArticle(nom, 'pièce'), rayon: rayonDe(nom), par: moi, source: 'manuel', coche: false, cochePar: '', recettes: [] });
     setMessage({ type: 'info', texte: `${res.manquants.length} ingrédient${res.manquants.length > 1 ? 's' : ''} ajouté${res.manquants.length > 1 ? 's' : ''} à la liste de courses.` });
@@ -43,8 +49,11 @@ export function Frigo({ index, stock, contraintes, ops, moi }) {
         <form class="ligne-saisie" onSubmit=${ajouter}><input type="text" placeholder="Ajouter : 3 courgettes, poulet…" value=${saisie} onInput=${(e) => setSaisie(e.target.value)} aria-label="Ajouter un ingrédient" />
           <button type="submit" class="bouton" disabled=${!saisie.trim()} aria-label="Ajouter">＋</button></form>
         ${stock.length === 0 ? html`<p class="note">Le stock est vide. Ajoutez ce que vous avez, ou terminez vos courses : il se remplit tout seul.</p>`
-          : html`<div class="puces sans-marge">${stock.map((s) => html`<${Puce} key=${s.cle} actif=${!exclus.has(s.cle)} onClick=${() => { const n = new Set(exclus); if (n.has(s.cle)) n.delete(s.cle); else n.add(s.cle); setExclus(n); }}>${s.nom}<//>`)}</div>
-            <p class="note">Touchez un produit pour l'écarter de la recherche. Le sel, l'huile, la farine et les épices sont toujours supposés disponibles.</p>`}
+          : html`<div class="puces sans-marge puces-stock">${stock.map((s) => html`<span class="puce-stock" key=${s.cle}>
+              <${Puce} actif=${!exclus.has(s.cle)} onClick=${() => { const n = new Set(exclus); if (n.has(s.cle)) n.delete(s.cle); else n.add(s.cle); setExclus(n); }}>${s.nom}<//>
+              <button type="button" class="retirer-stock" aria-label=${`Retirer ${s.nom} du stock`} onClick=${() => retirer(s)}>✕</button></span>`)}</div>
+            <p class="note">Touchez un produit pour l'écarter de la recherche, ou ✕ pour le retirer du stock. Le sel, l'huile, la farine et les épices sont toujours supposés disponibles.
+              <button type="button" class="lien" onClick=${toutRetirer}>Vider tout le stock</button></p>`}
       <//>
       <${Section} titre=${`Recettes possibles${resultats.length ? ` (${resultats.length})` : ''}`}>
         ${!articles.length ? html`<p class="note">Ajoutez au moins deux ingrédients.</p>` : resultats.length === 0

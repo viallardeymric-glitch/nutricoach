@@ -98,3 +98,6 @@ Sur l'écran Courses, choisissez « Courses pour : Cette semaine / Semaine proch
 - **À l'achat** : oui, ce que vous avez déjà en stock est retiré de la liste de courses.
 - **En cuisinant** : sur la fiche, « Après la cuisine » → « Retirer ces ingrédients de mon stock » (pour le nombre de personnes choisi). En mode cuisine, l'écran final propose la même chose, et vous pouvez cocher « le faire automatiquement » pour que ce soit fait à chaque fin de recette. Les ingrédients absents du stock sont simplement signalés.
 - Le stock affiche maintenant les quantités exactes (977,5 g après avoir retiré 22,5 g de beurre).
+
+## Retirer un produit du stock (Frigo magique)
+Dans « Mon frigo et mes placards », chaque produit a une croix ✕ pour le retirer du stock ; « Vider tout le stock » (avec confirmation) repart de zéro. Toucher le nom écarte seulement le produit de la recherche de recettes.
