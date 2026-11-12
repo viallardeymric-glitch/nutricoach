@@ -98,3 +98,6 @@ export function allergenesDansTexte(texte) {
   }
   return [...res];
 }
+
+/** Faux amis pour les règles d'alerte : « huile d'olive » n'est pas « olives » (riche en sel, risque d'étouffement). */
+export const nettoyerPourRegles = (t) => String(t).replace(/huile d['’ ]?olive/g, ' huile ');

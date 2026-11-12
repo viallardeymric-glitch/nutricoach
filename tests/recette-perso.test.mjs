@@ -81,3 +81,20 @@ test('le modèle ne dépend pas du catalogue : data/recettes.json n\'est pas mod
   const r = JSON.parse(readFileSync(new URL('../data/recettes.json', import.meta.url), 'utf8'));
   assert.equal(r.length, 1610); assert.equal(r[0].id, 'REC-000001'); assert.equal(r[1609].id, 'REC-001610');
 });
+
+import { categorieDepuis } from '../js/lib/recette-perso.js';
+test('catégorie : textes libres de l\'IA ramenés aux catégories du catalogue', () => {
+  for (const [t, c] of [['Plat principal', 'Plats'], ['plats', 'Plats'], ['Dessert', 'Desserts'], ['desserts', 'Desserts'], ['Entrée', 'Entrées'], ['entrees', 'Entrées'], ['Goûter', 'Goûters'], ['Petit-déjeuner', 'Goûters'], ['Apéritif', 'Apéros'], ['Apéro', 'Apéros'], ['', 'Plats'], [undefined, 'Plats'], ['n\'importe quoi', 'Plats']]) assert.equal(categorieDepuis(t), c, String(t));
+  assert.equal(normaliserRecette({ ...base, categorie: 'Dessert' }).recette.categorie, 'Desserts');
+  assert.equal(normaliserRecette({ ...base, categorie: 'Desserts' }).recette.categorie, 'Desserts');
+  assert.equal(normaliserRecette({ ...base, categorie: 'Apéritif dînatoire' }).recette.categorie, 'Apéros');
+});
+
+test('régimes d\'une recette ajoutée : jamais déduits d\'après les mots, mais les affirmations contredites par les ingrédients sont retirées', () => {
+  const n = (ingredients, regimes) => normaliserRecette({ titre: 'x1', etapes: ['a'], ingredients, regimes_compatibles: regimes }).recette.regimes_compatibles;
+  assert.deepEqual(n(['200 g de riz', '2 courgettes'], []), ['omnivore'], 'rien n\'est déduit');
+  assert.ok(!n(['300 g de lardons', '200 g de riz'], ['vegetarien', 'sans_porc', 'halal', 'pescetarien']).some((r) => ['vegetarien', 'sans_porc', 'halal', 'pescetarien'].includes(r)));
+  assert.ok(!n(['2 filets de poulet'], ['vegan', 'vegetarien']).includes('vegetarien'));
+  assert.ok(!n(['1 verre de vin blanc', '200 g de riz'], ['halal']).includes('halal'));
+  assert.ok(n(['200 g de riz', '2 courgettes'], ['vegetarien', 'vegan']).includes('vegan'), 'déclaré et cohérent : gardé');
+});

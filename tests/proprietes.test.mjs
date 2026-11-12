@@ -296,3 +296,9 @@ test('stockage local : une valeur d\'un autre type que le défaut (données corr
   assert.equal(lire('absent', 42), 42);
   delete globalThis.localStorage;
 });
+
+test('« huile d\'olive » n\'est pas « olives » (ni riche en sel, ni risque d\'étouffement)', () => {
+  const p = (...n) => deconseillesDetectes(ing(...n)).map((d) => d.profil);
+  assert.ok(!p('huile d\'olive', '200 g de riz').includes('hypertendu') && !p('huile d\'olive').includes('enfant_moins_de_3_ans'));
+  assert.ok(p('olives noires').includes('hypertendu') && p('olives vertes').includes('enfant_moins_de_3_ans'));
+});

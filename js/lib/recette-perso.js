@@ -4,7 +4,7 @@
 // automatiquement d'après les ingrédients pour que le filtre d'allergènes ne laisse jamais passer une recette qui en contient.
 import { normaliser } from './texte.js';
 import { CATEGORIES, REGIMES, ALLERGENES, SAISONS, APPAREILS, DIFFICULTES, COUTS, PROFILS } from '../data/libelles.js';
-import { REGLES_ALERTE, allergenesDansTexte } from '../data/deconseilles.js';
+import { REGLES_ALERTE, allergenesDansTexte, nettoyerPourRegles } from '../data/deconseilles.js';
 
 export const ID_PREMIER = 900001;
 export const estRecettePerso = (id) => /^REC-9\d{5}$/.test(String(id || ''));
@@ -73,6 +73,15 @@ function lireEtapes(brut) {
   }
   return etapes;
 }
+/** Catégorie du catalogue d'après un texte libre (« plat principal », « dessert », « goûter », « apéritif »… : accents et pluriels ignorés). Défaut : Plats. */
+export function categorieDepuis(texte) {
+  const t = normaliser(String(texte || ''));
+  if (/\bentrees?\b/.test(t)) return 'Entrées';
+  if (/\bdesserts?\b|\bpatisseries?\b|\bgateaux?\b/.test(t)) return 'Desserts';
+  if (/\bgouters?\b|\bcollations?\b|\bpetit[ -]dejeuner\b|\bgoutes?\b/.test(t)) return 'Goûters';
+  if (/\baperos?\b|\baperitifs?\b/.test(t)) return 'Apéros';
+  return 'Plats';
+}
 const liste = (v) => (Array.isArray(v) ? v : String(v || '').split(/[,\n]/)).map((x) => String(x).trim()).filter(Boolean);
 const choisir = (v, autorises, defaut) => (Object.keys(autorises).includes(v) ? v : defaut);
 const entierPos = (v, defaut, max) => { const n = nombreDe(v); return n != null && n >= 0 ? Math.min(max, Math.round(n)) : defaut; };
@@ -83,9 +92,26 @@ export function allergenesDetectes(ingredients) {
   const t = ` ${normaliser(ingredients.map((i) => i.aliment).join(' | '))} `;
   return allergenesDansTexte(t);
 }
+const VIANDE = /\b(poulet|dinde|canard|boeuf|veau|agneau|porc|jambon|lardons?|saucisses?|saucisson|chorizo|bacon|steaks?|escalopes?|entrecote|bavette|gigot|cotelettes?|merguez|lapin|pintade|magret|filet mignon|rosbif|roti|viande|hachee?|bresaola|coppa|pancetta|andouille|boudin|foie|rillettes|terrine|paleron|joue|osso|blanc de poulet|cuisses?|pilons?|gesiers?|mortadelle|salami|gelatine)\b/;
+const PORC = /\b(porc|jambon|lardons?|lard|saucisses?|saucisson|chorizo|bacon|pancetta|andouille|boudin|rillettes|coppa|mortadelle|saindoux|couenne|salami|filet mignon)\b/;
+const ALCOOL = /\b(vin|vins|biere|cidre|rhum|whisky|vodka|porto|madere|champagne|liqueur|calvados|cognac|armagnac|alcool|kirsch|amaretto|marsala|xeres|pastis|prosecco|vermouth|gin|saké|sake|mirin)\b/;
+const MIEL = /\b(miel|gelatine)\b/;
+
+/** Régimes déclarés (par la personne ou l'IA) qui contredisent les ingrédients : on ne les garde pas. On ne DÉDUIT jamais un régime d'après les mots (trop d'erreurs : « hoki », « rumsteck », « pennes »…), on ne fait que retirer les affirmations contredites. */
+export function regimesContredits(ingredients, allergenes) {
+  const t = ` ${normaliser(ingredients.map((i) => i.aliment).join(' | '))} `;
+  const viande = VIANDE.test(t); const poissons = ['poisson', 'crustaces', 'mollusques'].some((a) => allergenes.includes(a));
+  const res = [];
+  if (viande) res.push(['vegetarien', 'la recette contient de la viande'], ['vegan', 'la recette contient de la viande'], ['pescetarien', 'la recette contient de la viande']);
+  if (PORC.test(t)) res.push(['sans_porc', 'la recette contient du porc'], ['halal', 'la recette contient du porc']);
+  if (ALCOOL.test(t)) res.push(['halal', 'la recette contient de l\'alcool']);
+  if (MIEL.test(t)) res.push(['vegan', 'la recette contient du miel ou de la gélatine']);
+  return res;
+}
+
 /** Avertissements de profil (femme enceinte, enfants…) d'après les ingrédients : mêmes règles que les courses et les scans. */
 export function deconseillesDetectes(ingredients) {
-  const t = ` ${normaliser(ingredients.map((i) => i.aliment).join(' | '))} `;
+  const t = ` ${nettoyerPourRegles(normaliser(ingredients.map((i) => i.aliment).join(' | ')))} `;
   const res = [];
   for (const r of REGLES_ALERTE) {
     if (r.exclure && r.exclure.test(t)) continue;
@@ -118,6 +144,7 @@ export function normaliserRecette(brut) {
   if (ajoutes.length) avertissements.push(`Allergènes ajoutés d'après les ingrédients : ${ajoutes.map((a) => ALLERGENES[a].toLowerCase()).join(', ')}.`);
   let regimes = [...new Set(['omnivore', ...liste(b.regimes_compatibles || b.regimes).map((r) => normaliser(r).replace(/\s+/g, '_')).filter((r) => REGIMES[r])])];
   const retirer = (r, motif) => { if (regimes.includes(r)) { regimes = regimes.filter((x) => x !== r); avertissements.push(`Régime « ${REGIMES[r]} » retiré : ${motif}.`); } };
+  for (const [r, motif] of regimesContredits(ingredients, allergenes)) retirer(r, motif);
   if (allergenes.includes('gluten')) retirer('sans_gluten', 'la recette contient du gluten');
   if (allergenes.includes('lait')) retirer('sans_lactose', 'la recette contient du lait');
   if (['lait', 'oeuf', 'poisson', 'crustaces', 'mollusques'].some((a) => allergenes.includes(a))) retirer('vegan', 'la recette contient des produits animaux');
@@ -130,7 +157,7 @@ export function normaliserRecette(brut) {
   const principal = choisir(b.appareil_principal, APPAREILS, appareils[0] || 'classique');
   const recette = {
     titre: titre.slice(0, 120),
-    categorie: choisir(b.categorie, Object.fromEntries(CATEGORIES.map((x) => [x, 1])), 'Plats'),
+    categorie: CATEGORIES.includes(b.categorie) ? b.categorie : categorieDepuis(b.categorie),
     sous_categorie: String(b.sous_categorie || 'recettes perso').trim().slice(0, 60) || 'recettes perso',
     description: String(b.description || '').trim().slice(0, 600),
     portions_base: Math.max(1, entierPos(b.portions_base ?? b.portions, 4, 50)),

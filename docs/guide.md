@@ -108,3 +108,6 @@ Demandez simplement : « Crée-moi une recette pour ce midi », « Invente un pl
 - **Ajouter** : « ➕ Ajouter à mes recettes » la range dans Plus → Mes recettes (partagée avec l'autre téléphone). Ensuite « 👩‍🍳 Cuisiner pas à pas » ou « Voir la fiche ».
 - **Une autre idée** : propose une recette différente, en tenant compte de ce que vous avez dit avant (« pas forcément tous les ingrédients »).
 - **Qualité** : avec les deux clés, l'appli prend Gemini s'il répond dans les 2,5 secondes après Groq (réponses plus soignées), sinon Groq.
+
+## Où va une recette créée par le coach ?
+Dans la catégorie choisie par l'IA, ramenée aux catégories du catalogue (Entrées, Plats, Desserts, Goûters, Apéros ; « plat principal » → Plats, « dessert » → Desserts…), avec la sous-catégorie « Recettes perso ». Elle apparaît dans Plus → Mes recettes, dans l'onglet Recettes (filtres de catégorie compris) et, si c'est un plat, dans les menus de la semaine. Les filtres de votre profil s'appliquent comme pour les autres : une recette avec un aliment que vous évitez ou un allergène du foyer est masquée. Le coach signale aussi les aliments évités et les risques (grossesse, enfant) avant l'ajout. Ses régimes (végétarien, sans gluten…) ne sont jamais déduits automatiquement : seuls ceux déclarés et cohérents avec les ingrédients sont gardés.

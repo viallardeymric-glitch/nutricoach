@@ -28,6 +28,7 @@ test('contrôle de sécurité : allergène du foyer = bloquant, régime et alime
   assert.ok(c.some((x) => x.type === 'regime'));
   assert.ok(c.some((x) => x.type === 'risque' && /listériose/.test(x.texte)));
   assert.deepEqual(conflitsRecette(recette, { allergenes: [], regimes: [], risques: [] }), []);
+  assert.ok(conflitsRecette(recette, { allergenes: [], regimes: [], risques: [], exclusions: ['saumon'] }).some((x) => x.type === 'exclusion'), 'aliment évité');
 });
 
 test('prompt : demande, portions, contexte et conversation récente; consigne de sécurité', () => {

@@ -54,6 +54,8 @@ export function conflitsRecette(recette, contraintes) {
   const res = [];
   for (const a of contraintes.allergenes || []) if (recette.allergenes.includes(a)) res.push({ type: 'allergene', texte: `contient ${a.replace('_', ' ')}, que quelqu'un du foyer évite` });
   for (const g of contraintes.regimes || []) if (['vegetarien', 'vegan', 'sans_gluten', 'sans_lactose', 'pescetarien', 'sans_porc'].includes(g) && !recette.regimes_compatibles.includes(g)) res.push({ type: 'regime', texte: `n'est pas compatible avec le régime « ${g.replace('_', ' ')} »` });
+  const texte = normaliser(`${recette.titre} | ${recette.ingredients.map((i) => i.aliment).join(' | ')}`);
+  for (const x of contraintes.exclusions || []) if (texte.includes(x)) res.push({ type: 'exclusion', texte: `contient « ${x} », un aliment que quelqu'un du foyer évite` });
   const vus = new Set();
   for (const d of recette.deconseille_a || []) if ((contraintes.risques || []).includes(d.profil) && !vus.has(d.raison)) { vus.add(d.raison); res.push({ type: 'risque', texte: d.raison }); }
   return res;
