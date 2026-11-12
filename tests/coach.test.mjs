@@ -99,13 +99,15 @@ test('Groq : modèle retiré (404) → détection d\'un autre modèle, puis rép
   assert.equal(t, 'ok');
   await assert.rejects(demanderAGroq({ cle: 'k', historique: histo, contexte: '' }, async () => ({ ok: false, status: 401, json: async () => ({}) })), /clé Groq est refusée/);
 });
-test('deux IA en même temps : la plus rapide gagne, l\'autre en panne ne gêne pas', async () => {
+test('deux IA en même temps : Gemini (plus soigné) est préféré s\'il répond juste après Groq ; sinon Groq ; une panne ne gêne pas', async () => {
   const attente = (ms, v) => new Promise((r) => setTimeout(() => r(v), ms));
-  const lent = async (url) => (url.includes('groq') ? attente(5, reponseGroq('réponse Groq')) : attente(60, reponseGemini('réponse Gemini')));
-  const r = await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, lent);
-  assert.deepEqual(r, { texte: 'réponse Groq', via: 'Groq' });
+  const gemini60 = async (url) => (url.includes('groq') ? attente(5, reponseGroq('réponse Groq')) : attente(60, reponseGemini('réponse Gemini')));
+  assert.deepEqual(await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '', graceMs: 1000 }, gemini60), { texte: 'réponse Gemini', via: 'Gemini' });
+  assert.deepEqual(await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '', graceMs: 20 }, gemini60), { texte: 'réponse Groq', via: 'Groq' }, 'Gemini trop lent : Groq');
   const groqKo = async (url) => (url.includes('groq') ? { ok: false, status: 500, json: async () => ({}) } : attente(20, reponseGemini('ok Gemini')));
   assert.equal((await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, groqKo)).via, 'Gemini');
+  const geminiKo = async (url) => (url.includes('groq') ? attente(10, reponseGroq('ok Groq')) : { ok: false, status: 500, json: async () => ({}) });
+  assert.equal((await repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, geminiKo)).via, 'Groq', 'Gemini en panne : Groq tout de suite');
   const toutKo = async () => ({ ok: false, status: 500, json: async () => ({}) });
   await assert.rejects(repondre({ reg: { cle: 'a', cleGroq: 'b' }, historique: histo, contexte: '' }, toutKo));
   await assert.rejects(repondre({ reg: {}, historique: histo, contexte: '' }, toutKo), /clé Gemini ou Groq/);
@@ -159,7 +161,7 @@ test('réécriture de recette : Gemini et Groq en même temps, JSON demandé aux
     if (url.includes('groq')) { const c = JSON.parse(o.body); assert.equal(c.response_format.type, 'json_object'); return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"etapes":[]}' } }] }) }; }
     return new Promise((r) => setTimeout(() => r({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: '{"etapes":[1]}' }] } }] }) }), 30));
   };
-  assert.equal(await demanderJSONRapide({ reg: { cle: 'a', cleGroq: 'b' }, systeme: 's JSON', message: 'm' }, f), '{"etapes":[]}');
+  assert.equal(await demanderJSONRapide({ reg: { cle: 'a', cleGroq: 'b' }, systeme: 's JSON', message: 'm', graceMs: 5 }, f), '{"etapes":[]}');
   assert.equal(vus.length, 2);
   assert.equal(await demanderJSONRapide({ reg: { cle: 'a' }, systeme: 's', message: 'm' }, f), '{"etapes":[1]}');
   await assert.rejects(demanderJSONRapide({ reg: {}, systeme: 's', message: 'm' }, f), /clé Gemini ou Groq/);

@@ -64,3 +64,6 @@ Thème (4) et mode sombre, PIN, Face ID, clé du coach, appareils de cuisine (Th
 ## Menus équilibrés et autre repas
 - ✅ Menus de la semaine avec règles de diététique (plafonds viande rouge/porc/volaille/œuf, plancher poisson et légumineuses, score santé, diabète et tension, journée complétée) ; « autre repas » : jamais le même plat ni le même type / la même protéine que l'autre repas du jour. Testé sur le catalogue (20 semaines × plusieurs profils).
 - ✅ Réécriture Thermomix et autres méthodes : Gemini et Groq en parallèle. 🟡 Seules 90 recettes ont des étapes Thermomix d'origine.
+
+## Le coach crée des recettes
+- ✅ Demande détectée dans la conversation → recette complète (JSON) lue et normalisée comme une recette ajoutée à la main, contrôlée avec les allergies, régimes et risques de tout le foyer, étapes affichées, ajout à « Mes recettes », cuisine pas à pas, « une autre idée ». Non testé avec les vrais Gemini / Groq. 🟡 Qualité des réponses dépendante de l'IA ; Gemini préféré à Groq s'il répond dans les 2,5 s.

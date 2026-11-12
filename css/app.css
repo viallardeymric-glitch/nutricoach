@@ -554,3 +554,13 @@ input, select, textarea { font-size: 16px; }
 .puce-stock { display: inline-flex; align-items: center; gap: .15rem; }
 .retirer-stock { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--gris); font-size: 1rem; }
 .retirer-stock:active { background: var(--alerte-fond); color: var(--alerte); }
+
+/* Coach : recette créée par l'IA */
+.carte-recette-ia { max-width: 100%; }
+.carte-recette-ia h3 { margin: 0 0 .3rem; font-size: 1.15rem; }
+.carte-recette-ia h4 { margin: .8rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+.carte-recette-ia .etapes { padding-left: 1.3rem; margin: .2rem 0; }
+.carte-recette-ia .etapes li { margin: .45rem 0; line-height: 1.4; }
+.actions-recette-ia { display: grid; gap: .5rem; margin-top: .8rem; }
+.bulle-pied { display: flex; align-items: center; gap: .5rem; margin-top: .3rem; }
+.bulle-pied .copier { margin: 0; }

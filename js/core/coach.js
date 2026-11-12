@@ -15,7 +15,7 @@ export const chargerConversation = () => { const c = lire('coach.conversation', 
 export const enregistrerConversation = (c) => ecrire('coach.conversation', c.slice(-MAX_HISTORIQUE));
 
 export const CONSIGNES = `Tu es le coach de l'application NutriCoach, pour un couple (Eymric et Marie) : nutrition, cuisine, sport, bien-être et santé au quotidien.
-Réponds en français, avec un ton simple, chaleureux et concret, en quelques phrases courtes (listes si utile). Appuie-toi sur le contexte fourni : profil, situation (grossesse, allaitement, enfants), objectif sportif et phase d'entraînement, menu de la semaine, courses, frigo, poids et journal du jour. Cite ces éléments quand ils aident (« d'après votre menu de mardi… »).
+Réponds en français, avec un ton simple, chaleureux et concret, en quelques phrases courtes (listes si utile). Réponds EXACTEMENT à la dernière question posée, en tenant compte de toute la conversation ; ne change jamais de sujet et ne réponds jamais à côté. Appuie-toi sur le contexte fourni : profil, situation (grossesse, allaitement, enfants), objectif sportif et phase d'entraînement, menu de la semaine, courses, frigo, poids et journal du jour. Cite ces éléments quand ils aident (« d'après votre menu de mardi… »).
 
 Base médicale (tu connais les repères de santé publique français : Santé publique France / Manger Bouger, ANSES, HAS, Assurance maladie) :
 - Tu peux expliquer, informer et rassurer : alimentation selon l'âge et la situation, équilibre, hydratation, sommeil, activité physique, hygiène alimentaire, interactions simples aliments/situations, signes à surveiller.
@@ -169,7 +169,7 @@ export function choisirModeleGroq(modeles) {
 export async function demanderAGroq({ cle, modele = MODELE_GROQ_PAR_DEFAUT, historique, contexte }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Groq dans les réglages du coach.');
   const poster = (m) => appeler(`${URL_GROQ}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cle}` },
-    body: JSON.stringify({ model: m, messages: messagesGroq({ historique, contexte }), temperature: 0.7, max_tokens: 900 }) });
+    body: JSON.stringify({ model: m, messages: messagesGroq({ historique, contexte }), temperature: 0.4, max_tokens: 1000 }) });
   let rep;
   try { rep = await poster(modele); } catch { throw new Error(messageErreurGroq(0)); }
   if (rep.status === 404 || rep.status === 400) {
@@ -190,16 +190,37 @@ export async function demanderAGroq({ cle, modele = MODELE_GROQ_PAR_DEFAUT, hist
  * Interroge les fournisseurs configurés EN MÊME TEMPS et garde la première réponse réussie (moins d'attente).
  * Groq ne lit pas les photos ni les PDF : s'il y en a, seul Gemini répond. Retourne { texte, via: 'Gemini' | 'Groq' }.
  */
-export async function repondre({ reg, historique, contexte, pieces = [] }, appelerBrut = fetch) {
+export async function repondre({ reg, historique, contexte, pieces = [], graceMs = 2500 }, appelerBrut = fetch) {
   const appeler = (url, o = {}) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), 40000); return Promise.resolve(appelerBrut(url, { ...o, signal: c.signal })).finally(() => clearTimeout(t)); };
   const binaires = pieces.some((p) => p.data);
   const courses = [];
-  if (reg.cle) courses.push(demanderAuCoach({ cle: reg.cle, modele: reg.modele, historique, contexte, pieces }, appeler).then((texte) => ({ texte, via: 'Gemini' })));
-  if (reg.cleGroq && !binaires) courses.push(demanderAGroq({ cle: reg.cleGroq, modele: reg.modeleGroq, historique, contexte }, appeler).then((texte) => ({ texte, via: 'Groq' })));
+  if (reg.cle) courses.push({ prefere: true, p: demanderAuCoach({ cle: reg.cle, modele: reg.modele, historique, contexte, pieces }, appeler).then((texte) => ({ texte, via: 'Gemini' })) });
+  if (reg.cleGroq && !binaires) courses.push({ p: demanderAGroq({ cle: reg.cleGroq, modele: reg.modeleGroq, historique, contexte }, appeler).then((texte) => ({ texte, via: 'Groq' })) });
   if (!courses.length) throw new Error(binaires && reg.cleGroq && !reg.cle ? 'Groq ne lit pas les photos ni les PDF : ajoutez une clé Gemini pour les joindre.' : 'Ajoutez une clé Gemini ou Groq dans les réglages du coach.');
+  return premierReussi(courses, graceMs);
+}
+
+
+/**
+ * Première réponse réussie parmi plusieurs fournisseurs, avec une préférence de qualité : si le fournisseur rapide (Groq) répond d'abord
+ * mais que Gemini répond dans les `graceMs` suivantes, on garde Gemini (réponses généralement plus soignées). Chaque élément : { p: promesse de { texte, via }, prefere }.
+ */
+export function premierReussi(items, graceMs = 2500) {
   return new Promise((resolve, reject) => {
-    const erreurs = []; let restants = courses.length;
-    for (const c of courses) c.then(resolve, (e) => { erreurs.push(e); if (--restants === 0) reject(erreurs[0]); });
+    const erreurs = []; let restants = items.length; let rapide = null; let minuteur = null;
+    const fini = new Set();
+    const preferePendante = () => items.some((x) => x.prefere && !fini.has(x));
+    items.forEach((it) => it.p.then((v) => {
+      fini.add(it);
+      if (it.prefere) { clearTimeout(minuteur); resolve(v); return; }
+      if (rapide) return;
+      rapide = v;
+      if (!preferePendante()) resolve(v); else minuteur = setTimeout(() => resolve(v), graceMs);
+    }, (e) => {
+      fini.add(it); erreurs.push(e);
+      if (rapide && !preferePendante()) { clearTimeout(minuteur); resolve(rapide); return; }
+      if (--restants === 0 && !rapide) reject(erreurs[0]);
+    }));
   });
 }
 
@@ -214,8 +235,8 @@ export async function demanderAuCoach({ cle, modele = MODELE_PAR_DEFAUT, histori
 /** Appel Gemini avec une consigne propre (réécriture de recette…) : retourne le texte de la réponse (JSON demandé). */
 export async function demanderJSON({ cle, modele = MODELE_PAR_DEFAUT, systeme, message }, appeler = fetch) {
   if (!cle) throw new Error('Ajoutez votre clé Gemini dans les réglages du coach.');
-  const texte = extraireTexte(await posterGemini({ cle, modele, corps: { systemInstruction: { parts: [{ text: systeme }] }, contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2000, responseMimeType: 'application/json' } } }, appeler));
+  const texte = extraireTexte(await posterGemini({ cle, modele, corps: rapide(modele, { systemInstruction: { parts: [{ text: systeme }] }, contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2500, responseMimeType: 'application/json' } }) }, appeler));
   if (!texte) throw new Error('L\'IA n\'a pas pu répondre. Réessayez.');
   return texte;
 }
@@ -261,14 +282,17 @@ export async function demanderJSONGroq({ cle, modele = MODELE_GROQ_PAR_DEFAUT, s
 }
 
 /** Réponse JSON : Gemini et Groq interrogés en même temps, la première réponse réussie l'emporte (pour les réécritures de recettes, etc.). */
-export async function demanderJSONRapide({ reg, systeme, message }, appelerBrut = fetch) {
+export async function demanderJSONRapide({ reg, systeme, message, graceMs = 2500 }, appelerBrut = fetch) {
   const appeler = (url, o = {}) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), 45000); return Promise.resolve(appelerBrut(url, { ...o, signal: c.signal })).finally(() => clearTimeout(t)); };
   const courses = [];
-  if (reg.cle) courses.push(demanderJSON({ cle: reg.cle, modele: reg.modele, systeme, message }, appeler));
-  if (reg.cleGroq) courses.push(demanderJSONGroq({ cle: reg.cleGroq, modele: reg.modeleGroq, systeme, message }, appeler));
+  if (reg.cle) courses.push({ prefere: true, p: demanderJSON({ cle: reg.cle, modele: reg.modele, systeme, message }, appeler).then((texte) => ({ texte, via: 'Gemini' })) });
+  if (reg.cleGroq) courses.push({ p: demanderJSONGroq({ cle: reg.cleGroq, modele: reg.modeleGroq, systeme, message }, appeler).then((texte) => ({ texte, via: 'Groq' })) });
   if (!courses.length) throw new Error('Ajoutez une clé Gemini ou Groq dans les réglages du coach.');
-  return new Promise((resolve, reject) => {
-    const erreurs = []; let restants = courses.length;
-    for (const c of courses) c.then(resolve, (e) => { erreurs.push(e); if (--restants === 0) reject(erreurs[0]); });
-  });
+  return (await premierReussi(courses, graceMs)).texte;
+}
+
+/** Crée une recette avec l'IA (Gemini et Groq en parallèle) : retourne le texte JSON de la réponse. */
+export async function genererRecetteIA({ reg, demande, historique, contexte, portions, noms, graceMs }, appeler = fetch) {
+  const { CONSIGNE_RECETTE, promptRecette } = await import('../lib/recette-ia.js');
+  return demanderJSONRapide({ reg, systeme: CONSIGNE_RECETTE, message: promptRecette({ demande, historique, contexte, portions, noms }), graceMs }, appeler);
 }

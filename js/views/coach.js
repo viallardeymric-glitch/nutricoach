@@ -2,12 +2,16 @@
 import { html, useState, useEffect, useRef } from '../../vendor/preact-htm.js';
 import { Entete, Bandeau } from '../ui/composants.js';
 import { preparerPiece, texteAvecPieces, MAX_PIECES } from '../core/pieces.js';
+import { genererRecetteIA } from '../core/coach.js';
+import { veutUneRecette, lireRecetteIA, conflitsRecette } from '../lib/recette-ia.js';
+import { prochainId } from '../lib/recette-perso.js';
+import { libelleQuantite } from '../lib/courses.js';
 import { blocs } from '../lib/texte-riche.js';
 import { chargerReglagesCoach, enregistrerReglagesCoach, chargerConversation, enregistrerConversation,
   repondre, construireContexte, avertissementSante, MODELE_PAR_DEFAUT, MODELE_GROQ_PAR_DEFAUT } from '../core/coach.js';
 
-const SUGGESTIONS_GROSSESSE = ['Puis-je manger du saumon fumé ?', 'Idées de repas pour le premier trimestre', 'Que faire contre les nausées ?', 'Quels aliments riches en fer ?'];
-const SUGGESTIONS = ['Que cuisiner ce soir ?', 'Comment équilibrer ma semaine ?', 'Idées de petits-déjeuners riches en protéines', 'Que faire avec des restes de poulet ?'];
+const SUGGESTIONS_GROSSESSE = ['Crée-moi une recette pour ce midi', 'Puis-je manger du saumon fumé ?', 'Idées de repas pour le premier trimestre', 'Que faire contre les nausées ?', 'Quels aliments riches en fer ?'];
+const SUGGESTIONS = ['Crée-moi une recette pour ce midi', 'Que cuisiner ce soir ?', 'Comment équilibrer ma semaine ?', 'Idées de petits-déjeuners riches en protéines', 'Que faire avec des restes de poulet ?'];
 
 export function ReglagesCoach({ onChange }) {
   const [reg, setReg] = useState(chargerReglagesCoach);
@@ -32,6 +36,35 @@ export function ReglagesCoach({ onChange }) {
   </div>`;
 }
 
+/** Historique envoyé à l'IA : une recette proposée est résumée en texte (les messages sans texte sont retirés). */
+const pourIA = (messages) => messages.map((m) => (m.texte ? m : m.recette ? { role: m.role, texte: `J'ai proposé la recette « ${m.recette.titre} » (${m.recette.ingredients.slice(0, 8).map((i) => i.aliment).join(', ')}).` } : null)).filter(Boolean);
+
+function CarteRecetteIA({ m, onAjouter, onAutre, enCours }) {
+  const r = m.recette;
+  const bloquants = m.conflits.filter((c) => c.type === 'allergene');
+  const nut = r.nutrition_par_portion;
+  return html`<div class="bulle coach carte-recette-ia">
+    <h3>🍳 ${r.titre}</h3>
+    ${r.description && html`<p>${r.description}</p>`}
+    <p class="sous">${r.portions_base} portion${r.portions_base > 1 ? 's' : ''} · ⏱ ${r.temps.total_min} min${nut.calories_kcal ? ` · ≈ ${nut.calories_kcal} kcal / portion` : ''}</p>
+    ${m.conflits.length > 0 && html`<${Bandeau} type="alerte" titre=${bloquants.length ? 'Cette recette ne convient pas à votre foyer' : 'À vérifier avant de cuisiner'}><ul class="simple">${m.conflits.map((c, i) => html`<li key=${i}>${c.texte}</li>`)}</ul><//>`}
+    <h4>Ingrédients</h4>
+    <ul class="ingredients">${r.ingredients.map((i, k) => html`<li key=${k}><strong>${libelleQuantite(i)}</strong> ${i.aliment}${i.precision ? html` <span class="prec">(${i.precision})</span>` : ''}</li>`)}</ul>
+    <h4>Étape par étape</h4>
+    <ol class="etapes">${r.etapes.map((e) => html`<li key=${e.numero}>${e.texte}</li>`)}</ol>
+    ${r.astuces.length > 0 && html`<p class="note">💡 ${r.astuces.join(' ')}</p>`}
+    ${m.avertissements.length > 0 && html`<p class="note">${m.avertissements.join(' ')}</p>`}
+    <div class="actions-recette-ia">
+      ${m.idAjoute ? html`<a class="bouton" href=${'#/cuisine/' + m.idAjoute + '?p=' + r.portions_base}>👩‍🍳 Cuisiner pas à pas</a>
+          <a class="bouton secondaire" href=${'#/recette/' + m.idAjoute}>Voir la fiche</a>
+          <p class="note">✓ Ajoutée à « Mes recettes » (partagée avec l'autre téléphone).</p>`
+        : bloquants.length ? '' : html`<button type="button" class="bouton" onClick=${onAjouter}>➕ Ajouter à mes recettes</button>`}
+      <button type="button" class="bouton secondaire" disabled=${enCours} onClick=${onAutre}>🔄 Une autre idée</button>
+    </div>
+    <p class="note">Recette créée par l'IA : vérifiez les cuissons et les quantités. La nutrition est une estimation.</p>
+  </div>`;
+}
+
 function Message({ m }) {
   const [copie, setCopie] = useState(false);
   const copier = async () => {
@@ -44,11 +77,11 @@ function Message({ m }) {
       ? html`<ul>${b.items.map((it) => html`<li>${it.map((s) => (s.gras ? html`<strong>${s.texte}</strong>` : s.texte))}</li>`)}</ul>`
       : html`<p>${b.segments.map((s) => (s.gras ? html`<strong>${s.texte}</strong>` : s.texte))}</p>`)}
     ${m.avertir && html`<p class="avertissement-sante">${m.avertir}</p>`}
-    ${m.role !== 'user' && html`<button type="button" class="lien copier" onClick=${copier}>${copie ? '✓ Copié' : '⧉ Copier'}</button>${m.via ? html` <span class="sous">· ${m.via}</span>` : ''}`}
+    ${m.role !== 'user' && html`<div class="bulle-pied"><button type="button" class="lien copier" onClick=${copier}>${copie ? '✓ Copié' : '⧉ Copier'}</button>${m.via ? html`<span class="sous">· ${m.via}</span>` : ''}</div>`}
   </div>`;
 }
 
-export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi, enceinte = false, extra = {} }) {
+export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi, enceinte = false, extra = {}, contraintes = { allergenes: [], regimes: [], risques: [] }, foyer = 2, nomsFoyer = '', recettesPerso = [], opsRecettes = null }) {
   const [reg, setReg] = useState(chargerReglagesCoach);
   const [messages, setMessages] = useState(chargerConversation);
   const [saisie, setSaisie] = useState('');
@@ -67,6 +100,30 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSui
       try { const p = await preparerPiece(f); setPieces((l) => (l.length < MAX_PIECES ? [...l, p] : l)); } catch (e) { setErreur(e.message); }
     }
   };
+  // Création d'une recette par l'IA : JSON → recette normalisée → contrôle avec les profils du foyer → carte à ajouter aux recettes
+  const creerRecette = async (demande, suite, contexte) => {
+    const historique = suite.slice(0, -1);
+    const brut = await genererRecetteIA({ reg, demande, historique, contexte, portions: foyer, noms: nomsFoyer });
+    const r = lireRecetteIA(brut, foyer);
+    if (!r.recette) { setErreur(r.erreurs[0]); enregistrerConversation(suite.map(({ texte, role }) => ({ texte, role }))); return; }
+    const conflits = conflitsRecette(r.recette, contraintes);
+    const final = [...suite, { role: 'coach', recette: r.recette, conflits, avertissements: r.avertissements }];
+    setMessages(final); enregistrerConversation(final);
+  };
+  const ajouterRecette = (k) => {
+    const m = messages[k]; if (!m || !m.recette || !opsRecettes) return;
+    if (m.conflits.some((c) => c.type === 'allergene')) return;
+    if (m.conflits.length && !window.confirm('Cette recette est signalée pour votre foyer (voir l\'encadré rouge). L\'ajouter quand même ?')) return;
+    const titre = recettesPerso.some((x) => x.titre.toLowerCase() === m.recette.titre.toLowerCase()) ? `${m.recette.titre} (coach)` : m.recette.titre;
+    const id = prochainId(recettesPerso.map((x) => x.id));
+    opsRecettes.ecrire({ ...m.recette, titre, id, perso: true });
+    const final = messages.map((x, i) => (i === k ? { ...x, idAjoute: id } : x));
+    setMessages(final); enregistrerConversation(final);
+  };
+  const autreIdee = () => {
+    const derniere = [...messages].reverse().find((x) => x.role === 'user');
+    envoyer(`${derniere ? derniere.texte : 'Crée-moi une recette'}\nPropose une recette DIFFÉRENTE de la précédente.`);
+  };
   const envoyer = async (texte) => {
     const t = texte.trim();
     if ((!t && pieces.length === 0) || enCours) return;
@@ -76,9 +133,10 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSui
     setMessages(suite); setSaisie(''); setPieces([]); setErreur(''); setEnCours(true);
     try {
       const contexte = reg.partagerProfil ? construireContexte({ profil, besoins, prenom, repasSemaine, saison, lignesSuivi, ...extra }) : construireContexte({ saison });
-      const reponse = await repondre({ reg, historique: suite.slice(-20), contexte, pieces: jointes });
+      if (veutUneRecette(t) && jointes.length === 0) { await creerRecette(t, suite, contexte); setEnCours(false); return; }
+      const reponse = await repondre({ reg, historique: pourIA(suite.slice(-20)), contexte, pieces: jointes });
       const final = [...suite, { role: 'coach', texte: reponse.texte, via: reponse.via, avertir: avertissementSante({ profil, question: t }) }];
-      setMessages(final); enregistrerConversation(final.map(({ texte, role, pieces: ps, via, avertir }) => ({ texte, role, pieces: ps, via, avertir }))); setReg(chargerReglagesCoach());
+      setMessages(final); enregistrerConversation(final.map(({ texte, role, pieces: ps, via, avertir, recette, conflits, avertissements, idAjoute }) => ({ texte, role, pieces: ps, via, avertir, recette, conflits, avertissements, idAjoute }))); setReg(chargerReglagesCoach());
     } catch (e) { setErreur(e.message); enregistrerConversation(suite); }
     setEnCours(false);
   };
@@ -96,7 +154,7 @@ export function Coach({ profil, besoins, prenom, repasSemaine, saison, lignesSui
     <div class="coach-fil">
       ${messages.length === 0 && html`<div class="coach-accueil"><p>Bonjour ${prenom} ! Que puis-je faire pour vous ?</p>
         <div class="puces sans-marge">${(enceinte ? SUGGESTIONS_GROSSESSE : SUGGESTIONS).map((s) => html`<button type="button" class="puce" key=${s} onClick=${() => envoyer(s)}>${s}</button>`)}</div></div>`}
-      ${messages.map((m, k) => html`<${Message} key=${k} m=${m} />`)}
+      ${messages.map((m, k) => (m.recette ? html`<${CarteRecetteIA} key=${k} m=${m} enCours=${enCours} onAjouter=${() => ajouterRecette(k)} onAutre=${autreIdee} />` : html`<${Message} key=${k} m=${m} />`))}
       ${enCours && html`<div class="bulle coach attente" aria-live="polite">Le coach réfléchit…</div>`}
       ${erreur && html`<${Bandeau} type="alerte"><p>${erreur}</p><//>`}
       ${messages.length > 0 && html`<button type="button" class="lien coach-efface" onClick=${() => { setMessages([]); enregistrerConversation([]); }}>Effacer la conversation</button>`}

@@ -385,7 +385,7 @@ function App() {
       articlesListe=${donneesCourses.articles.filter((a) => a.liste === 'semaine')} />`}
     ${route.ecran === 'scans' && html`<${Historique} scans=${scans} moi=${moi} />`}
     ${(route.ecran === 'plus' || route.ecran === 'sources') && html`<${Plus} moi=${moi} profil=${profil} enceinte=${enceinte} nuage=${session.actif} section=${route.ecran === 'sources' ? 'sources' : null} />`}
-    ${route.ecran === 'coach' && html`<${Coach} extra=${contexteCoach} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
+    ${route.ecran === 'coach' && html`<${Coach} extra=${contexteCoach} contraintes=${contraintes} foyer=${foyerNb} nomsFoyer=${nomsFoyer} recettesPerso=${recettesPerso} opsRecettes=${opsRecettes} enceinte=${enceinte} profil=${profil} besoins=${besoins} prenom=${PERSONNES[moi].prenom}
       repasSemaine=${repasSemaine} saison=${saisonDe(new Date())} lignesSuivi=${lignesSuivi} />`}
     ${route.ecran === 'grossesse' && html`<${Grossesse} profil=${profil} />`}
     ${route.ecran === 'mes-recettes' && html`<${MesRecettes} recettes=${recettesPerso} ops=${opsRecettes} />`}

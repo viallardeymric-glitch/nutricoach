@@ -101,3 +101,10 @@ Sur l'écran Courses, choisissez « Courses pour : Cette semaine / Semaine proch
 
 ## Retirer un produit du stock (Frigo magique)
 Dans « Mon frigo et mes placards », chaque produit a une croix ✕ pour le retirer du stock ; « Vider tout le stock » (avec confirmation) repart de zéro. Toucher le nom écarte seulement le produit de la recherche de recettes.
+
+## Le coach crée une recette (étape par étape) et l'ajoute à vos recettes
+Demandez simplement : « Crée-moi une recette pour ce midi », « Invente un plat avec du poulet et des courgettes », « Propose une recette végétarienne ». Le coach répond avec une **fiche complète** : ingrédients pour le nombre de personnes de votre foyer (3 chez vous), étapes numérotées, temps, calories estimées.
+- **Sécurité** : la recette est contrôlée avec les profils de tout le foyer. Si elle contient un allergène de quelqu'un (par exemple de la crème pour une allergie au lait), elle est refusée et ne peut pas être ajoutée ; un régime ou un aliment déconseillé (grossesse, enfant…) est signalé en rouge.
+- **Ajouter** : « ➕ Ajouter à mes recettes » la range dans Plus → Mes recettes (partagée avec l'autre téléphone). Ensuite « 👩‍🍳 Cuisiner pas à pas » ou « Voir la fiche ».
+- **Une autre idée** : propose une recette différente, en tenant compte de ce que vous avez dit avant (« pas forcément tous les ingrédients »).
+- **Qualité** : avec les deux clés, l'appli prend Gemini s'il répond dans les 2,5 secondes après Groq (réponses plus soignées), sinon Groq.

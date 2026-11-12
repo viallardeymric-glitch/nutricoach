@@ -885,6 +885,44 @@ verif((await p.textContent('.contenu')).includes('lait cru') && (await p.textCon
   verif(anomalies.length === 0, 'audit automatique 360 px : aucun débordement, aucun texte NaN/undefined ' + anomalies.join(' ; '));
   await p.setViewportSize(vp0);
 }
+// Coach : création d'une recette étape par étape, contrôle de sécurité du foyer, ajout aux recettes
+{
+  await p.evaluate(() => localStorage.setItem('nutricoach.coach.reglages', JSON.stringify({ cle: 'CLE-TEST', modele: 'gemini-2.5-flash', partagerProfil: true })));
+  const RECETTES = [
+    { titre: 'Poulet à la crème et aux courgettes', description: 'Un plat doux.', portions_base: 3, temps: { preparation_min: 10, cuisson_min: 25 }, ingredients: ['3 escalopes de poulet', '2 courgettes', '20 cl de crème fraîche', '1 c. à soupe d\'huile d\'olive'], etapes: ['Coupez le poulet en lanières.', 'Faites-le dorer 8 minutes.', 'Ajoutez les courgettes et la crème, cuisez 15 minutes.', 'Servez chaud.'], nutrition_par_portion: { calories_kcal: 420, proteines_g: 38, glucides_g: 8, lipides_g: 26 } },
+    { titre: 'Riz au poulet et courgettes', description: 'Un plat complet sans lait.', portions_base: 3, temps: { preparation_min: 10, cuisson_min: 25 }, ingredients: ['3 escalopes de poulet', '2 courgettes', '200 g de riz', '1 c. à soupe d\'huile d\'olive'], etapes: ['Coupez le poulet en dés.', 'Faites-le dorer 8 minutes à la poêle.', 'Ajoutez les courgettes et le riz, couvrez d\'eau et cuisez 15 minutes.', 'Servez chaud.'], nutrition_par_portion: { calories_kcal: 450, proteines_g: 36, glucides_g: 48, lipides_g: 12 } },
+  ];
+  let nbJson = 0; let promptRecu = '';
+  await p.route('https://generativelanguage.googleapis.com/**', async (route) => {
+    const corps = route.request().postData() || '';
+    if (corps.includes('responseMimeType')) { promptRecu = corps; const r = RECETTES[Math.min(nbJson++, 1)]; return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(r) }] } }] }) }); }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Réponse de discussion.' }] } }] }) });
+  });
+  await p.goto(serveur.url + '/#/coach'); await p.waitForSelector('.coach-saisie');
+  await p.click('text=Effacer la conversation').catch(() => {});
+  await p.fill('.coach-saisie textarea', 'Je veux que tu me crée une recette pour midi pour 2 adultes et 1 enfant'); await p.click('.coach-saisie button[type=submit]');
+  await p.waitForSelector('.carte-recette-ia', { timeout: 8000 });
+  verif(promptRecu.includes('Nombre de portions : 3') && promptRecu.includes('Eymric, Marie et Léa'), 'coach recette : la demande part pour 3 portions (le foyer)');
+  verif(await p.locator('.carte-recette-ia .etapes li').count() === 4 && (await p.textContent('.carte-recette-ia')).includes('Poulet à la crème'), 'coach recette : recette affichée étape par étape');
+  verif((await p.textContent('.carte-recette-ia')).includes('ne convient pas à votre foyer') && await p.locator('.carte-recette-ia >> text=Ajouter à mes recettes').count() === 0, 'coach recette : la recette avec de la crème est refusée pour Marie (allergie au lait), pas d\'ajout possible');
+  await p.click('.carte-recette-ia >> text=Une autre idée');
+  await p.waitForSelector('.carte-recette-ia:has-text("Riz au poulet")', { timeout: 8000 });
+  verif(!(await p.locator('.carte-recette-ia:has-text("Riz au poulet")').textContent()).includes('ne convient pas'), 'coach recette : « une autre idée » propose une recette qui convient');
+  await p.click('.carte-recette-ia:has-text("Riz au poulet") >> text=Ajouter à mes recettes');
+  await p.waitForSelector('text=Ajoutée à « Mes recettes »');
+  const lien = await p.getAttribute('.carte-recette-ia:has-text("Riz au poulet") >> text=Cuisiner pas à pas', 'href');
+  verif(/^#\/cuisine\/REC-9\d{5}\?p=3$/.test(lien), 'coach recette : ajoutée aux recettes, « Cuisiner pas à pas » pour 3 personnes');
+  await p.goto(serveur.url + '/#/mes-recettes'); await p.waitForSelector('.page-mes-recettes .article');
+  verif((await p.textContent('.page-mes-recettes')).includes('Riz au poulet et courgettes'), 'coach recette : la recette est dans « Mes recettes »');
+  await p.goto(serveur.url + lien.replace(/^/, '/')); await p.waitForSelector('.cuisine-nav');
+  await p.click('text=Commencer');
+  verif((await p.textContent('.cuisine-texte')).includes('Coupez le poulet'), 'coach recette : le mode cuisine déroule les étapes de la recette du coach');
+  await p.goto(serveur.url + '/#/mes-recettes'); p.once('dialog', (d) => d.accept());
+  await p.click('[aria-label^="Supprimer Riz au poulet"]');
+  await p.goto(serveur.url + '/#/coach'); await p.waitForSelector('.coach-saisie'); await p.click('text=Effacer la conversation');
+  await p.unroute('https://generativelanguage.googleapis.com/**');
+}
+
 // Sécurité : politique de contenu (CSP) active, et un titre piégé reste du simple texte
 verif(await p.evaluate(() => new Promise((res) => { document.addEventListener('securitypolicyviolation', () => res(true), { once: true }); const sc = document.createElement('script'); sc.textContent = 'window.__csp = 1'; document.head.appendChild(sc); setTimeout(() => res(false), 600); })) && await p.evaluate(() => window.__csp === undefined), 'sécurité : la politique de contenu (CSP) bloque un script injecté');
 await p.goto(serveur.url + '/#/recette-nouvelle'); await p.waitForSelector('text=Nouvelle recette');
